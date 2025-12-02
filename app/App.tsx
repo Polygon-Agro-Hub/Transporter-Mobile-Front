@@ -14,12 +14,14 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector } from "react-redux";
-import store, { RootState } from "@/services/reducxStore";
+import store, { RootState } from "@/services/store";
 import NetInfo from "@react-native-community/netinfo";
 import { useTranslation } from "react-i18next";
 import { navigationRef } from "../navigationRef";
+import CustomDrawerContent from '@/Items/CustomDrawerContent';
 
 import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
@@ -42,7 +44,27 @@ NativeWindStyleSheet.setOutput({
 };
 
 const Stack = createStackNavigator();
+const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
+
+
+function MainDrawer() {
+  return (
+    <Drawer.Navigator
+      screenOptions={{
+        headerShown: false,
+        drawerType: "front", 
+               drawerStyle: {
+      width: "80%"
+    },
+      }}
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+    >
+<Drawer.Screen name="Home" component={Home} />
+
+    </Drawer.Navigator>
+  );
+}
 
 function AppContent() {
   const insets = useSafeAreaInsets();
@@ -111,8 +133,9 @@ function AppContent() {
       >
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
+
             <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Home" component={Home} />
+                                    <Stack.Screen name="Main" component={MainDrawer} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
