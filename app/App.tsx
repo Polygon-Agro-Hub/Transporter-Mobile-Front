@@ -25,6 +25,7 @@ import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import Splash from "@/component/Splash";
 import Home from "@/component/Home";
+import ComplaintsList from "@/component/ComplaintsList"
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -113,6 +114,7 @@ function AppContent() {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
             <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

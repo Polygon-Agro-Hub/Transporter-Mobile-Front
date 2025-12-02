@@ -54,7 +54,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: myComplaintImage,
       label: "My Complaints",
       color: "#8B5CF6",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("ComplaintsList"),
     },
     {
       image: ongoingImage,
