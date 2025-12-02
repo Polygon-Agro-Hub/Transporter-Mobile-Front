@@ -5,4 +5,5 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
+  Profile: undefined;
 };
