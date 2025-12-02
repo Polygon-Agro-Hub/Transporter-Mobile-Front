@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Image,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
@@ -91,7 +90,12 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     >
       {/* Header */}
       <View className="bg-white px-6 shadow-sm mt-4">
-        <View className="flex-row items-center">
+        {/* Make whole user section clickable */}
+        <TouchableOpacity
+          className="flex-row items-center"
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate("Profile")}
+        >
           {/* User Image */}
           <View className="mr-4">
             <Image
@@ -104,9 +108,14 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           {/* User Info */}
           <View className="flex-1">
             <Text className="text-2xl font-bold text-gray-900">Hi, Lashan</Text>
+            <Text className="text-sm text-gray-500">View Profile</Text>
           </View>
-        </View>
+
+          {/* Optional arrow icon */}
+          <Feather name="chevron-right" size={22} color="#ccc" />
+        </TouchableOpacity>
       </View>
+
       {/* Box 1: Have a nice day box */}
       <TouchableOpacity className="mx-6 mt-8 mb-4 bg-[#FFF2BF] rounded-2xl p-5 flex-row items-center">
         <View className="flex-1">
