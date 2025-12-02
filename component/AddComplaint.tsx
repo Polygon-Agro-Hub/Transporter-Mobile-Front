@@ -7,7 +7,7 @@ import {
   RefreshControl,
   TextInput,
   Platform,
-  Image
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -18,8 +18,12 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+import CustomHeader from "./CustomHeader";
 
-type AddComplaintNavigationProp = StackNavigationProp<RootStackParamList, "AddComplaint">;
+type AddComplaintNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "AddComplaint"
+>;
 
 interface AddComplaintProps {
   navigation: AddComplaintNavigationProp;
@@ -51,7 +55,9 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const handleSubmit = () => {
     if (value && description.trim()) {
       // Find the selected category label
-      const selectedCategory = items.find(item => item.value === value)?.label;
+      const selectedCategory = items.find(
+        (item) => item.value === value
+      )?.label;
       console.log({ category: selectedCategory, description });
       navigation.goBack();
     }
@@ -60,9 +66,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const isFormValid = value && description.trim().length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       <ScrollView
-        className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -70,24 +75,12 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View
-          className="flex-row justify-between px-5"
-          style={{ paddingHorizontal: wp(4), paddingVertical: hp(2) }}
-        >
-          <TouchableOpacity
-            className="w-10 h-10 rounded-full bg-[#F7FAFF] items-center justify-center shadow-sm"
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="chevron-left" size={24} color="#000" />
-          </TouchableOpacity>
-
-          <View className="flex-1 items-center mt-1 mr-4">
-            <Text className="text-lg font-bold">
-              Add a Complaint
-            </Text>
-          </View>
-        </View>
+        <CustomHeader
+          title="Add a Complaint"
+          showBackButton={true}
+          showLanguageSelector={false}
+          navigation={navigation}
+        />
 
         {/* Content */}
         <View className="px-6 pb-8">
@@ -101,7 +94,6 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
           {/* Category Dropdown */}
           <View className="mb-6 z-50">
-           
             <DropDownPicker
               open={open}
               value={value}
@@ -166,7 +158,6 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
           {/* Description Input */}
           <View className="mb-8">
-           
             <TextInput
               className="bg-white border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 min-h-[250px]"
               placeholder="Add Description Here..."
@@ -197,7 +188,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

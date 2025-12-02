@@ -9,13 +9,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
-import { AntDesign, Feather, FontAwesome6, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  AntDesign,
+  Feather,
+  FontAwesome6,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+import CustomHeader from "./CustomHeader";
 
-type ComplaintsListNavigationProp = StackNavigationProp<RootStackParamList, "ComplaintsList">;
+type ComplaintsListNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "ComplaintsList"
+>;
 
 interface ComplaintsListProps {
   navigation: ComplaintsListNavigationProp;
@@ -61,35 +70,17 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   return (
     <View className="flex-1 bg-white">
       <ScrollView
-        className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <SafeAreaView  className="bg-white px-2 shadow-sm">
-        
-           <View
-          className="flex-row justify-between "
-          style={{ paddingHorizontal: wp(4) ,paddingVertical: hp(2) }}
-        >
-        
-            <TouchableOpacity 
-      className="w-10 h-10 rounded-full bg-[#F7FAFF] items-center justify-center shadow-sm "
-      onPress={() => navigation.goBack()}
-    >
-              <Feather name="chevron-left" size={24} color="#000" />
-           
-          </TouchableOpacity>
-       
-          <View className="flex-1 items-center mt-1">
-            <Text className="text-lg font-bold">
-              My Complaints
-            </Text>
-          </View>
-        </View>
-        </SafeAreaView>
+        <CustomHeader
+          title="My Complaints"
+          showBackButton={true}
+          showLanguageSelector={false}
+          navigation={navigation}
+        />
 
         {/* Complaints List */}
         <View className="px-6 py-4">
@@ -125,11 +116,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                     }`}
                   >
                     {isWaiting ? (
-                      <AntDesign
-                        name="hourglass"
-                        size={14}
-                        color="black"
-                      />
+                      <AntDesign name="hourglass" size={14} color="black" />
                     ) : (
                       <FontAwesome6
                         name="circle-check"
@@ -175,9 +162,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         className="absolute bottom-6 right-6 rounded-full "
-        onPress={() => {navigation.navigate("AddComplaint")}}
+        onPress={() => {
+          navigation.navigate("AddComplaint");
+        }}
       >
         <View className="w-16 h-16 items-center justify-center">
           <View className="w-16 h-16 rounded-full bg-black items-center justify-center">
