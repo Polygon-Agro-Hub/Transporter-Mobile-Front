@@ -75,7 +75,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <View className="items-center mt-10">
             <View style={{ position: "relative" }}>
               <Image
-                source={require("@/assets/images/home/profile.png")}
+                source={require("@/assets/images/home/profile.webp")}
                 style={{
                   width: wp(30),
                   height: wp(30),

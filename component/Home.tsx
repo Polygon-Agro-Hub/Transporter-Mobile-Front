@@ -11,13 +11,13 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
 
-const scanQRImage = require("@/assets/images/home/scan.png");
-const myComplaintImage = require("@/assets/images/home/complaints.png");
-const ongoingImage = require("@/assets/images/home/ongoing.png");
-const packsImage = require("@/assets/images/home/packs.png");
-const returnImage = require("@/assets/images/home/return.png");
-const smallImage = require("@/assets/images/home/target.png");
-const moneyImage = require("@/assets/images/home/money.png");
+const scanQRImage = require("@/assets/images/home/scan.webp");
+const myComplaintImage = require("@/assets/images/home/complaints.webp");
+const ongoingImage = require("@/assets/images/home/ongoing.webp");
+const packsImage = require("@/assets/images/home/packs.webp");
+const returnImage = require("@/assets/images/home/return.webp");
+const smallImage = require("@/assets/images/home/target.webp");
+const moneyImage = require("@/assets/images/home/money.webp");
 
 type HomeNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 
@@ -99,7 +99,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           {/* User Image */}
           <View className="mr-4">
             <Image
-              source={require("@/assets/images/home/profile.png")}
+              source={require("@/assets/images/home/profile.webp")}
               className="w-14 h-14 rounded-full border-2 border-yellow-400"
               resizeMode="cover"
             />
