@@ -183,7 +183,7 @@ showModal("Invalid Password!", "Please check the Password and retry again.");
   setTimeout(() => {
     setLoading(false);
     
-    if (passwordUpdated === 1) {
+    if (passwordUpdated === 0) {
       navigation.navigate("ChangePassword",  {passwordUpdated : passwordUpdated});
     } else {
       navigation.navigate("Main", { screen: "Home" });
