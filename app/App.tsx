@@ -21,12 +21,13 @@ import store, { RootState } from "@/services/store";
 import NetInfo from "@react-native-community/netinfo";
 import { useTranslation } from "react-i18next";
 import { navigationRef } from "../navigationRef";
-import CustomDrawerContent from '@/Items/CustomDrawerContent';
+import CustomDrawerContent from "@/Items/CustomDrawerContent";
 
 import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import Splash from "@/component/Splash";
 import Home from "@/component/Home";
+import ProfileScreen from "@/component/Profile";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -47,21 +48,20 @@ const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
 
-
 function MainDrawer() {
   return (
     <Drawer.Navigator
       screenOptions={{
         headerShown: false,
-        drawerType: "front", 
-               drawerStyle: {
-      width: "80%"
-    },
+        drawerType: "front",
+        drawerStyle: {
+          width: "80%",
+        },
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
     >
-<Drawer.Screen name="Home" component={Home} />
-
+      <Drawer.Screen name="Home" component={Home} />
+      <Drawer.Screen name="Profile" component={ProfileScreen} />
     </Drawer.Navigator>
   );
 }
@@ -133,9 +133,8 @@ function AppContent() {
       >
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
-
             <Stack.Screen name="Splash" component={Splash} />
-                                    <Stack.Screen name="Main" component={MainDrawer} />
+            <Stack.Screen name="Main" component={MainDrawer} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

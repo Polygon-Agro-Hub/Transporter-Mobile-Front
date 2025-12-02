@@ -3,4 +3,5 @@ export type RootStackParamList = {
   Home: undefined;
   Lanuage: undefined;
   Splash: undefined;
+  Profile: undefined;
 };
