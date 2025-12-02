@@ -10,33 +10,22 @@ import {
   BackHandler,
   Keyboard,
   ActivityIndicator,
-  Modal,
-  Animated,
 } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "./types";
 import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
 import { environment } from "@/environment/environment";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
-import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
+import { AntDesign } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  Entypo,
-  FontAwesome,
-  Ionicons,
-  MaterialIcons,
-  SimpleLineIcons,
-} from "@expo/vector-icons";
+import { Entypo, MaterialIcons } from "@expo/vector-icons";
+import AlertModal from "./models/AlertModal";
 
 type ChangePasswordNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -61,35 +50,18 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState<"success" | "error">("error");
 
-  const [unsuccessfulLoadingBarWidth, setUnsuccessfulLoadingBarWidth] =
-    useState(new Animated.Value(300)); // Start with 100%
-
-  const showModal = (title: string, message: string) => {
+  const showModal = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error"
+  ) => {
     setModalTitle(title);
     setModalMessage(message);
+    setModalType(type);
     setModalVisible(true);
   };
-
-  useEffect(() => {
-    if (modalVisible) {
-      // Reset bar to full width
-      unsuccessfulLoadingBarWidth.setValue(300);
-
-      Animated.timing(unsuccessfulLoadingBarWidth, {
-        toValue: 0,
-        duration: 3000, // Full animation runs 2 seconds
-        useNativeDriver: false,
-      }).start();
-
-      // CLOSE MODAL EARLY (before animation ends)
-      const closeTimer = setTimeout(() => {
-        setModalVisible(false);
-      }, 2800); // close in 1.8 seconds
-
-      return () => clearTimeout(closeTimer);
-    }
-  }, [modalVisible]);
 
   console.log(passwordUpdated);
   const { t } = useTranslation();
@@ -97,7 +69,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const validatePassword = () => {
     // Check if all fields are filled
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showModal("Sorry", "All fields are required");
+      showModal("Sorry", "All fields are required", "error");
       return false;
     }
 
@@ -141,7 +113,8 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     if (newPassword !== confirmPassword) {
       showModal(
         "Do Not Match",
-        "The new password and confirm new password does not match."
+        "The new password and confirm new password does not match.",
+        "error"
       );
       return false;
     }
@@ -157,6 +130,11 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
 
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
+      showModal(
+        "No Internet",
+        "Please check your internet connection",
+        "error"
+      );
       return;
     }
 
@@ -176,17 +154,27 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         }
       );
 
-      Alert.alert("Success", "Password updated successfully");
-      navigation.navigate("Login");
+      // Navigate to login after a delay
+      setTimeout(() => {
+        navigation.navigate("Login");
+      }, 2000);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         if (error.response.status === 401) {
-          showModal("Incorrect Password!", "Current password is incorrect.");
+          showModal(
+            "Incorrect Password!",
+            "Current password is incorrect.",
+            "error"
+          );
         } else {
-          showModal("Failed!", "Failed to update password");
+          showModal("Failed!", "Failed to update password", "error");
         }
       } else {
-        showModal("Sorry", "Something went wrong. Please try again later.");
+        showModal(
+          "Sorry",
+          "Something went wrong. Please try again later.",
+          "error"
+        );
       }
     } finally {
       setLoading(false);
@@ -227,7 +215,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
             source={require("../assets/changepassword.webp")}
-            className="w-auto h-[60%]"
+            className="w-auto h-[65%]"
             resizeMode="contain"
           />
         </View>
@@ -246,7 +234,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-20 "
+            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-24"
           >
             <View>
               <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">
@@ -372,45 +360,17 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
           </LinearGradient>
         </View>
       </ScrollView>
-      <Modal visible={modalVisible} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          {/* POPUP CONTAINER */}
-          <View
-            style={{ width: 300 }}
-            className="bg-white p-6 rounded-2xl items-center shadow-lg relative"
-          >
-            <Text className="items-center font-bold text-lg mb-4">
-              {modalTitle}
-            </Text>
-            {/* Icon */}
-            <Image
-              source={require("../assets/Alert.webp")}
-              className="w-24 h-24"
-              resizeMode="contain"
-            />
 
-            {/* Message */}
-            <Text className="text-center text-[#4E4E4E] mb-5 ">
-              {modalMessage}
-            </Text>
-
-            {/* FIXED: LOADING BAR INSIDE POPUP + SAME WIDTH */}
-            <View
-              className="absolute bottom-0 left-0 right-0 h-3  "
-              style={{
-                overflow: "hidden",
-                borderBottomLeftRadius: 16,
-                borderBottomRightRadius: 16,
-              }}
-            >
-              <Animated.View
-                className="h-full bg-[#F7CA21] rounded-b-3xl"
-                style={{ width: unsuccessfulLoadingBarWidth }}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Use the AlertModal component */}
+      <AlertModal
+        visible={modalVisible}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+        onClose={() => setModalVisible(false)}
+        duration={3000}
+        autoClose={true}
+      />
     </KeyboardAvoidingView>
   );
 };
