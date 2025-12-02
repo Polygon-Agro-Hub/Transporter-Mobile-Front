@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { AntDesign, Feather, FontAwesome6, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -76,14 +76,14 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
         >
         
             <TouchableOpacity 
-      className="w-8 h-8 rounded-full bg-[#F7FAFF] items-center justify-center shadow-sm "
+      className="w-10 h-10 rounded-full bg-[#F7FAFF] items-center justify-center shadow-sm "
       onPress={() => navigation.goBack()}
     >
               <Feather name="chevron-left" size={24} color="#000" />
            
           </TouchableOpacity>
        
-          <View className="flex-1 items-center">
+          <View className="flex-1 items-center mt-1">
             <Text className="text-lg font-bold">
               My Complaints
             </Text>
@@ -120,26 +120,26 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 <View className="flex-row items-center justify-between">
                   {/* Status Badge */}
                   <View
-                    className={`flex-row items-center px-3 py-2 rounded-full ${
-                      isWaiting ? "bg-yellow-100" : "bg-green-100"
+                    className={`flex-row items-center px-3 py-2 rounded-lg ${
+                      isWaiting ? "bg-[#FFF3BF]" : "bg-[#FFF3BF]"
                     }`}
                   >
                     {isWaiting ? (
-                      <MaterialCommunityIcons
-                        name="clock-outline"
+                      <AntDesign
+                        name="hourglass"
                         size={14}
-                        color="#92400e"
+                        color="black"
                       />
                     ) : (
-                      <Feather
-                        name="check-circle"
+                      <FontAwesome6
+                        name="circle-check"
                         size={14}
-                        color="#166534"
+                        color="black"
                       />
                     )}
                     <Text
                       className={`ml-1.5 text-xs font-medium ${
-                        isWaiting ? "text-yellow-800" : "text-green-800"
+                        isWaiting ? "text-black" : "text-black"
                       }`}
                     >
                       {isWaiting ? "Waiting.." : "Answered"}
@@ -148,20 +148,20 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
                   {/* Reply Button */}
                   <TouchableOpacity
-                    className={`flex-row items-center px-4 py-2 rounded-full ${
-                      isWaiting ? "bg-gray-100" : "bg-black"
+                    className={`flex-row items-center px-4 py-1.5 rounded-lg ${
+                      isWaiting ? "bg-[#CBD7E8]" : "bg-black"
                     }`}
                     disabled={isWaiting}
                     onPress={() => handleReply(complaint.id)}
                   >
                     <MaterialCommunityIcons
-                      name="message-reply-outline"
+                      name="eye"
                       size={16}
-                      color={isWaiting ? "#9ca3af" : "#fff"}
+                      color={isWaiting ? "#fff" : "#fff"}
                     />
                     <Text
                       className={`ml-2 text-sm font-medium ${
-                        isWaiting ? "text-gray-400" : "text-white"
+                        isWaiting ? "text-white" : "text-white"
                       }`}
                     >
                       Reply
@@ -177,10 +177,10 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       {/* Floating Action Button */}
       <TouchableOpacity 
         className="absolute bottom-6 right-6 rounded-full "
-        onPress={() => {/* Handle FAB press */}}
+        onPress={() => {navigation.navigate("AddComplaint")}}
       >
         <View className="w-16 h-16 items-center justify-center">
-          <View className="w-12 h-12 rounded-full bg-black items-center justify-center">
+          <View className="w-16 h-16 rounded-full bg-black items-center justify-center">
             <Feather name="plus" size={24} color="#fff" />
           </View>
         </View>
