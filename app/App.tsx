@@ -27,6 +27,8 @@ import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import Splash from "@/component/Splash";
 import Home from "@/component/Home";
+import LoginScreen from "@/component/LoginScreen";
+import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
 
 LogBox.ignoreAllLogs(true);
@@ -134,7 +136,10 @@ function AppContent() {
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
+            <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="Main" component={MainDrawer} />
+            <Stack.Screen name="ChangePassword" component={ChangePassword} />
+
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
