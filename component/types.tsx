@@ -3,4 +3,6 @@ export type RootStackParamList = {
   Home: undefined;
   Lanuage: undefined;
   Splash: undefined;
+  Login: undefined;
+  ChangePassword: { passwordUpdated: number };
 };

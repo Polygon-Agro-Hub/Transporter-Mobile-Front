@@ -2,13 +2,11 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 interface AuthState {
   token: string | null;
-  jobRole: string | null;
   empId: string | null;
      userProfile: ProfileData | null;
 }
 const initialState: AuthState = {
   token: null,
-  jobRole: null,
   empId: null,
   userProfile: null
 };
@@ -29,14 +27,11 @@ const authSlice = createSlice({
   reducers: {
     setUser: (
       state,
-      action: PayloadAction<{ token: string; role: string; empId: string }>
+      action: PayloadAction<{ token: string; empId: string }>
     ) => {
- const { token, role, empId } = action.payload;
+ const { token, empId } = action.payload;
          console.log("Dispatching setUser action:");
-          console.log("login redux:", role);
-           // ✅ Cleaner assignment
       state.token = token;
-      state.jobRole = role;
       state.empId = empId;
     },
         setUserProfile: (state, action: PayloadAction<ProfileData>) => {
