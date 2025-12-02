@@ -33,7 +33,8 @@ const Splash: React.FC = () => {
       duration: 3000,
       useNativeDriver: false,
     }).start(() => {
-      navigation.navigate("Main" ,{ screen: "Home"});
+      // navigation.navigate("Main" ,{ screen: "Home"});
+      navigation.navigate("Login");
     });
 
     return () => {
