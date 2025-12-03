@@ -32,6 +32,8 @@ import AddComplaint from "@/component/AddComplaint"
 import LoginScreen from "@/component/LoginScreen";
 import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
+import Jobs from "@/component/Jobs";
+import OrderDetails from "@/component/OrderDetails";
 import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
 
 LogBox.ignoreAllLogs(true);
@@ -144,6 +146,8 @@ function AppContent() {
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="Jobs" component={Jobs} />
+            <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
           </Stack.Navigator>
         </NavigationContainer>
