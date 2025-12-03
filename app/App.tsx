@@ -32,6 +32,8 @@ import AddComplaint from "@/component/AddComplaint"
 import LoginScreen from "@/component/LoginScreen";
 import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
+import ReturnOrders from "@/component/ReturnOrders";
+import QRScan from "@/component/QRScan";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -143,6 +145,8 @@ function AppContent() {
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
+             <Stack.Screen name="QRScan" component={QRScan}  />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

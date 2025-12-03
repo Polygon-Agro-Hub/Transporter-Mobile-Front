@@ -87,7 +87,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           {/* Warning Icon */}
           <View className="items-center mb-8">
             <Image
-              source={require("../assets/images/complaints/complain.png")}
+              source={require("../assets/images/complaints/complain.webp")}
               style={{ width: 150, height: 150 }}
             />
           </View>

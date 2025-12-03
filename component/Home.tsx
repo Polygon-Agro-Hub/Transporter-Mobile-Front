@@ -41,7 +41,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: scanQRImage,
       label: "Scan QR",
       color: "#3B82F6",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("QRScan"),
     },
     {
       image: packsImage,
@@ -65,7 +65,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: returnImage,
       label: "2 Return",
       color: "#F59E0B",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("ReturnOrders"),
     },
   ];
 
