@@ -27,11 +27,14 @@ import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import Splash from "@/component/Splash";
 import Home from "@/component/Home";
+import ComplaintsList from "@/component/ComplaintsList";
+import AddComplaint from "@/component/AddComplaint"
 import LoginScreen from "@/component/LoginScreen";
 import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
 import Jobs from "@/component/Jobs";
 import OrderDetails from "@/component/OrderDetails";
+import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -138,11 +141,14 @@ function AppContent() {
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="Main" component={MainDrawer} />
+            <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
+            <Stack.Screen name="AddComplaint" component={AddComplaint} />
+            <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

@@ -10,14 +10,16 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
+import { useSelector } from "react-redux";
+import { selectUserProfile } from "../store/authSlice";
 
-const scanQRImage = require("@/assets/images/home/scan.png");
-const myComplaintImage = require("@/assets/images/home/complaints.png");
-const ongoingImage = require("@/assets/images/home/ongoing.png");
-const packsImage = require("@/assets/images/home/packs.png");
-const returnImage = require("@/assets/images/home/return.png");
-const smallImage = require("@/assets/images/home/target.png");
-const moneyImage = require("@/assets/images/home/money.png");
+const scanQRImage = require("@/assets/images/home/scan.webp");
+const myComplaintImage = require("@/assets/images/home/complaints.webp");
+const ongoingImage = require("@/assets/images/home/ongoing.webp");
+const packsImage = require("@/assets/images/home/packs.webp");
+const returnImage = require("@/assets/images/home/return.webp");
+const smallImage = require("@/assets/images/home/target.webp");
+const moneyImage = require("@/assets/images/home/money.webp");
 
 type HomeNavigationProp = StackNavigationProp<RootStackParamList, "Home">;
 
@@ -27,6 +29,9 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get user profile from Redux
+  const userProfile = useSelector(selectUserProfile);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -53,19 +58,19 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: myComplaintImage,
       label: "My Complaints",
       color: "#8B5CF6",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("ComplaintsList"),
     },
     {
       image: ongoingImage,
       label: "Ongoing",
       color: "#F59E0B",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("Login"),
     },
     {
       image: returnImage,
       label: "2 Return",
       color: "#F59E0B",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("EndJourneyConfirmation"),
     },
   ];
 
@@ -99,7 +104,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           {/* User Image */}
           <View className="mr-4">
             <Image
-              source={require("@/assets/images/home/profile.png")}
+              source={
+                userProfile?.profileImg
+                  ? { uri: userProfile.profileImg }
+                  : require("@/assets/images/home/profile.webp")
+              }
               className="w-14 h-14 rounded-full border-2 border-yellow-400"
               resizeMode="cover"
             />
@@ -107,7 +116,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
           {/* User Info */}
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">Hi, Lashan</Text>
+            <Text className="text-xl font-bold text-gray-900">
+              Hi, {userProfile?.firstName || "User"}{" "}
+              {userProfile?.lastName || ""}
+            </Text>
             <Text className="text-sm text-gray-500">View Profile</Text>
           </View>
 
