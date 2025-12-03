@@ -8,6 +8,8 @@ export type RootStackParamList = {
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
+  ReturnOrders:undefined;
+  QRScan:undefined;
   Jobs:undefined;
   OrderDetails:undefined
   EndJourneyConfirmation: undefined;
