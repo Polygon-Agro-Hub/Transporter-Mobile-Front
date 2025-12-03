@@ -8,4 +8,5 @@ export type RootStackParamList = {
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
+  EndJourneyConfirmation: undefined;
 };

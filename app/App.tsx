@@ -32,6 +32,7 @@ import AddComplaint from "@/component/AddComplaint"
 import LoginScreen from "@/component/LoginScreen";
 import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
+import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -143,6 +144,7 @@ function AppContent() {
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
