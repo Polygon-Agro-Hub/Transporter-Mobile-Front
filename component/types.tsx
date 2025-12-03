@@ -6,4 +6,6 @@ export type RootStackParamList = {
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
+  Jobs:undefined;
+  OrderDetails:undefined
 };

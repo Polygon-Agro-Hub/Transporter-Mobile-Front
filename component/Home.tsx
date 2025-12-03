@@ -134,7 +134,9 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Box 2: Cash Received box */}
-      <TouchableOpacity className="mx-6 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center">
+      <TouchableOpacity className="mx-6 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
+      onPress={()=> navigation.navigate("Jobs")}
+      >
         <View className="flex-row items-center flex-1">
           <Image
             source={moneyImage}

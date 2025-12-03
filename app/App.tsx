@@ -30,6 +30,8 @@ import Home from "@/component/Home";
 import LoginScreen from "@/component/LoginScreen";
 import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
+import Jobs from "@/component/Jobs";
+import OrderDetails from "@/component/OrderDetails";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -139,7 +141,8 @@ function AppContent() {
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="Main" component={MainDrawer} />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
-
+            <Stack.Screen name="Jobs" component={Jobs} />
+            <Stack.Screen name="OrderDetails" component={OrderDetails} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
