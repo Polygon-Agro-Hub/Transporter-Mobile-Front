@@ -10,6 +10,8 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
+import { useSelector } from "react-redux";
+import { selectUserProfile } from "../store/authSlice";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -27,6 +29,9 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get user profile from Redux
+  const userProfile = useSelector(selectUserProfile);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -59,7 +64,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: ongoingImage,
       label: "Ongoing",
       color: "#F59E0B",
-      action: () => navigation.navigate("Splash"),
+      action: () => navigation.navigate("EndJourneyConfirmation"),
     },
     {
       image: returnImage,
@@ -99,7 +104,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           {/* User Image */}
           <View className="mr-4">
             <Image
-              source={require("@/assets/images/home/profile.webp")}
+              source={
+                userProfile?.profileImg
+                  ? { uri: userProfile.profileImg }
+                  : require("@/assets/images/home/profile.webp")
+              }
               className="w-14 h-14 rounded-full border-2 border-yellow-400"
               resizeMode="cover"
             />
@@ -107,7 +116,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
           {/* User Info */}
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">Hi, Lashan</Text>
+            <Text className="text-xl font-bold text-gray-900">
+              Hi, {userProfile?.firstName || "User"}{" "}
+              {userProfile?.lastName || ""}
+            </Text>
             <Text className="text-sm text-gray-500">View Profile</Text>
           </View>
 
@@ -134,7 +146,9 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Box 2: Cash Received box */}
-      <TouchableOpacity className="mx-6 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center">
+      <TouchableOpacity className="mx-6 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
+      onPress={()=> navigation.navigate("Jobs")}
+      >
         <View className="flex-row items-center flex-1">
           <Image
             source={moneyImage}

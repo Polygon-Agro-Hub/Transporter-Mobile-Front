@@ -10,4 +10,7 @@ export type RootStackParamList = {
   Profile: undefined;
   ReturnOrders:undefined;
   QRScan:undefined;
+  Jobs:undefined;
+  OrderDetails:undefined
+  EndJourneyConfirmation: undefined;
 };

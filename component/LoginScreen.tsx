@@ -21,7 +21,7 @@ import { environment } from "@/environment/environment";
 import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
-import { setUser } from "../store/authSlice";
+import { setUser, setUserProfile } from "../store/authSlice";
 import AlertModal from "./models/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
@@ -110,6 +110,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
 
     setLoading(true);
+
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("empid");
 
@@ -161,18 +162,39 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         return;
       }
 
-      const { token, passwordUpdated, empId } = data.data;
+      // Extract data properly
+      const {
+        firstNameEnglish,
+        lastNameEnglish,
+        image,
+        token,
+        passwordUpdated,
+        empId,
+      } = data.data;
 
-      // Continue with normal login flow
+      // Save token + empId
       await AsyncStorage.setItem("token", token);
       await AsyncStorage.setItem("empid", empId.toString());
+
       dispatch(setUser({ token, empId: empId.toString() }));
 
+      // Save First name, Last name, Image into Redux
+      dispatch(
+        setUserProfile({
+          firstName: firstNameEnglish,
+          lastName: lastNameEnglish,
+          profileImg: image,
+          empId: empId.toString(),
+        })
+      );
+
+      // Store token timestamps
       if (token) {
         const timestamp = new Date();
         const expirationTime = new Date(
           timestamp.getTime() + 8 * 60 * 60 * 1000
         );
+
         await AsyncStorage.multiSet([
           ["tokenStoredTime", timestamp.toISOString()],
           ["tokenExpirationTime", expirationTime.toISOString()],

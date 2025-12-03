@@ -234,7 +234,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-24"
+            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-24 "
           >
             <View>
               <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">

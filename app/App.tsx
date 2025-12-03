@@ -34,6 +34,9 @@ import ChangePassword from "@/component/ChangePassword";
 import ProfileScreen from "@/component/Profile";
 import ReturnOrders from "@/component/ReturnOrders";
 import QRScan from "@/component/QRScan";
+import Jobs from "@/component/Jobs";
+import OrderDetails from "@/component/OrderDetails";
+import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -147,6 +150,9 @@ function AppContent() {
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
              <Stack.Screen name="QRScan" component={QRScan}  />
+            <Stack.Screen name="Jobs" component={Jobs} />
+            <Stack.Screen name="OrderDetails" component={OrderDetails} />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
