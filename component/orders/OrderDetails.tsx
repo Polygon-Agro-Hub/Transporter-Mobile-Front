@@ -132,6 +132,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation }) => {
             shadowRadius: 5,
             elevation: 4,
           }}
+          onPress={() => navigation.navigate("MyJourney")}
         >
           <Text className="text-base font-bold">Start Journey</Text>
         </TouchableOpacity>

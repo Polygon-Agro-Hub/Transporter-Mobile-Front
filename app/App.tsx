@@ -37,6 +37,7 @@ import QRScan from "@/component/orders/QRScan";
 import Jobs from "@/component/orders/Jobs";
 import OrderDetails from "@/component/orders/OrderDetails";
 import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
+import MyJourney from "@/component/orders/MyJourney";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -153,6 +154,7 @@ function AppContent() {
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
+            <Stack.Screen name="MyJourney" component={MyJourney} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

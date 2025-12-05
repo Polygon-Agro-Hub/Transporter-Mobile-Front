@@ -13,4 +13,5 @@ export type RootStackParamList = {
   Jobs:undefined;
   OrderDetails:undefined
   EndJourneyConfirmation: undefined;
+  MyJourney: undefined;
 };

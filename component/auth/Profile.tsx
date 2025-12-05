@@ -242,11 +242,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             />
             <InfoCard
               label="Vehicle"
-              value={profileData?.vehicle || "Not available"}
+              value={profileData?.vType || "Not available"}
             />
             <InfoCard
               label="Vehicle's Registration Number"
-              value={profileData?.vehicleNo || "Not available"}
+              value={profileData?.vRegNo || "Not available"}
             />
           </View>
         </ScrollView>
