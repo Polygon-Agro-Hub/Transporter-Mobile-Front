@@ -5,7 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Image
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -22,7 +22,7 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "@/component/common/CustomHeader";
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -95,38 +95,26 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     switch (statusType) {
       case "confirmed":
         return (
-          <FontAwesome
-            name="exclamation-circle"
-            size={wp(5)}
-            color="black"
-          />
+          <FontAwesome name="exclamation-circle" size={wp(5)} color="black" />
         );
       case "failed":
         return (
-          <FontAwesome
-            name="exclamation-circle"
-            size={wp(5)}
-            color="black"
-          />
+          <FontAwesome name="exclamation-circle" size={wp(5)} color="black" />
         );
       default:
         return (
-          <MaterialCommunityIcons
-            name="phone"
-            size={wp(5)}
-            color="#4b5563"
-          />
+          <MaterialCommunityIcons name="phone" size={wp(5)} color="#4b5563" />
         );
     }
   };
 
   const getPaymentIcon = (paymentStatus: string) => {
     if (paymentStatus === "Cash") {
-      return (
-        <FontAwesome6 name="coins" size={wp(4.5)} color="#F7CA21" />
-      );
+      return <FontAwesome6 name="coins" size={wp(4.5)} color="#F7CA21" />;
     } else if (paymentStatus.includes("Paid")) {
-      return <FontAwesome5 name="check-circle" size={wp(4.5)} color="#F7CA21" />;
+      return (
+        <FontAwesome5 name="check-circle" size={wp(4.5)} color="#F7CA21" />
+      );
     }
     return null;
   };
@@ -152,12 +140,8 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
           />
         }
       >
-        
-
         {/* Orders List */}
         <View className="mb-20 px-3">
-        
-          
           {orders.map((order, index) => (
             <TouchableOpacity
               key={order.id}
@@ -169,22 +153,23 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
               <View className="flex-row justify-between items-start mb-1">
                 <View className="flex-1">
                   <Text className="text-[#4E4E4E] font-semibold">
-                 Order ID : {order.orderId}
+                    Order ID : {order.orderId}
                   </Text>
                   <Text className="text-black font-bold text-base mt-1">
                     {order.customerName}
                   </Text>
                 </View>
-              
               </View>
 
               {/* Status */}
               <View className="flex-row items-center ">
                 <View className="mt-[-5%]">
-                {getStatusIcon(order.statusType)}
+                  {getStatusIcon(order.statusType)}
                 </View>
                 <Text
-                  className={`ml-2  flex-1 text-sm ${getStatusColor(order.statusType)}`}
+                  className={`ml-2  flex-1 text-sm ${getStatusColor(
+                    order.statusType
+                  )}`}
                 >
                   {order.status}
                 </Text>
@@ -204,10 +189,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                     {order.paymentStatus}
                   </Text>
                 </View>
-               
               </View>
-
-              
             </TouchableOpacity>
           ))}
         </View>
@@ -219,11 +201,11 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         onPress={() => navigation.navigate("QRScan")}
       >
         {/* <AntDesign name="plus" size={24} color="white" /> */}
-         <Image
-                    source={require("../assets/images/ReturnOrders/qr.webp")}
-                    className="w-auto h-[65%]"
-                    resizeMode="contain"
-                  />
+        <Image
+          source={require("@/assets/images/ReturnOrders/qr.webp")}
+          className="w-auto h-[65%]"
+          resizeMode="contain"
+        />
       </TouchableOpacity>
     </SafeAreaView>
   );

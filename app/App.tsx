@@ -25,18 +25,18 @@ import CustomDrawerContent from "@/Items/CustomDrawerContent";
 
 import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
-import Splash from "@/component/Splash";
+import Splash from "@/component/common/Splash";
 import Home from "@/component/Home";
-import ComplaintsList from "@/component/ComplaintsList";
-import AddComplaint from "@/component/AddComplaint"
-import LoginScreen from "@/component/LoginScreen";
-import ChangePassword from "@/component/ChangePassword";
-import ProfileScreen from "@/component/Profile";
-import ReturnOrders from "@/component/ReturnOrders";
-import QRScan from "@/component/QRScan";
-import Jobs from "@/component/Jobs";
-import OrderDetails from "@/component/OrderDetails";
-import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
+import ComplaintsList from "@/component/complaints/ComplaintsList";
+import AddComplaint from "@/component/complaints/AddComplaint"
+import LoginScreen from "@/component/auth/LoginScreen";
+import ChangePassword from "@/component/auth/ChangePassword";
+import ProfileScreen from "@/component/auth/Profile";
+import ReturnOrders from "@/component/orders/ReturnOrders";
+import QRScan from "@/component/orders/QRScan";
+import Jobs from "@/component/orders/Jobs";
+import OrderDetails from "@/component/orders/OrderDetails";
+import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({

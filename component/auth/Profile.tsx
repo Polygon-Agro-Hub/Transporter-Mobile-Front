@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "../common/CustomHeader";
 import { useSelector } from "react-redux";
 import { selectAuthToken } from "@/store/authSlice";
 import { environment } from "@/environment/environment";

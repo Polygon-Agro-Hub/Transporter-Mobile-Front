@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types";
 import { Entypo, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
@@ -21,8 +21,8 @@ import { environment } from "@/environment/environment";
 import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
-import { setUser, setUserProfile } from "../store/authSlice";
-import AlertModal from "./models/AlertModal";
+import { setUser, setUserProfile } from "../../store/authSlice";
+import AlertModal from "../common/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -246,12 +246,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
-            source={require("../assets/logo.webp")}
+            source={require("@/assets/logo.webp")}
             className="w-auto h-[22%]"
             resizeMode="contain"
           />
           <Image
-            source={require("../assets/truck.webp")}
+            source={require("@/assets/truck.webp")}
             className="w-auto h-[60%]"
             resizeMode="contain"
           />

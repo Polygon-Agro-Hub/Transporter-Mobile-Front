@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "@/component/common/CustomHeader";
 import Foundation from "@expo/vector-icons/Foundation";
 
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";

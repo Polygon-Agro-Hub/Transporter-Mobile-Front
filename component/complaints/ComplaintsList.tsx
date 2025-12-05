@@ -19,7 +19,7 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "@/component/common/CustomHeader";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,

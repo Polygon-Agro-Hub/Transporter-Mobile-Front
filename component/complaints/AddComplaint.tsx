@@ -18,7 +18,7 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "@/component/common/CustomHeader";
 
 type AddComplaintNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -87,7 +87,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           {/* Warning Icon */}
           <View className="items-center mb-8">
             <Image
-              source={require("../assets/images/complaints/complain.webp")}
+              source={require("@/assets/images/complaints/complain.webp")}
               style={{ width: 150, height: 150 }}
             />
           </View>

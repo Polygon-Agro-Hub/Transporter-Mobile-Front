@@ -14,7 +14,7 @@ import {
 import React, { useCallback, useState } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useRoute } from "@react-navigation/native";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types";
 import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
 import { environment } from "@/environment/environment";
@@ -25,7 +25,7 @@ import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { Entypo, MaterialIcons } from "@expo/vector-icons";
-import AlertModal from "./models/AlertModal";
+import AlertModal from "../common/AlertModal";
 
 type ChangePasswordNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -214,7 +214,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
-            source={require("../assets/changepassword.webp")}
+            source={require("@/assets/changepassword.webp")}
             className="w-auto h-[65%]"
             resizeMode="contain"
           />

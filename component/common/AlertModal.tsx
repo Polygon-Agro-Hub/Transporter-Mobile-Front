@@ -14,10 +14,10 @@ interface AlertModalProps {
   visible: boolean;
   title: string;
   message: string;
-  type?: "success" | "error" ;
+  type?: "success" | "error";
   onClose: () => void;
-  duration?: number; 
-  autoClose?: boolean; 
+  duration?: number;
+  autoClose?: boolean;
 }
 
 const AlertModal: React.FC<AlertModalProps> = ({
@@ -55,7 +55,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
   const getIcon = () => {
     switch (type) {
       case "success":
-        return require("@/assets/success.webp"); 
+        return require("@/assets/success.webp");
       case "error":
       default:
         return require("@/assets/Alert.webp");
