@@ -38,6 +38,8 @@ import Jobs from "@/component/orders/Jobs";
 import OrderDetails from "@/component/orders/OrderDetails";
 import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
 import MyJourney from "@/component/orders/MyJourney";
+import SignatureScreen from "@/component/orders/SignatureScreen";
+import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -155,6 +157,8 @@ function AppContent() {
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
             <Stack.Screen name="MyJourney" component={MyJourney} />
+            <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
+            <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

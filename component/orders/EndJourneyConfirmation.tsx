@@ -30,8 +30,8 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
   };
 
   const handleGetSignature = () => {
-    console.log("Get Digital Signature");
-    // navigation.navigate("DigitalSignature");
+    console.log("SignatureScreen");
+    navigation.navigate("SignatureScreen");
   };
 
   return (

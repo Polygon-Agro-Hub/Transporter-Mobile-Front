@@ -14,4 +14,6 @@ export type RootStackParamList = {
   OrderDetails:undefined
   EndJourneyConfirmation: undefined;
   MyJourney: undefined;
+  SignatureScreen: undefined;
+  DeliverySuccessful: undefined;
 };
