@@ -13,9 +13,12 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
-import { Entypo, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import {
+  FontAwesome5,
+  FontAwesome6,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { Keyboard } from "react-native";
@@ -282,8 +285,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-4 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <FontAwesome name="user" size={20} color="#F7CA21" />
-
+                  <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
                   <TextInput
                     className="flex-1  text-base  text-white placeholder:ml-4"
                     autoCapitalize="characters"
@@ -307,7 +309,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={22} color="#F7CA21" />
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
                   <TextInput
                     className="flex-1 text-base placeholder:ml-2 text-white"
                     secureTextEntry={secureTextEntry}
@@ -320,8 +322,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     onPress={() => setSecureTextEntry(!secureTextEntry)}
                     className="mr-4"
                   >
-                    <Entypo
-                      name={secureTextEntry ? "eye-with-line" : "eye"}
+                    <FontAwesome5
+                      name={secureTextEntry ? "eye-slash" : "eye"}
                       size={24}
                       color="white"
                     />
@@ -354,7 +356,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         message={modalMessage}
         type={modalType}
         onClose={() => setModalVisible(false)}
-        duration={2000}
+        duration={4000}
         autoClose={true}
       />
     </KeyboardAvoidingView>

@@ -1,4 +1,3 @@
-// components/AlertModal.tsx
 import React, { useEffect } from "react";
 import {
   View,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import LottieView from "lottie-react-native";
 
 interface AlertModalProps {
   visible: boolean;
@@ -26,7 +26,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
   message,
   type = "error",
   onClose,
-  duration = 3000,
+  duration = 4000,
   autoClose = true,
 }) => {
   const loadingBarWidth = new Animated.Value(300);
@@ -51,22 +51,35 @@ const AlertModal: React.FC<AlertModalProps> = ({
     }
   }, [visible, duration, autoClose]);
 
-  // Get icon based on type
-  const getIcon = () => {
+  // Get content based on type
+  const getContent = () => {
     switch (type) {
       case "success":
-        return require("@/assets/success.webp");
+        return (
+          <LottieView
+            source={require("@/assets/json/delivery-successful.json")}
+            autoPlay
+            loop={false}
+            style={{ width: 120, height: 120 }}
+          />
+        );
       case "error":
       default:
-        return require("@/assets/Alert.webp");
+        return (
+          <Image
+            source={require("@/assets/Alert.webp")}
+            className="w-24 h-24"
+            resizeMode="contain"
+          />
+        );
     }
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View className="flex-1 bg-black/50 justify-center items-center">
+      <View className="flex-1 bg-black/50 justify-center items-center p-4">
         {/* POPUP CONTAINER */}
-        <View className="bg-white p-6 rounded-2xl items-center shadow-lg relative w-11/12 mx-10">
+        <View className="bg-white p-6 rounded-2xl items-center shadow-lg w-full max-w-md relative">
           {/* Close Button */}
           <TouchableOpacity
             className="absolute top-5 right-5 z-10 w-8 h-8 rounded-full bg-[#F7FAFF] items-center justify-center"
@@ -76,16 +89,12 @@ const AlertModal: React.FC<AlertModalProps> = ({
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="items-center font-bold text-lg mb-4 text-center">
+          <Text className="font-bold text-lg mb-4 text-center">
             {title}
           </Text>
 
-          {/* Icon - based on type */}
-          <Image
-            source={getIcon()}
-            className="w-24 h-24"
-            resizeMode="contain"
-          />
+          {/* Icon/Animation - based on type */}
+          {getContent()}
 
           {/* Message */}
           <Text className="text-center text-[#4E4E4E] mb-5 mt-2">

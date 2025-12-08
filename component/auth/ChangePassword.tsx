@@ -18,13 +18,13 @@ import { RootStackParamList } from "../types";
 import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
 import { environment } from "@/environment/environment";
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, FontAwesome5 } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { Entypo, MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import AlertModal from "../common/AlertModal";
 
 type ChangePasswordNavigationProp = StackNavigationProp<
@@ -253,8 +253,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-4 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={22} color="#F7CA21" />
-
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
                   <TextInput
                     className="flex-1  text-base  text-white placeholder:ml-2"
                     secureTextEntry={secureCurrent}
@@ -267,8 +266,8 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                     className="mr-4"
                     onPress={() => setSecureCurrent(!secureCurrent)}
                   >
-                    <Entypo
-                      name={secureCurrent ? "eye-with-line" : "eye"}
+                    <FontAwesome5
+                      name={secureCurrent ? "eye-slash" : "eye"}
                       size={24}
                       color="white"
                     />
@@ -283,7 +282,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={22} color="#F7CA21" />{" "}
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />{" "}
                   <TextInput
                     className="flex-1 text-base placeholder:ml-2 text-white"
                     secureTextEntry={secureNew}
@@ -300,8 +299,8 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                     className="mr-4"
                     onPress={() => setSecureNew(!secureNew)}
                   >
-                    <Entypo
-                      name={secureNew ? "eye-with-line" : "eye"}
+                    <FontAwesome5
+                      name={secureNew ? "eye-slash" : "eye"}
                       size={24}
                       color="white"
                     />
@@ -316,7 +315,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={22} color="#F7CA21" />{" "}
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
                   <TextInput
                     className="flex-1 text-base placeholder:ml-2 text-white"
                     secureTextEntry={secureConfirm}
@@ -333,8 +332,8 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                     className="mr-4"
                     onPress={() => setSecureConfirm(!secureConfirm)}
                   >
-                    <Entypo
-                      name={secureNew ? "eye-with-line" : "eye"}
+                    <FontAwesome5
+                      name={secureNew ? "eye-slash" : "eye"}
                       size={24}
                       color="white"
                     />
@@ -368,7 +367,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         message={modalMessage}
         type={modalType}
         onClose={() => setModalVisible(false)}
-        duration={3000}
+        duration={4000}
         autoClose={true}
       />
     </KeyboardAvoidingView>

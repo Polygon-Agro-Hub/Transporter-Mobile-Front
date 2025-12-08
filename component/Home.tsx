@@ -71,7 +71,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       label: "2 Return",
       color: "#F59E0B",
       action: () => navigation.navigate("ReturnOrders"),
-    },
+    }
   ];
 
   // Function to split array into chunks of 2 for rows

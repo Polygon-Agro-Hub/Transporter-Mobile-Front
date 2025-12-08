@@ -166,7 +166,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView className="flex bg-black">
+    <View className="flex bg-black">
       <ScrollView contentContainerStyle={{ paddingBottom: hp("0%") }}>
         <CustomHeader
           title="My Journey"
@@ -342,7 +342,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
