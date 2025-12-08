@@ -66,10 +66,11 @@ const AlertModal: React.FC<AlertModalProps> = ({
       case "error":
       default:
         return (
-          <Image
-            source={require("@/assets/Alert.webp")}
-            className="w-24 h-24"
-            resizeMode="contain"
+          <LottieView
+            source={require("@/assets/json/error.json")}
+            autoPlay
+            loop={false}
+            style={{ width: 120, height: 120 }}
           />
         );
     }
