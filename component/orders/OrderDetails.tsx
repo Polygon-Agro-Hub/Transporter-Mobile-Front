@@ -35,6 +35,16 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation }) => {
       time: "1:00PM - 5:00PM",
       payment: "Card : Rs. 3,000.00",
     },
+    {
+      id: "251201002",
+      time: "8:00AM - 12:00PM",
+      payment: "Cash : Rs. 2,500.00",
+    },
+    {
+      id: "251201003",
+      time: "1:00PM - 5:00PM",
+      payment: "Card : Rs. 3,000.00",
+    },
   ];
 
   return (
@@ -49,6 +59,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation }) => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 160 }}
+        className="px-6"
       >
         {/* Avatar */}
         <View className="items-center ">
@@ -68,19 +79,19 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation }) => {
           </View>
         </View>
 
-        <View className="flex-row justify-between mx-3 mt-6">
-          <View className="w-[45%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+        <View className="flex-row justify-between mt-6">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
             <FontAwesome5 name="shopping-bag" size={30} color="black" />
             <Text className="mt-2 text-lg font-semibold">2 Packs</Text>
           </View>
 
-          <View className="w-[45%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
             <Ionicons name="time" size={30} color="black" />
             <Text className="mt-2 text-lg font-semibold">8AM - 2PM</Text>
           </View>
         </View>
 
-        <View className="mx-3 mt-6 space-y-5">
+        <View className="mt-6 space-y-5">
           {orderItems.map((item, index) => (
             <View
               key={index}

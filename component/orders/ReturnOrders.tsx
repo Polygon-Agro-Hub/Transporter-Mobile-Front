@@ -65,6 +65,36 @@ const returnOrdersData = [
     statusType: "failed",
     date: "Dec 21, 2022",
   },
+  {
+    id: "22123100002",
+    orderId: "#22123100002",
+    customerName: "Mr. Gimhan Nayanajith Kariyawa..",
+    status: "Call Confirmed, But the customer wasn't there",
+    paymentStatus: "Cash",
+    amount: "Rs. 1,000.00",
+    statusType: "confirmed",
+    date: "Dec 31, 2022",
+  },
+  {
+    id: "22123100001",
+    orderId: "#22123100001",
+    customerName: "Mr. Gimhan Nayanajith Kariyawa..",
+    status: "Call Confirmed, But the customer wasn't there",
+    paymentStatus: "Cash",
+    amount: "Rs. 1,000.00",
+    statusType: "confirmed",
+    date: "Dec 31, 2022",
+  },
+  {
+    id: "22122100001",
+    orderId: "#22122100001",
+    customerName: "Ms. Hashini Herath",
+    status: "Phone switched off & the customer wasn't there",
+    paymentStatus: "Already Paid!",
+    amount: "",
+    statusType: "failed",
+    date: "Dec 21, 2022",
+  },
 ];
 
 const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
@@ -141,7 +171,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         }
       >
         {/* Orders List */}
-        <View className="mb-20 px-3">
+        <View className="mb-20">
           {orders.map((order, index) => (
             <TouchableOpacity
               key={order.id}
@@ -197,7 +227,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        className="absolute bottom-6 right-6 bg-[#F7CA21] w-14 h-14 rounded-full items-center justify-center shadow-lg"
+        className="absolute bottom-4 right-4 bg-[#F7CA21] w-16 h-16 rounded-full items-center justify-center shadow-lg"
         onPress={() => navigation.navigate("QRScan")}
       >
         {/* <AntDesign name="plus" size={24} color="white" /> */}

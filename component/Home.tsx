@@ -94,7 +94,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       }
     >
       {/* Header */}
-      <View className="bg-white px-6 shadow-sm mt-4">
+      <View className="bg-white px-4 shadow-sm mt-4">
         {/* Make whole user section clickable */}
         <TouchableOpacity
           className="flex-row items-center"
@@ -129,7 +129,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       </View>
 
       {/* Box 1: Have a nice day box */}
-      <TouchableOpacity className="mx-6 mt-8 mb-4 bg-[#FFF2BF] rounded-2xl p-5 flex-row items-center">
+      <TouchableOpacity className="mx-4 mt-8 mb-4 bg-[#FFF2BF] rounded-2xl p-5 flex-row items-center">
         <View className="flex-1">
           <Text className="text-lg font-bold text-gray-900">
             Have a nice Day!
@@ -146,7 +146,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Box 2: Cash Received box */}
-      <TouchableOpacity className="mx-6 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
+      <TouchableOpacity className="mx-4 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
       onPress={()=> navigation.navigate("Jobs")}
       >
         <View className="flex-row items-center flex-1">
@@ -169,7 +169,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       </TouchableOpacity>
 
       {/* Quick Actions */}
-      <View className="px-6 pt-2 pb-6">
+      <View className="px-4 pt-2 pb-6">
         {/* Grid layout with 2 items per row */}
         {actionRows.map((row, rowIndex) => (
           <View key={rowIndex} className="flex-row justify-between mb-6">

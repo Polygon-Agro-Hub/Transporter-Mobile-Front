@@ -67,6 +67,12 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
   return (
     <View className="flex-1 bg-white">
+      <CustomHeader
+        title="Add a Complaint"
+        showBackButton={true}
+        showLanguageSelector={false}
+        navigation={navigation}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -75,15 +81,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <CustomHeader
-          title="Add a Complaint"
-          showBackButton={true}
-          showLanguageSelector={false}
-          navigation={navigation}
-        />
-
         {/* Content */}
-        <View className="px-6 pb-8">
+        <View className="px-4 pb-8">
           {/* Warning Icon */}
           <View className="items-center mb-8">
             <Image

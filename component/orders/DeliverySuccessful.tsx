@@ -55,7 +55,7 @@ const DeliverySuccessful: React.FC<DeliverySuccessfulProps> = ({
           </Text>
 
           {/* Continue Button */}
-          <View className="items-center px-6 mt-10">
+          <View className="items-center mt-10">
             <TouchableOpacity
               onPress={handleContinue}
               className="min-w-full py-4 rounded-full bg-[#F7CA21]"

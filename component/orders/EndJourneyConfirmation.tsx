@@ -35,8 +35,8 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <View className="flex-1 bg-white">
+      <ScrollView showsVerticalScrollIndicator={true}>
         <CustomHeader
           title="End of the Journey"
           showBackButton={true}
@@ -45,7 +45,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         />
 
         {/* Icon Section */}
-        <View className="items-center mb-6">
+        <View className="items-center my-6">
           <Image
             source={locationImage}
             className="w-40 h-40"
@@ -54,7 +54,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         </View>
 
         {/* Trouble Section */}
-        <View className="items-center px-6">
+        <View className="items-center px-4">
           <Text className="text-xl font-semibold text-black mb-1">
             Having trouble?
           </Text>
@@ -92,7 +92,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         </View>
 
         {/* Signature Section */}
-        <View className="items-center px-6 mb-10">
+        <View className="items-center px-4 mb-10">
           <Text className="text-lg font-semibold text-black mb-1">
             Ready to complete the order?
           </Text>
@@ -111,7 +111,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

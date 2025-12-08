@@ -53,6 +53,30 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       date: "Sent : At 11:00AM on Jun 2, 2026",
       status: "answered",
     },
+    {
+      id: "#DVR000012511001002",
+      title: "Finance Issue",
+      date: "Sent : At 11:00AM on Jun 2, 2026",
+      status: "waiting",
+    },
+    {
+      id: "#DVR000012511001001",
+      title: "Vehicle Repair Announcement",
+      date: "Sent : At 11:00AM on Jun 2, 2026",
+      status: "answered",
+    },
+    {
+      id: "#DVR000012511001002",
+      title: "Finance Issue",
+      date: "Sent : At 11:00AM on Jun 2, 2026",
+      status: "waiting",
+    },
+    {
+      id: "#DVR000012511001001",
+      title: "Vehicle Repair Announcement",
+      date: "Sent : At 11:00AM on Jun 2, 2026",
+      status: "answered",
+    },
   ];
 
   const onRefresh = () => {
@@ -69,21 +93,20 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
   return (
     <View className="flex-1 bg-white">
+      <CustomHeader
+        title="My Complaints"
+        showBackButton={true}
+        showLanguageSelector={false}
+        navigation={navigation}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <CustomHeader
-          title="My Complaints"
-          showBackButton={true}
-          showLanguageSelector={false}
-          navigation={navigation}
-        />
-
         {/* Complaints List */}
-        <View className="px-6 py-4">
+        <View className="px-4 py-4">
           {complaints.map((complaint) => {
             const isWaiting = complaint.status === "waiting";
 
@@ -111,7 +134,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 <View className="flex-row items-center justify-between">
                   {/* Status Badge */}
                   <View
-                    className={`flex-row items-center px-3 py-2 rounded-lg ${
+                    className={`flex-row items-center px-4 py-2 rounded-lg ${
                       isWaiting ? "bg-[#FFF3BF]" : "bg-[#FFF3BF]"
                     }`}
                   >
@@ -163,14 +186,14 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        className="absolute bottom-6 right-6 rounded-full "
+        className="absolute bottom-4 right-4 rounded-full "
         onPress={() => {
           navigation.navigate("AddComplaint");
         }}
       >
         <View className="w-16 h-16 items-center justify-center">
           <View className="w-16 h-16 rounded-full bg-black items-center justify-center">
-            <Feather name="plus" size={24} color="#fff" />
+            <Feather name="plus" size={32} color="#fff" />
           </View>
         </View>
       </TouchableOpacity>

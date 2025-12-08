@@ -208,8 +208,8 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
             {/* Scan Frame with Camera */}
             <View
               style={{
-                width: wp(70),
-                height: wp(70),
+                width: wp(80),
+                height: wp(80),
                 borderRadius: 24,
                 overflow: "hidden",
                 position: "relative",

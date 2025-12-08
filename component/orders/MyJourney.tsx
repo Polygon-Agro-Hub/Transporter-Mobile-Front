@@ -166,16 +166,15 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
   };
 
   return (
-    <View className="flex bg-black">
+    <View className="flex-1 bg-black">
+      <CustomHeader
+        title="My Journey"
+        showBackButton={true}
+        showLanguageSelector={false}
+        navigation={navigation}
+        dark={true}
+      />
       <ScrollView contentContainerStyle={{ paddingBottom: hp("0%") }}>
-        <CustomHeader
-          title="My Journey"
-          showBackButton={true}
-          showLanguageSelector={false}
-          navigation={navigation}
-          dark={true}
-        />
-
         {/* MAP IMAGE */}
         <View className="w-full relative">
           <Image
