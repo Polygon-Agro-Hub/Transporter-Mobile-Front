@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Platform,
   PermissionsAndroid,
   StatusBar,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -14,7 +16,10 @@ import { RootStackParamList } from "@/component/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Entypo, Ionicons } from "@expo/vector-icons";
 import { widthPercentageToDP as wp } from "react-native-responsive-screen";
-import AlertModal from "@/component/common/AlertModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { environment } from "@/environment/environment";
+import { AlertModal } from "../common/AlertModal";
 
 type QRScanNavigationProp = StackNavigationProp<RootStackParamList, "QRScan">;
 
@@ -27,17 +32,70 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanLineAnim] = useState(new Animated.Value(0));
+  const [loading, setLoading] = useState(false);
+
+  // Timer states for 4-second timeout
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Modal states
-  const [showAlreadyReturnedModal, setShowAlreadyReturnedModal] =
-    useState(false);
-  const [showSuccessfulReturnModal, setShowSuccessfulReturnModal] =
-    useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState<string | React.ReactElement>(
+    ""
+  );
+  const [modalType, setModalType] = useState<"error" | "success">("error");
 
   useEffect(() => {
     checkCameraPermission();
     startScanAnimation();
+    startTimeoutTimer();
+
+    return () => {
+      // Clean up timer on unmount
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, []);
+
+  // Start 4-second timeout timer
+  const startTimeoutTimer = () => {
+    // Clear existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    // Set new timer for 4 seconds
+    timerRef.current = setTimeout(() => {
+      if (!scanned && !loading) {
+        setModalTitle("Scan Timeout");
+        setModalMessage(
+          "The QR code is not identified. Please check and try again."
+        );
+        setModalType("error");
+        setShowTimeoutModal(true);
+      }
+    }, 4000);
+  };
+
+  // Reset timer and scanning
+  const resetScanning = () => {
+    // Clear timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    // Reset states
+    setScanned(false);
+    setShowTimeoutModal(false);
+    setShowErrorModal(false);
+    setShowSuccessModal(false);
+
+    // Restart timer
+    startTimeoutTimer();
+  };
 
   const checkCameraPermission = async () => {
     if (Platform.OS === "android") {
@@ -74,41 +132,259 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
     ).start();
   };
 
-  const handleBarCodeScanned = ({
+  // Extract invoice number from QR data
+  const extractInvoiceNumber = (qrData: string): string | null => {
+    try {
+      console.log("Raw QR Data:", qrData);
+
+      // Method 1: Check if QR contains invoice pattern (INV followed by numbers)
+      const invoicePattern = /INV[0-9]+/gi;
+      const match = qrData.match(invoicePattern);
+      if (match) {
+        console.log("Found invoice pattern:", match[0]);
+        return match[0];
+      }
+
+      // Method 2: Check if QR is JSON containing invoice
+      if (qrData.startsWith("{") && qrData.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(qrData);
+          console.log("Parsed JSON:", parsed);
+          if (
+            parsed.invoiceNo ||
+            parsed.invNo ||
+            parsed.invoiceNumber ||
+            parsed.invoice
+          ) {
+            const invoice =
+              parsed.invoiceNo ||
+              parsed.invNo ||
+              parsed.invoiceNumber ||
+              parsed.invoice;
+            console.log("Found invoice in JSON:", invoice);
+            return invoice;
+          }
+        } catch (e) {
+          console.log("Not valid JSON");
+        }
+      }
+
+      // Method 3: Check if it's just the invoice number (alphanumeric, 6-20 chars)
+      const simplePattern = /^[A-Z0-9]{6,20}$/;
+      if (simplePattern.test(qrData)) {
+        console.log("Simple pattern matched:", qrData);
+        return qrData;
+      }
+
+      // Method 4: Try to extract any alphanumeric code (6+ characters)
+      const alphanumericPattern = /[A-Z0-9]{6,}/gi;
+      const alphanumericMatches = qrData.match(alphanumericPattern);
+      if (alphanumericMatches && alphanumericMatches.length > 0) {
+        console.log("Alphanumeric matches:", alphanumericMatches);
+        // Return the longest match (likely to be the invoice)
+        const longestMatch = alphanumericMatches.reduce((a, b) =>
+          a.length > b.length ? a : b
+        );
+        return longestMatch;
+      }
+
+      console.log("No invoice number found in QR data");
+      return null;
+    } catch (error) {
+      console.error("Error extracting invoice:", error);
+      return null;
+    }
+  };
+
+  // API call to assign order
+  const assignOrderToDriver = async (invoiceNo: string) => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Construct the full API URL using environment
+      const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
+      console.log("Making API call to:", apiUrl);
+      console.log("Invoice:", invoiceNo);
+      console.log("Token:", token.substring(0, 20) + "...");
+
+      const response = await axios.post(
+        apiUrl,
+        {
+          invNo: invoiceNo,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log("API Response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Server responded with error
+          throw {
+            message: error.response.data?.message || "Failed to assign order",
+            status: error.response.status,
+            data: error.response.data,
+          };
+        } else if (error.request) {
+          // Request made but no response
+          throw new Error("Network error. Please check your connection.");
+        } else {
+          // Other errors
+          throw new Error(error.message || "Failed to assign order");
+        }
+      } else {
+        throw new Error("An unexpected error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBarCodeScanned = async ({
     type,
     data,
   }: {
     type: string;
     data: string;
   }) => {
-    if (!scanned) {
-      setScanned(true);
+    if (scanned || loading) return;
 
-      // Check if this order was already returned
-      const isAlreadyReturned = data.includes("251201001");
+    setScanned(true);
 
-      if (isAlreadyReturned) {
-        setShowAlreadyReturnedModal(true);
-      } else {
-        setShowSuccessfulReturnModal(true);
+    // Clear the 4-second timer when scan is detected
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    try {
+      // Extract invoice number from QR
+      const invoiceNo = extractInvoiceNumber(data);
+
+      if (!invoiceNo) {
+        setModalTitle("Invalid QR Code");
+        setModalMessage(
+          "The scanned QR code does not contain a valid invoice number."
+        );
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
       }
+
+      console.log("Extracted invoice:", invoiceNo);
+
+      // Call API to assign order
+      const result = await assignOrderToDriver(invoiceNo);
+
+      if (result.status === "success") {
+        setModalTitle("Successful!");
+        // Create rich text with bold invoice number
+        setModalMessage(
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+              Order:{" "}
+              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
+              been successfully assigned to you.
+            </Text>
+          </View>
+        );
+        setModalType("success");
+        setShowSuccessModal(true);
+      } else {
+        // Set modal title based on the specific error message from backend
+        let title = "Error";
+        const message = result.message || "Failed to assign order";
+
+        if (message.includes("already in your target list")) {
+          title = "Already got this!";
+        } else if (
+          message.includes("already been assigned to another driver")
+        ) {
+          title = "Order Unavailable!";
+        }
+
+        setModalTitle(title);
+        setModalMessage(message);
+        setModalType("error");
+        setShowErrorModal(true);
+      }
+    } catch (error: any) {
+      console.error("Error processing QR scan:", error);
+
+      // Handle specific error cases
+      let title = "Error";
+      let message = error.message || "Failed to process QR code";
+      let type: "error" | "success" = "error";
+
+      // Set modal title based on the specific error message from backend
+      if (message.includes("already in your target list")) {
+        title = "Already got this!";
+      } else if (message.includes("already been assigned to another driver")) {
+        title = "Order Unavailable!";
+      } else if (
+        message.includes("not found") ||
+        message.includes("Invoice number not found")
+      ) {
+        title = "Invoice Not Found";
+        message = "The invoice number was not found in the system.";
+      } else if (message.includes("Network error")) {
+        title = "Network Error";
+        message = "Please check your internet connection and try again.";
+      } else if (message.includes("Unauthorized")) {
+        title = "Session Expired";
+        message = "Please login again to continue.";
+      } else if (error.status === 404) {
+        title = "Server Error";
+        message = "The server endpoint was not found. Please contact support.";
+      } else if (error.status === 500) {
+        title = "Server Error";
+        message = "Internal server error. Please try again later.";
+      }
+
+      setModalTitle(title);
+      setModalMessage(message);
+      setModalType(type);
+      setShowErrorModal(true);
     }
   };
 
-  const handleAlreadyReturnedClose = () => {
-    setShowAlreadyReturnedModal(false);
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
+    resetScanning();
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
     setScanned(false);
-    // Navigate to ReturnOrders after modal closes
-    // navigation.navigate("ReturnOrders");
     navigation.goBack();
   };
 
-  const handleSuccessfulReturnClose = () => {
-    setShowSuccessfulReturnModal(false);
-    setScanned(false);
-    // Navigate to ReturnOrders after modal closes
-    //  navigation.navigate("ReturnOrders");
-    navigation.goBack();
+  const handleTimeoutModalClose = () => {
+    setShowTimeoutModal(false);
+    resetScanning();
+  };
+
+  const handleTimeoutRescan = () => {
+    setShowTimeoutModal(false);
+    resetScanning();
   };
 
   if (hasPermission === null) {
@@ -159,24 +435,51 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
     <View className="flex-1">
       <StatusBar barStyle="light-content" />
 
-      {/* Already Returned Modal */}
+      {/* Loading Overlays */}
+      {loading && (
+        <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70 z-50 justify-center items-center">
+          <View className="bg-black/80 p-6 rounded-xl items-center">
+            <ActivityIndicator size="large" color="#F7CA21" />
+            <Text className="text-white text-lg font-semibold mt-4">
+              Assigning Order...
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Timeout Modal - Shows after 4 seconds if no scan (with Re-Scan button) */}
       <AlertModal
-        visible={showAlreadyReturnedModal}
-        title="Already Returned!"
-        message="You have already returned this order to the centre."
+        visible={showTimeoutModal}
+        title="Scan Timeout"
+        message="The QR code is not identified. Please check and try again."
         type="error"
-        onClose={handleAlreadyReturnedClose}
+        onClose={handleTimeoutModalClose}
+        showRescanButton={true}
+        onRescan={handleTimeoutRescan}
         duration={4000}
         autoClose={true}
       />
 
-      {/* Successful Return Modal */}
+      {/* Error Modal - For API errors (without Re-Scan button) */}
       <AlertModal
-        visible={showSuccessfulReturnModal}
-        title="Successful!"
-        message="Order: 251201001 has been successfully returned to the centre."
-        type="success"
-        onClose={handleSuccessfulReturnClose}
+        visible={showErrorModal}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+        onClose={handleErrorModalClose}
+        showRescanButton={false}
+        duration={4000}
+        autoClose={true}
+      />
+
+      {/* Success Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+        onClose={handleSuccessModalClose}
+        showRescanButton={false}
         duration={4000}
         autoClose={true}
       />
@@ -189,13 +492,14 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               className="items-start"
+              disabled={loading}
             >
               <Entypo
                 name="chevron-left"
                 size={25}
                 color="black"
                 style={{
-                  backgroundColor: "#F7FAFF",
+                  backgroundColor: loading ? "#666" : "#F7FAFF",
                   borderRadius: 50,
                   padding: wp(2.5),
                 }}
@@ -228,7 +532,9 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
                 barcodeScannerSettings={{
                   barcodeTypes: ["qr"],
                 }}
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                onBarcodeScanned={
+                  scanned || loading ? undefined : handleBarCodeScanned
+                }
               />
 
               {/* Animated Scan Line */}
@@ -240,6 +546,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
                   transform: [{ translateY: scanLineTranslateY }],
                   position: "relative",
                   zIndex: 10,
+                  opacity: scanned || loading ? 0 : 1,
                 }}
               />
 

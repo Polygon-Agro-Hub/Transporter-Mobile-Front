@@ -7,25 +7,30 @@ import {
   Animated,
   TouchableOpacity,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
 
+// Alert Modal with Re-Scan button option
 interface AlertModalProps {
   visible: boolean;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   type?: "success" | "error";
   onClose: () => void;
+  showRescanButton?: boolean;
+  onRescan?: () => void;
   duration?: number;
   autoClose?: boolean;
 }
 
-const AlertModal: React.FC<AlertModalProps> = ({
+export const AlertModal: React.FC<AlertModalProps> = ({
   visible,
   title,
   message,
   type = "error",
   onClose,
+  showRescanButton = false,
+  onRescan,
   duration = 4000,
   autoClose = true,
 }) => {
@@ -76,6 +81,16 @@ const AlertModal: React.FC<AlertModalProps> = ({
     }
   };
 
+  // Function to render message (handles both string and ReactNode)
+  const renderMessage = () => {
+    if (typeof message === "string") {
+      return (
+        <Text className="text-center text-[#4E4E4E] mb-5 mt-2">{message}</Text>
+      );
+    }
+    return message;
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View className="flex-1 bg-black/50 justify-center items-center p-4">
@@ -90,17 +105,25 @@ const AlertModal: React.FC<AlertModalProps> = ({
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="font-bold text-lg mb-4 text-center">
-            {title}
-          </Text>
+          <Text className="font-bold text-lg mb-4 text-center">{title}</Text>
 
           {/* Icon/Animation - based on type */}
           {getContent()}
 
-          {/* Message */}
-          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-            {message}
-          </Text>
+          {/* Message - supports rich text */}
+          {renderMessage()}
+
+          {/* Re-Scan Button (only shown when showRescanButton is true) */}
+          {showRescanButton && onRescan && (
+            <TouchableOpacity
+              onPress={onRescan}
+              activeOpacity={0.8}
+              className="bg-[#F7CA21] py-3 px-6 rounded-full mb-4 flex-row items-center justify-center space-x-2 shadow-md"
+            >
+              <FontAwesome5 name="undo" size={18} color="black" />
+              <Text className="text-black font-bold text-base">Re-Scan</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Loading Bar - only show if autoClose is true */}
           {autoClose && (
@@ -126,5 +149,3 @@ const AlertModal: React.FC<AlertModalProps> = ({
     </Modal>
   );
 };
-
-export default AlertModal;
