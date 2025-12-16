@@ -27,14 +27,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useSelector } from "react-redux";
-import { selectUserProfile } from "../../store/authSlice"; // Add this import
+import { selectUserProfile } from "../../store/authSlice";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
   "ComplaintsList"
 >;
-
-
 
 interface ComplaintsListProps {
   navigation: ComplaintsListNavigationProp;
@@ -154,7 +152,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
   // Get user's full name
   const getUserName = () => {
-    const firstName =  userProfile?.firstName || "User";
+    const firstName = userProfile?.firstName || "User";
     const lastName = userProfile?.lastName || "";
     return `${firstName} ${lastName}`.trim();
   };
@@ -197,7 +195,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
               <Text className="text-gray-500 text-base">
                 No complaints found
               </Text>
-            
             </View>
           ) : (
             complaints.map((complaint) => {
@@ -310,10 +307,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
               <AntDesign name="close" size={16} color="#000" />
             </TouchableOpacity>
 
-            <ScrollView
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-            >
+            <ScrollView showsVerticalScrollIndicator={true} bounces={true}>
               <View className="p-6 pt-14">
                 {/* Header with User Name from Redux */}
                 <Text className="text-lg font-bold text-gray-900 mb-1">
@@ -326,11 +320,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   resolved.
                 </Text>
 
-            
-
                 {/* Admin Reply */}
                 <View className=" mb-2">
-                  
                   <Text className="text-sm text-gray-800 leading-6">
                     {selectedComplaint?.reply || "No reply provided yet."}
                   </Text>
@@ -354,8 +345,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                     {formatReplyDate(selectedComplaint?.replyTime || null)}
                   </Text>
                 </View>
-
-              
               </View>
             </ScrollView>
           </View>

@@ -55,7 +55,6 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const [items, setItems] = useState<DropdownItem[]>([]);
   const [description, setDescription] = useState("");
 
-  // Fetch categories when component mounts
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -88,10 +87,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       console.error("Error fetching categories:", error);
-      showAlert(
-        "Error",
-        "Failed to load categories. Please try again later."
-      );
+      showAlert("Error", "Failed to load categories. Please try again later.");
     } finally {
       setCategoriesLoading(false);
     }
@@ -99,7 +95,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchCategories(); // Refresh categories on pull-to-refresh
+    fetchCategories();
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
@@ -197,7 +193,9 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
             {categoriesLoading ? (
               <View className="bg-[#F3F3F3] border border-[#A4AAB7] rounded-3xl px-4 py-3 flex-row items-center justify-center min-h-[50px]">
                 <ActivityIndicator size="small" color="#000000" />
-                <Text className="ml-2 text-gray-600">Loading categories...</Text>
+                <Text className="ml-2 text-gray-600">
+                  Loading categories...
+                </Text>
               </View>
             ) : items.length > 0 ? (
               <DropDownPicker
