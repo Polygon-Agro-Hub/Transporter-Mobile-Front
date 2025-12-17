@@ -9,9 +9,12 @@ export type RootStackParamList = {
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
   ReturnOrders: undefined;
-  QRScan: undefined;
-  VerifyOrderByQR: {
+  AssignOrderQR: undefined;
+    VerifyOrderQR: {
     invNo: string;
+    orderId: number;
+    allOrderIds: number[]; 
+    totalToScan: number; 
   };
   Jobs: undefined;
   OrderDetails: {
@@ -20,7 +23,9 @@ export type RootStackParamList = {
   OrderDetailsAfterJourney: {
     orderIds: number[];
   };
-  EndJourneyConfirmation: undefined;
+  EndJourneyConfirmation: {
+    orderIds: number[];
+  };
   MyJourney: {
     orderIds: number[];
   };

@@ -17,27 +17,41 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Entypo, Ionicons } from "@expo/vector-icons";
 import { widthPercentageToDP as wp } from "react-native-responsive-screen";
 import { AlertModal } from "../common/AlertModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type VerifyOrderByQRNavigationProp = StackNavigationProp<
+type VerifyOrderQRNavigationProp = StackNavigationProp<
   RootStackParamList,
-  "VerifyOrderByQR"
+  "VerifyOrderQR"
 >;
 
-interface VerifyOrderByQRProps {
-  navigation: VerifyOrderByQRNavigationProp;
-  route: RouteProp<RootStackParamList, "VerifyOrderByQR">;
+interface VerifyOrderQRProps {
+  navigation: VerifyOrderQRNavigationProp;
+  route: RouteProp<RootStackParamList, "VerifyOrderQR">;
 }
 
-const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
+// Define interface for stored scan data
+interface ScanData {
+  orderId: number;
+  invNo: string;
+  scannedAt: string;
+}
+
+const SCAN_STORAGE_KEY = "@order_qr_scans";
+
+const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
   navigation,
   route,
 }) => {
-  const { invNo } = route.params;
+  const { invNo, orderId, allOrderIds, totalToScan } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
+
+  // Scan tracking states
+  const [completedScans, setCompletedScans] = useState<number[]>([]);
+  const [scanCount, setScanCount] = useState(0);
 
   // Timer states for 4-second timeout
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
@@ -56,6 +70,7 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
     checkCameraPermission();
     startScanAnimation();
     startTimeoutTimer();
+    loadCompletedScans();
 
     return () => {
       // Clean up timer on unmount
@@ -64,6 +79,97 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
       }
     };
   }, []);
+
+  // Load previously completed scans
+  const loadCompletedScans = async () => {
+    try {
+      const storedScans = await AsyncStorage.getItem(SCAN_STORAGE_KEY);
+      if (storedScans) {
+        const scans: ScanData[] = JSON.parse(storedScans);
+        // Filter scans for current order IDs
+        const relevantScans = scans.filter((scan) =>
+          allOrderIds.includes(scan.orderId)
+        );
+        const completedOrderIds = relevantScans.map((scan) => scan.orderId);
+        setCompletedScans(completedOrderIds);
+        setScanCount(completedOrderIds.length);
+      }
+    } catch (error) {
+      console.error("Error loading completed scans:", error);
+    }
+  };
+
+  // Save a successful scan
+  const saveScan = async (scannedInvoice: string) => {
+    try {
+      const scanData: ScanData = {
+        orderId,
+        invNo: scannedInvoice,
+        scannedAt: new Date().toISOString(),
+      };
+
+      // Get existing scans
+      const storedScans = await AsyncStorage.getItem(SCAN_STORAGE_KEY);
+      let allScans: ScanData[] = [];
+
+      if (storedScans) {
+        allScans = JSON.parse(storedScans);
+        // Remove any existing scan for this orderId
+        allScans = allScans.filter((scan) => scan.orderId !== orderId);
+      }
+
+      // Add new scan
+      allScans.push(scanData);
+
+      // Save back to storage
+      await AsyncStorage.setItem(SCAN_STORAGE_KEY, JSON.stringify(allScans));
+
+      // Update state
+      const newCompletedScans = [...completedScans, orderId];
+      setCompletedScans(newCompletedScans);
+      setScanCount(newCompletedScans.length);
+
+      return true;
+    } catch (error) {
+      console.error("Error saving scan:", error);
+      return false;
+    }
+  };
+
+  // Check if all scans are completed
+  const checkAllScansCompleted = () => {
+    return allOrderIds.every((id) => completedScans.includes(id));
+  };
+
+  // Navigate to confirmation if all scans are done
+  const navigateIfAllScanned = () => {
+    if (checkAllScansCompleted()) {
+      // Clear stored scans for these orders after a short delay
+      setTimeout(async () => {
+        try {
+          const storedScans = await AsyncStorage.getItem(SCAN_STORAGE_KEY);
+          if (storedScans) {
+            const allScans: ScanData[] = JSON.parse(storedScans);
+            // Remove scans for these order IDs
+            const remainingScans = allScans.filter(
+              (scan) => !allOrderIds.includes(scan.orderId)
+            );
+            await AsyncStorage.setItem(
+              SCAN_STORAGE_KEY,
+              JSON.stringify(remainingScans)
+            );
+          }
+        } catch (error) {
+          console.error("Error clearing scans:", error);
+        }
+      }, 1000);
+
+      // Navigate to confirmation screen
+      navigation.replace("EndJourneyConfirmation", {
+        orderIds: allOrderIds,
+      });
+    }
+  };
 
   // Start 4-second timeout timer
   const startTimeoutTimer = () => {
@@ -205,14 +311,14 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
   // Verify scanned QR against provided invNo
   const verifyQRCode = async (scannedInvoice: string) => {
     setLoading(true);
-    
+
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     try {
       console.log("Comparing:", {
         invoiceIdFromParams: invNo,
-        scannedInvoice: scannedInvoice
+        scannedInvoice: scannedInvoice,
       });
 
       // Normalize both invoice IDs for comparison
@@ -225,7 +331,7 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
 
       console.log("Normalized comparison:", {
         param: normalizedParam,
-        scanned: normalizedScanned
+        scanned: normalizedScanned,
       });
 
       // Check if they match
@@ -233,13 +339,13 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
         return {
           status: "success",
           message: "QR code verified successfully",
-          match: true
+          match: true,
         };
       } else {
         return {
           status: "error",
           message: "You have scanned the wrong package.",
-          match: false
+          match: false,
         };
       }
     } catch (error) {
@@ -247,7 +353,7 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
       return {
         status: "error",
         message: "An error occurred during verification",
-        match: false
+        match: false,
       };
     } finally {
       setLoading(false);
@@ -291,22 +397,67 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
       const result = await verifyQRCode(scannedInvoiceNo);
 
       if (result.status === "success" && result.match) {
+        // Check if this order was already scanned
+        if (completedScans.includes(orderId)) {
+          setModalTitle("Already Scanned");
+          setModalMessage(
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+                Package:{" "}
+                <Text className="font-bold text-[#000000]">{invNo}</Text> has
+                already been scanned.
+              </Text>
+              <Text className="text-center text-[#4E4E4E] mb-5">
+                Scanned: {scanCount} of {totalToScan}
+              </Text>
+            </View>
+          );
+          setModalType("success");
+          setShowSuccessModal(true);
+          navigateIfAllScanned();
+          return;
+        }
+
+        // Save the successful scan
+        const saveSuccess = await saveScan(scannedInvoiceNo);
+
+        if (!saveSuccess) {
+          setModalTitle("Error");
+          setModalMessage("Failed to save scan. Please try again.");
+          setModalType("error");
+          setShowErrorModal(true);
+          return;
+        }
+
+        const newScanCount = scanCount + 1;
+
         setModalTitle("Successful!");
-        // Create rich text with bold invoice number
+        // Create rich text with progress
         setModalMessage(
           <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Package:{" "}
-              <Text className="font-bold text-[#000000]">{invNo}</Text> has
-              been successfully verified.
+            <Text className="text-center text-[#4E4E4E] mb-3 mt-2">
+              Package: <Text className="font-bold text-[#000000]">{invNo}</Text>{" "}
+              has been successfully verified.
             </Text>
           </View>
         );
         setModalType("success");
         setShowSuccessModal(true);
+
+        // Check if all scans are completed
+        if (newScanCount === totalToScan) {
+          // Navigate after a short delay to show success message
+          setTimeout(() => {
+            navigation.replace("EndJourneyConfirmation", {
+              orderIds: allOrderIds,
+            });
+          }, 2000);
+        }
       } else {
         setModalTitle("Verification Failed");
-        setModalMessage(result.message || "You have scanned the wrong package.");
+        setModalMessage(
+          result.message || "You have scanned the wrong package."
+        );
         setModalType("error");
         setShowErrorModal(true);
       }
@@ -327,8 +478,10 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    // Navigate back to previous screen on success
-    navigation.goBack();
+    // If not all scans are completed, go back to scan next QR
+    if (!checkAllScansCompleted()) {
+      navigation.goBack();
+    }
   };
 
   const handleTimeoutModalClose = () => {
@@ -459,14 +612,6 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
                 }}
               />
             </TouchableOpacity>
-            
-            {/* Screen Title */}
-            <View className="absolute left-0 right-0 items-center">
-              <Text className="text-white font-bold text-lg">Verify Package</Text>
-              <Text className="text-gray-300 text-sm mt-1">
-                Scan QR code to verify package #{invNo}
-              </Text>
-            </View>
           </View>
 
           {/* Scan Frame Container */}
@@ -634,16 +779,6 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
                 />
               </View>
             </View>
-
-            {/* Instruction Text */}
-            <View className="mt-8 px-8">
-              <Text className="text-white text-center text-base">
-                Please scan the QR code on the package to verify it matches
-              </Text>
-              <Text className="text-[#F7CA21] text-center text-lg font-bold mt-2">
-                Package #{invNo}
-              </Text>
-            </View>
           </View>
         </View>
       </View>
@@ -651,4 +786,4 @@ const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
   );
 };
 
-export default VerifyOrderByQR;
+export default VerifyOrderQR;

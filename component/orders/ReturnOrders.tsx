@@ -228,7 +228,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
       {/* Floating Action Button */}
       <TouchableOpacity
         className="absolute bottom-4 right-4 bg-[#F7CA21] w-16 h-16 rounded-full items-center justify-center shadow-lg"
-        onPress={() => navigation.navigate("QRScan")}
+        onPress={() => navigation.navigate("AssignOrderQR")}
       >
         {/* <AntDesign name="plus" size={24} color="white" /> */}
         <Image
