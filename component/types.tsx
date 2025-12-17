@@ -10,6 +10,9 @@ export type RootStackParamList = {
   Profile: undefined;
   ReturnOrders: undefined;
   QRScan: undefined;
+  VerifyOrderByQR: {
+    invNo: string;
+  };
   Jobs: undefined;
   OrderDetails: {
     orderIds: number[];
