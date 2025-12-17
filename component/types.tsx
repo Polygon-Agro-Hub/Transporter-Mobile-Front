@@ -14,8 +14,13 @@ export type RootStackParamList = {
   OrderDetails: {
     orderIds: number[];
   };
+  OrderDetailsAfterJourney: {
+    orderIds: number[];
+  };
   EndJourneyConfirmation: undefined;
-  MyJourney: undefined;
+  MyJourney: {
+    orderIds: number[];
+  };
   SignatureScreen: undefined;
   DeliverySuccessful: undefined;
 };

@@ -40,6 +40,8 @@ import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
 import MyJourney from "@/component/orders/MyJourney";
 import SignatureScreen from "@/component/orders/SignatureScreen";
 import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
+import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
+import { RootStackParamList } from "@/component/types";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -56,7 +58,7 @@ NativeWindStyleSheet.setOutput({
   allowFontScaling: false,
 };
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
 
@@ -155,6 +157,7 @@ function AppContent() {
              <Stack.Screen name="QRScan" component={QRScan}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
+            <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
             <Stack.Screen name="MyJourney" component={MyJourney} />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
