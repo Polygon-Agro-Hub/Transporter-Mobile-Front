@@ -162,6 +162,15 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const dataToShow =
     activeTab === "todo" ? getTodoDisplayOrders() : getCompletedDisplayOrders();
 
+  const navigateToOrderDetails = (orderData: DriverOrder) => {
+    // Get order IDs array - use allOrderIds if available, otherwise create array with single orderId
+    const orderIds = orderData.allOrderIds || [orderData.orderId];
+
+    navigation.navigate("OrderDetails", {
+      orderIds: orderIds,
+    });
+  };
+
   if (loading && !refreshing) {
     return (
       <View className="flex-1 bg-white">
@@ -286,6 +295,16 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                   ? "bg-white border-[#FF0000]"
                   : "bg-white border-[#A4AAB7]"
               }`}
+              onPress={() => {
+                if (activeTab === "todo") {
+                  const orderIds = item.orderData.allOrderIds || [
+                    item.orderData.orderId,
+                  ];
+                  navigation.navigate("OrderDetails", {
+                    orderIds: orderIds,
+                  });
+                }
+              }}
             >
               <View className="flex-1">
                 <View className="flex-row items-center">
