@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
 import {
@@ -18,15 +20,20 @@ import {
 import CustomHeader from "@/component/common/CustomHeader";
 import Entypo from "@expo/vector-icons/Entypo";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { environment } from "@/environment/environment";
 
 type MyJourneyNavigationProp = StackNavigationProp<
   RootStackParamList,
   "MyJourney"
 >;
 
+type MyJourneyRouteProp = RouteProp<RootStackParamList, "MyJourney">;
+
 interface MyJourneyProps {
   navigation: MyJourneyNavigationProp;
-  route?: any; // Add route prop to receive trip data
+  route: MyJourneyRouteProp;
 }
 
 interface TripData {
@@ -40,8 +47,22 @@ interface TripData {
   distanceToGo?: string;
 }
 
+interface OrderDetails {
+  orderId: number;
+  customerName: string;
+  scheduleTime: string;
+  packCount: number;
+  address: string;
+  payment: string;
+}
+
 const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
-  // Simulate trip data from backend
+  const { orderIds } = route.params;
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<OrderDetails[]>([]);
+  const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
+
+  // Simulate trip data from backend (you can replace this with real data)
   const [todoJobs, setTodoJobs] = useState<TripData[]>([
     {
       id: "01",
@@ -71,26 +92,81 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
     "not_started" | "starting" | "in_progress"
   >("not_started");
 
-  // Initialize with trip from route or find first pending trip
+  // Fetch order details when component mounts
   useEffect(() => {
-    if (route?.params?.tripId) {
-      const trip = todoJobs.find((job) => job.id === route.params.tripId);
-      if (trip) {
-        setCurrentTrip(trip);
-        if (trip.status === "Started") {
-          setJourneyStatus("starting");
-        } else if (trip.status === "InProgress") {
-          setJourneyStatus("in_progress");
+    if (orderIds && orderIds.length > 0) {
+      fetchOrderDetails();
+    }
+    
+    // Initialize with first pending trip
+    const pendingTrip = todoJobs.find((job) => job.status === "Pending");
+    if (pendingTrip) {
+      setCurrentTrip(pendingTrip);
+    }
+  }, [orderIds]);
+
+  const fetchOrderDetails = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        navigation.navigate("Login");
+        return;
+      }
+
+      const orderIdsString = Array.isArray(orderIds)
+        ? orderIds.join(",")
+        : String(orderIds);
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/order/get-order-user-details`,
+        {
+          params: { orderIds: orderIdsString },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.status === "success") {
+        const data = response.data.data;
+        if (data.orders && data.orders.length > 0) {
+          // Transform API data to match your TripData structure
+          const formattedOrders: OrderDetails[] = data.orders.map((order: any, index: number) => ({
+            orderId: order.orderId,
+            customerName: data.user?.firstName + " " + data.user?.lastName || "Customer",
+            scheduleTime: order.sheduleTime || "Not Scheduled",
+            packCount: 1, // You might need to adjust this based on your data
+            address: data.user?.address || "Address not specified",
+            payment: `Cash : ${order.pricing || "0.00"}`,
+          }));
+          
+          setOrders(formattedOrders);
+          
+          // Update todoJobs with real data
+          if (formattedOrders.length > 0) {
+            const updatedJobs = formattedOrders.map((order, index) => ({
+              id: (index + 1).toString().padStart(2, "0"),
+              name: order.customerName,
+              time: order.scheduleTime,
+              count: order.packCount,
+              status: "Pending" as const,
+              address: order.address,
+              payment: order.payment,
+              distanceToGo: `${Math.floor(Math.random() * 5) + 1}km`, // Random distance for demo
+            }));
+            
+            setTodoJobs(updatedJobs);
+            setCurrentTrip(updatedJobs[0]);
+          }
         }
       }
-    } else {
-      // Find first pending trip
-      const pendingTrip = todoJobs.find((job) => job.status === "Pending");
-      if (pendingTrip) {
-        setCurrentTrip(pendingTrip);
-      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+      Alert.alert("Error", "Failed to load order details");
+    } finally {
+      setLoading(false);
     }
-  }, [route?.params?.tripId]);
+  };
 
   // Function to start journey
   const handleStartJourney = () => {
@@ -104,12 +180,11 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
         {
           text: "Start",
           onPress: () => {
-            // Update trip status
             const updatedJobs = todoJobs.map((job) =>
               job.id === currentTrip.id
                 ? { ...job, status: "Started" as const }
                 : job
-            ) as TripData[];
+            );
             setTodoJobs(updatedJobs);
             setCurrentTrip((prev) =>
               prev ? { ...prev, status: "Started" as const } : null
@@ -125,12 +200,11 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
   const handleContinueJourney = () => {
     if (!currentTrip) return;
 
-    // Update to in-progress
     const updatedJobs = todoJobs.map((job) =>
       job.id === currentTrip.id
         ? { ...job, status: "InProgress" as const }
         : job
-    ) as TripData[];
+    );
     setTodoJobs(updatedJobs);
     setCurrentTrip((prev) =>
       prev ? { ...prev, status: "InProgress" as const } : null
@@ -140,30 +214,55 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
 
   // Function to end journey
   const handleEndJourney = () => {
-    navigation.navigate("EndJourneyConfirmation" as any, {
-      tripId: currentTrip?.id,
-      tripName: currentTrip?.name,
-      onConfirm: () => {
-        // Mark trip as completed
-        const updatedJobs = todoJobs.map((job) =>
-          job.id === currentTrip?.id
-            ? { ...job, status: "Completed" as const }
-            : job
-        ) as TripData[];
-        setTodoJobs(updatedJobs);
-        setCurrentTrip(null);
-        setJourneyStatus("not_started");
+    if (!currentTrip) return;
 
-        // Find next pending trip
-        const nextPendingTrip = updatedJobs.find(
-          (job) => job.status === "Pending"
-        ) as TripData | undefined;
-        if (nextPendingTrip) {
-          setCurrentTrip(nextPendingTrip);
-        }
-      },
-    });
+    // Find next trip
+    const currentIndex = todoJobs.findIndex(job => job.id === currentTrip.id);
+    const nextTrip = currentIndex < todoJobs.length - 1 ? todoJobs[currentIndex + 1] : null;
+
+    // Mark current trip as completed
+    const updatedJobs = todoJobs.map((job) =>
+      job.id === currentTrip.id
+        ? { ...job, status: "Completed" as const }
+        : job
+    );
+    
+    setTodoJobs(updatedJobs);
+    
+    if (nextTrip) {
+      // If there's another trip, move to it
+      setCurrentTrip(nextTrip);
+      setJourneyStatus("not_started");
+    } else {
+      // If this was the last trip, navigate to OrderDetailsAfterJourney
+      navigation.navigate("OrderDetailsAfterJourney", { orderIds });
+      setCurrentTrip(null);
+      setJourneyStatus("not_started");
+    }
   };
+
+  // Function to navigate directly to OrderDetailsAfterJourney (for testing)
+  const handleGoToAfterJourney = () => {
+    navigation.navigate("OrderDetailsAfterJourney", { orderIds });
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-black">
+        <CustomHeader
+          title="My Journey"
+          showBackButton={true}
+          showLanguageSelector={false}
+          navigation={navigation}
+          dark={true}
+        />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#F7CA21" />
+          <Text className="text-white mt-4">Loading journey details...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-black">
@@ -196,7 +295,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
       </ScrollView>
 
       {/* BOTTOM CARD - ABSOLUTE */}
-      {currentTrip && (
+      {currentTrip ? (
         <View className="mx-6">
           <View
             className="absolute w-full pb-4"
@@ -220,7 +319,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                         </Text>
                       </Text>
                       <Text className="text-sm text-black mt-1 text-center font-semibold">
-                        No: #{currentTrip.id}
+                        No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
                       </Text>
                     </View>
                   </View>
@@ -252,7 +351,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                         </Text>
                       </Text>
                       <Text className="text-sm text-black mt-1 text-center font-semibold">
-                        No: #{currentTrip.id}
+                        No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
                       </Text>
                     </View>
                   </View>
@@ -338,6 +437,42 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                 </View>
               </>
             )}
+          </View>
+        </View>
+      ) : (
+        // No current trip - Show "Go to After Journey" button
+        <View className="mx-6">
+          <View
+            className="absolute w-full pb-4"
+            style={{
+              bottom: 0,
+            }}
+          >
+            <View
+              className="bg-white w-full rounded-2xl shadow-lg px-5 py-4 mb-3"
+              style={{ elevation: 4 }}
+            >
+              <View className="flex-row justify-center items-center mb-4">
+                <View>
+                  <Text className="text-sm text-black text-center font-semibold">
+                    All Orders Completed!
+                  </Text>
+                  <Text className="text-xs text-gray-600 mt-1 text-center">
+                    Ready for scanning {orders.length} order{orders.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Go to After Journey Button */}
+              <TouchableOpacity
+                onPress={handleGoToAfterJourney}
+                className="bg-[#F7CA21] py-4 rounded-full items-center justify-center"
+              >
+                <Text className="text-base font-semibold text-black">
+                  Go to Scanning ({orders.length} orders)
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}

@@ -9,12 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import {
-  Ionicons,
-  MaterialIcons,
-  FontAwesome5,
-  FontAwesome6,
-} from "@expo/vector-icons";
+import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
@@ -24,16 +19,19 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 
-type OrderDetailsNavigationProp = StackNavigationProp<
+type OrderDetailsAfterJourneyNavigationProp = StackNavigationProp<
   RootStackParamList,
-  "OrderDetails"
+  "OrderDetailsAfterJourney"
 >;
 
-type OrderDetailsRouteProp = RouteProp<RootStackParamList, "OrderDetails">;
+type OrderDetailsAfterJourneyRouteProp = RouteProp<
+  RootStackParamList,
+  "OrderDetailsAfterJourney"
+>;
 
-interface OrderDetailsProp {
-  navigation: OrderDetailsNavigationProp;
-  route: OrderDetailsRouteProp;
+interface OrderDetailsAfterJourneyProp {
+  navigation: OrderDetailsAfterJourneyNavigationProp;
+  route: OrderDetailsAfterJourneyRouteProp;
 }
 
 interface UserDetails {
@@ -68,20 +66,22 @@ interface OrderDetailsResponse {
   orders: OrderItem[];
 }
 
-const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
+const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
+  navigation,
+  route,
+}) => {
   const { orderIds } = route.params;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [startingJourney, setStartingJourney] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [alertModal, setAlertModal] = useState({
     visible: false,
     title: "",
     message: "",
     type: "error" as "success" | "error",
-    showOpenOngoingButton: false,
   });
 
   useEffect(() => {
@@ -126,6 +126,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
         setUserDetails(data.user);
         setOrders(data.orders);
+        // Initialize all orders as selected
+        setSelectedOrders(data.orders.map((order) => order.orderId));
       } else {
         throw new Error(
           response.data.message || "Failed to fetch order details"
@@ -153,6 +155,36 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     if (userDetails?.phoneCode && userDetails?.phoneNumber) {
       const phoneNumber = `${userDetails.phoneCode}${userDetails.phoneNumber}`;
       Linking.openURL(`tel:${phoneNumber}`);
+    }
+  };
+
+  const toggleOrderSelection = (orderId: number) => {
+    setSelectedOrders((prev) => {
+      if (prev.includes(orderId)) {
+        return prev.filter((id) => id !== orderId);
+      } else {
+        return [...prev, orderId];
+      }
+    });
+  };
+
+  const selectAllOrders = () => {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map((order) => order.orderId));
+    }
+  };
+
+  const handleScanToProceed = () => {
+    if (selectedOrders.length === 0) {
+      setAlertModal({
+        visible: true,
+        title: "No Orders Selected",
+        message: "Please select at least one order to proceed with scanning.",
+        type: "error",
+      });
+      return;
     }
   };
 
@@ -193,7 +225,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const getScheduleTimeDisplay = () => {
     if (!orders || orders.length === 0) return "Not Scheduled";
 
-    // Return the first order's schedule time
     const firstOrder = orders[0];
     return firstOrder?.sheduleTime || "Not Scheduled";
   };
@@ -203,92 +234,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     return orders.some(
       (order) => order.processOrder.status?.toLowerCase() === "hold"
     );
-  };
-
-  // Get button text based on order status
-  const getJourneyButtonText = () => {
-    return hasHoldOrder() ? "Restart the Journey" : "Start Journey";
-  };
-
-  const handleStartJourney = async () => {
-    try {
-      setStartingJourney(true);
-      setError(null);
-
-      const token = await AsyncStorage.getItem("token");
-
-      if (!token) {
-        navigation.navigate("Login");
-        return;
-      }
-
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
-
-      const response = await axios.post(
-        `${environment.API_BASE_URL}api/order/start-journey`,
-        {
-          orderIds: orderIdsString,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.status === "success") {
-        navigation.navigate("MyJourney", { orderIds });
-
-        // No need to refresh order details since we're navigating away
-      } else {
-        throw new Error(response.data.message || "Failed to start journey");
-      }
-    } catch (error: any) {
-      console.error("Error starting journey:", error);
-
-      // Check if this is the "ongoing activity" error
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to start journey";
-      const hasOngoingActivity =
-        errorMessage.includes("ongoing activity") ||
-        errorMessage.includes("ongoing") ||
-        errorMessage.includes("Ongoing");
-
-      if (hasOngoingActivity) {
-        setAlertModal({
-          visible: true,
-          title: "Already Have Active Journey",
-          message: errorMessage,
-          type: "error",
-          showOpenOngoingButton: true,
-        });
-      } else {
-        setAlertModal({
-          visible: true,
-          title: "Error",
-          message: errorMessage,
-          type: "error",
-          showOpenOngoingButton: false,
-        });
-      }
-    } finally {
-      setStartingJourney(false);
-    }
-  };
-
-  const handleOpenOngoingActivity = () => {
-    // Close the modal
-    setAlertModal({
-      ...alertModal,
-      visible: false,
-    });
-    navigation.navigate("MyJourney", { orderIds });
   };
 
   if (loading) {
@@ -350,7 +295,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   }
 
   return (
-    <View className="flex-1 bg-white justify-center items-center">
+    <View className="flex-1 bg-white">
       <CustomHeader
         title="Order Details"
         navigation={navigation}
@@ -371,8 +316,20 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           />
         }
       >
+        {/* Great Work! Message Box */}
+        <View className="mt-4 mb-6 p-5 rounded-xl bg-white border border-[#F7CA21]">
+          <View className="flex text-center justify-center items-center">
+            <Text className="text-lg text-black font-semibold">
+              Great Work!
+            </Text>
+            <Text className="text-sm text-black mt-1">
+              Please select orders and scan to proceed!
+            </Text>
+          </View>
+        </View>
+
         {/* Avatar and User Details */}
-        <View className="items-center">
+        <View className="items-center mb-6">
           {userDetails.image ? (
             <Image
               source={{ uri: userDetails.image }}
@@ -402,7 +359,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         </View>
 
         {/* Stats Cards */}
-        <View className="flex-row justify-between mt-6">
+        <View className="flex-row justify-between mb-6">
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
             <Text className="mt-2 text-lg font-semibold">
@@ -419,50 +376,90 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Orders List */}
-        <View className="mt-6 space-y-5">
-          {orders.map((order, index) => (
-            <View
-              key={`${order.orderId}-${index}`}
-              className="rounded-xl border border-[#A4AAB7] py-2 px-4 bg-white"
-            >
-              <Text className="font-bold text-sm">
-                #{order.processOrder.invNo || `ORD${order.orderId}`}
-              </Text>
-
-              <View className="flex-row items-center mt-1">
-                <Ionicons name="time" size={16} color="black" />
-                <Text className="ml-2 text-sm">
-                  {order.sheduleTime || "Not Scheduled"}
-                </Text>
-              </View>
-
-              <View className="flex-row items-center mt-1">
-                {order.processOrder.isPaid ? (
-                  <FontAwesome6 name="circle-check" size={16} color="#F7CA21" />
-                ) : (
-                  <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-                )}
-                <Text className="ml-2 text-sm">
-                  {order.processOrder.isPaid ? (
-                    <Text className="text-black">Already Paid!</Text>
-                  ) : (
-                    <Text>
-                      {formatPaymentMethod(order.processOrder.paymentMethod)} :{" "}
-                      {formatCurrency(order.pricing)}
-                      {order.processOrder.status?.toLowerCase() === "hold" &&
-                        " (On Hold)"}
-                    </Text>
-                  )}
-                </Text>
-              </View>
-            </View>
-          ))}
+        {/* Orders List with Selection */}
+    <View className="mb-6 space-y-4">
+  {orders.map((order, index) => (
+    <View
+      key={`${order.orderId}-${index}`}
+      className={`rounded-xl border py-2 px-4 bg-white flex-row items-center ${
+        selectedOrders.includes(order.orderId)
+          ? "border-[#F7CA21] border bg-[#FFF2BF]"
+          : "border-[#A4AAB7]"
+      }`}
+    >
+      <TouchableOpacity
+        className="flex-1"
+        onPress={() => toggleOrderSelection(order.orderId)}
+      >
+        <View className="flex-row justify-between items-center">
+          <Text className="font-bold text-sm">
+            #{order.processOrder.invNo || `ORD${order.orderId}`}
+          </Text>
+          {order.processOrder.status?.toLowerCase() === "hold" && (
+            <Text className="text-[#FF0000] text-xs font-semibold">
+              (On Hold)
+            </Text>
+          )}
         </View>
+
+        <View className="flex-row items-center mt-1">
+          <Ionicons name="time" size={16} color="black" />
+          <Text className="ml-2 text-sm">
+            {order.sheduleTime || "Not Scheduled"}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center mt-1">
+          {order.processOrder.isPaid ? (
+            <FontAwesome6
+              name="circle-check"
+              size={16}
+              color="#F7CA21"
+            />
+          ) : (
+            <FontAwesome6 name="coins" size={16} color="#F7CA21" />
+          )}
+          <Text className="ml-2 text-sm">
+            {order.processOrder.isPaid ? (
+              <Text className="text-black">Already Paid!</Text>
+            ) : (
+              <Text>
+                {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
+                : {formatCurrency(order.pricing)}
+              </Text>
+            )}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* QR Code Icon on the right */}
+      <TouchableOpacity
+        onPress={() => {
+          if (order.processOrder.invNo) {
+            navigation.navigate("VerifyOrderByQR", { 
+              invNo: order.processOrder.invNo
+            });
+          } else {
+            // Show error if no invoice number
+            setAlertModal({
+              visible: true,
+              title: "No Invoice Number",
+              message: "This order doesn't have an invoice number to scan.",
+              type: "error",
+            });
+          }
+        }}
+        className="ml-3 p-3 bg-white rounded-full"
+      >
+        <FontAwesome6 name="qrcode" size={20} color="black" />
+      </TouchableOpacity>
+    </View>
+  ))}
+</View>
       </ScrollView>
 
       {/* Bottom Action Buttons */}
-      <View className="absolute bottom-0 w-full mx-3 px-8 mb-6">
+      <View className="absolute bottom-0 w-full px-6 pb-6 bg-white pt-4">
         <TouchableOpacity
           className="rounded-full bg-white border border-[#CBD7E8] py-6 px-6 w-full justify-center"
           style={{
@@ -483,29 +480,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             <Ionicons name="call" size={24} color="#000" />
           </View>
         </TouchableOpacity>
-
-        {/* Start/Restart Journey Button */}
-        <TouchableOpacity
-          className="rounded-full bg-[#F7CA21] py-3 mt-5 items-center"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 2, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 5,
-            elevation: 4,
-          }}
-          onPress={handleStartJourney}
-          disabled={startingJourney}
-        >
-          {startingJourney ? (
-            <ActivityIndicator size="small" color="#000" />
-          ) : (
-            <Text className="text-base font-bold">
-              {getJourneyButtonText()}
-            </Text>
-          )}
-        </TouchableOpacity>
       </View>
+
+      {/* Alert Modal */}
       <AlertModal
         visible={alertModal.visible}
         title={alertModal.title}
@@ -513,15 +490,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         type={alertModal.type}
         autoClose={false}
         onClose={() => setAlertModal({ ...alertModal, visible: false })}
-        showOpenOngoingButton={alertModal.showOpenOngoingButton}
-        onOpenOngoing={
-          alertModal.showOpenOngoingButton
-            ? handleOpenOngoingActivity
-            : undefined
-        }
       />
     </View>
   );
 };
 
-export default OrderDetails;
+export default OrderDetailsAfterJourney;

@@ -8,26 +8,31 @@ import {
   PermissionsAndroid,
   StatusBar,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Entypo, Ionicons } from "@expo/vector-icons";
 import { widthPercentageToDP as wp } from "react-native-responsive-screen";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 
-type QRScanNavigationProp = StackNavigationProp<RootStackParamList, "QRScan">;
+type VerifyOrderByQRNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "VerifyOrderByQR"
+>;
 
-interface QRScanProps {
-  navigation: QRScanNavigationProp;
+interface VerifyOrderByQRProps {
+  navigation: VerifyOrderByQRNavigationProp;
+  route: RouteProp<RootStackParamList, "VerifyOrderByQR">;
 }
 
-const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
+const VerifyOrderByQR: React.FC<VerifyOrderByQRProps> = ({
+  navigation,
+  route,
+}) => {
+  const { invNo } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -92,6 +97,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
     setShowTimeoutModal(false);
     setShowErrorModal(false);
     setShowSuccessModal(false);
+    setLoading(false);
 
     // Restart timer
     startTimeoutTimer();
@@ -196,64 +202,53 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
     }
   };
 
-  // API call to assign order
-  const assignOrderToDriver = async (invoiceNo: string) => {
+  // Verify scanned QR against provided invNo
+  const verifyQRCode = async (scannedInvoice: string) => {
+    setLoading(true);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Authentication token not found");
-      }
-
-      // Construct the full API URL using environment
-      const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
-      console.log("Making API call to:", apiUrl);
-      console.log("Invoice:", invoiceNo);
-      console.log("Token:", token.substring(0, 20) + "...");
-
-      const response = await axios.post(
-        apiUrl,
-        {
-          invNo: invoiceNo,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
-
-      console.log("API Response:", response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
+      console.log("Comparing:", {
+        invoiceIdFromParams: invNo,
+        scannedInvoice: scannedInvoice
       });
 
-      if (axios.isAxiosError(error)) {
-        if (error.response) {
-          // Server responded with error
-          throw {
-            message: error.response.data?.message || "Failed to assign order",
-            status: error.response.status,
-            data: error.response.data,
-          };
-        } else if (error.request) {
-          // Request made but no response
-          throw new Error("Network error. Please check your connection.");
-        } else {
-          // Other errors
-          throw new Error(error.message || "Failed to assign order");
-        }
+      // Normalize both invoice IDs for comparison
+      const normalizeInvoice = (invoice: string): string => {
+        return invoice.toUpperCase().trim();
+      };
+
+      const normalizedParam = normalizeInvoice(invNo);
+      const normalizedScanned = normalizeInvoice(scannedInvoice);
+
+      console.log("Normalized comparison:", {
+        param: normalizedParam,
+        scanned: normalizedScanned
+      });
+
+      // Check if they match
+      if (normalizedParam === normalizedScanned) {
+        return {
+          status: "success",
+          message: "QR code verified successfully",
+          match: true
+        };
       } else {
-        throw new Error("An unexpected error occurred");
+        return {
+          status: "error",
+          message: "You have scanned the wrong package.",
+          match: false
+        };
       }
+    } catch (error) {
+      console.error("Verification error:", error);
+      return {
+        status: "error",
+        message: "An error occurred during verification",
+        match: false
+      };
     } finally {
       setLoading(false);
     }
@@ -277,9 +272,9 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
 
     try {
       // Extract invoice number from QR
-      const invoiceNo = extractInvoiceNumber(data);
+      const scannedInvoiceNo = extractInvoiceNumber(data);
 
-      if (!invoiceNo) {
+      if (!scannedInvoiceNo) {
         setModalTitle("Invalid QR Code");
         setModalMessage(
           "The scanned QR code does not contain a valid invoice number."
@@ -289,79 +284,38 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
         return;
       }
 
-      console.log("Extracted invoice:", invoiceNo);
+      console.log("Extracted invoice from QR:", scannedInvoiceNo);
+      console.log("Expected invoice from params:", invNo);
 
-      // Call API to assign order
-      const result = await assignOrderToDriver(invoiceNo);
+      // Verify the QR code against the provided invNo
+      const result = await verifyQRCode(scannedInvoiceNo);
 
-      if (result.status === "success") {
+      if (result.status === "success" && result.match) {
         setModalTitle("Successful!");
         // Create rich text with bold invoice number
         setModalMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
-              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
-              been successfully assigned to you.
+              Package:{" "}
+              <Text className="font-bold text-[#000000]">{invNo}</Text> has
+              been successfully verified.
             </Text>
           </View>
         );
         setModalType("success");
         setShowSuccessModal(true);
       } else {
-        // Set modal title based on the specific error message from backend
-        let title = "Error";
-        const message = result.message || "Failed to assign order";
-
-        if (message.includes("already in your target list")) {
-          title = "Already got this!";
-        } else if (
-          message.includes("already been assigned to another driver")
-        ) {
-          title = "Order Unavailable!";
-        }
-
-        setModalTitle(title);
-        setModalMessage(message);
+        setModalTitle("Verification Failed");
+        setModalMessage(result.message || "You have scanned the wrong package.");
         setModalType("error");
         setShowErrorModal(true);
       }
     } catch (error: any) {
       console.error("Error processing QR scan:", error);
 
-      // Handle specific error cases
-      let title = "Error";
-      let message = error.message || "Failed to process QR code";
-      let type: "error" | "success" = "error";
-
-      // Set modal title based on the specific error message from backend
-      if (message.includes("already in your target list")) {
-        title = "Already got this!";
-      } else if (message.includes("already been assigned to another driver")) {
-        title = "Order Unavailable!";
-      } else if (
-        message.includes("not found") ||
-        message.includes("Invoice number not found")
-      ) {
-        title = "Invoice Not Found";
-        message = "The invoice number was not found in the system.";
-      } else if (message.includes("Network error")) {
-        title = "Network Error";
-        message = "Please check your internet connection and try again.";
-      } else if (message.includes("Unauthorized")) {
-        title = "Session Expired";
-        message = "Please login again to continue.";
-      } else if (error.status === 404) {
-        title = "Server Error";
-        message = "The server endpoint was not found. Please contact support.";
-      } else if (error.status === 500) {
-        title = "Server Error";
-        message = "Internal server error. Please try again later.";
-      }
-
-      setModalTitle(title);
-      setModalMessage(message);
-      setModalType(type);
+      setModalTitle("Error");
+      setModalMessage(error.message || "Failed to verify QR code");
+      setModalType("error");
       setShowErrorModal(true);
     }
   };
@@ -373,7 +327,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    setScanned(false);
+    // Navigate back to previous screen on success
     navigation.goBack();
   };
 
@@ -412,7 +366,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
           Camera Permission Required
         </Text>
         <Text className="text-gray-400 text-center mb-8 px-4">
-          Please grant camera permission to scan QR codes.
+          Please grant camera permission to verify QR codes.
         </Text>
         <TouchableOpacity
           className="bg-[#F7CA21] py-4 px-12 rounded-xl"
@@ -441,7 +395,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Assigning Order...
+              Verifying Package...
             </Text>
           </View>
         </View>
@@ -460,7 +414,7 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
         autoClose={true}
       />
 
-      {/* Error Modal - For API errors (without Re-Scan button) */}
+      {/* Error Modal - For verification errors (without Re-Scan button) */}
       <AlertModal
         visible={showErrorModal}
         title={modalTitle}
@@ -505,6 +459,14 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
                 }}
               />
             </TouchableOpacity>
+            
+            {/* Screen Title */}
+            <View className="absolute left-0 right-0 items-center">
+              <Text className="text-white font-bold text-lg">Verify Package</Text>
+              <Text className="text-gray-300 text-sm mt-1">
+                Scan QR code to verify package #{invNo}
+              </Text>
+            </View>
           </View>
 
           {/* Scan Frame Container */}
@@ -672,6 +634,16 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
                 />
               </View>
             </View>
+
+            {/* Instruction Text */}
+            <View className="mt-8 px-8">
+              <Text className="text-white text-center text-base">
+                Please scan the QR code on the package to verify it matches
+              </Text>
+              <Text className="text-[#F7CA21] text-center text-lg font-bold mt-2">
+                Package #{invNo}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -679,4 +651,4 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
   );
 };
 
-export default QRScan;
+export default VerifyOrderByQR;

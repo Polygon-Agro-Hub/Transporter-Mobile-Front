@@ -25,7 +25,7 @@ import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "../../store/authSlice";
-import AlertModal from "../common/AlertModal";
+import { AlertModal } from "../common/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
