@@ -14,36 +14,42 @@ type EndJourneyNavigationProp = StackNavigationProp<
   "EndJourneyConfirmation"
 >;
 
-type EndJourneyRouteProp = RouteProp<RootStackParamList, "EndJourneyConfirmation">;
+type EndJourneyRouteProp = RouteProp<
+  RootStackParamList,
+  "EndJourneyConfirmation"
+>;
 
 interface EndJourneyProps {
   navigation: EndJourneyNavigationProp;
   route: EndJourneyRouteProp;
 }
 
-const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
-  console.log("order ids", orderIds);
-  // Get processOrderIds from route params
+const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
+  navigation,
+  route,
+}) => {
   const { processOrderIds = [] } = route.params;
   const handleHoldOrder = () => {
     navigation.navigate("HoldOrder", {
-        orderIds: orderIds,
-      });
+      orderIds: processOrderIds,
+    });
     console.log("Hold Order pressed");
     console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleReturnOrder = () => {
-    navigation.navigate("OrderReturn" , {
-        orderIds: orderIds,
-      });
+    navigation.navigate("OrderReturn", {
+      orderIds: processOrderIds,
+    });
     console.log("Return Order pressed");
     console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleGetSignature = () => {
-    console.log("Navigating to SignatureScreen with Process Order IDs:", processOrderIds);
+    console.log(
+      "Navigating to SignatureScreen with Process Order IDs:",
+      processOrderIds
+    );
     navigation.navigate("SignatureScreen", {
       processOrderIds: processOrderIds,
     });
@@ -125,7 +131,6 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation, route }
             </Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </View>
   );

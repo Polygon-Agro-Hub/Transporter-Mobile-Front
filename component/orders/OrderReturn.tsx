@@ -8,16 +8,16 @@ import {
   Modal,
   Image,
   ActivityIndicator,
-  Alert
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import CustomHeader from "../common/CustomHeader";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RouteProp } from "@react-navigation/native";
+import { AlertModal } from "../common/AlertModal";
 
 type OrderReturnNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -42,16 +42,20 @@ interface Reason {
 const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const { orderIds } = route.params;
   console.log("Order Return page orderIds:", orderIds);
-  
+
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">("En");
+  const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">(
+    "En"
+  );
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [invoiceNumbers, setInvoiceNumbers] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState<
+    string | React.ReactNode
+  >("");
 
   const languageMap = {
     English: { code: "En" as const, key: "rsnEnglish" as const },
@@ -64,37 +68,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   useEffect(() => {
     fetchReasons();
   }, []);
-
-
-    const fetchInvoiceNumbers = async (orderIdsList: number[]) => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const invoices: string[] = [];
-
-      for (const orderId of orderIdsList) {
-        try {
-          const response = await axios.get(
-            `${environment.API_BASE_URL}api/return/get-invoice/${orderId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          if (response.data.status === "success" && response.data.data) {
-            invoices.push(response.data.data.invNo);
-          }
-        } catch (error) {
-          console.error(`Error fetching invoice for order ${orderId}:`, error);
-        }
-      }
-
-      setInvoiceNumbers(invoices);
-    } catch (error) {
-      console.error("Error fetching invoice numbers:", error);
-    }
-  };
 
   const fetchReasons = async () => {
     try {
@@ -113,7 +86,9 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       const result = response.data;
 
       if (result.status === "success" && result.data) {
-        const sortedReasons = result.data.sort((a: Reason, b: Reason) => a.indexNo - b.indexNo);
+        const sortedReasons = result.data.sort(
+          (a: Reason, b: Reason) => a.indexNo - b.indexNo
+        );
         setReasons(sortedReasons);
       } else {
         Alert.alert("Error", "Failed to fetch reasons");
@@ -126,7 +101,10 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     }
   };
 
-  const getCurrentLanguageKey = (): "rsnEnglish" | "rsnSinhala" | "rsnTamil" => {
+  const getCurrentLanguageKey = ():
+    | "rsnEnglish"
+    | "rsnSinhala"
+    | "rsnTamil" => {
     if (selectedLanguage === "En") return "rsnEnglish";
     if (selectedLanguage === "Si") return "rsnSinhala";
     return "rsnTamil";
@@ -152,7 +130,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       const payload = {
         orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
         returnReasonId: selectedReason.id,
-        note: isOtherReason(selectedReason) ? otherReason.trim() : null
+        note: isOtherReason(selectedReason) ? otherReason.trim() : null,
       };
 
       console.log("Submitting return order:", payload);
@@ -169,29 +147,79 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       );
 
       const result = response.data;
+      console.log("Return submit response:", result);
 
       if (result.status === "success") {
+        // Get invoice numbers from the response - ensure it's an array of strings
+        const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
+        console.log("Invoice numbers from response:", invoiceNumbers);
 
-        await fetchInvoiceNumbers(orderIdsList)
+        // Create success message with bold invoice numbers
+        let message: string | React.ReactNode;
 
-        setShowSuccess(true);
+        if (invoiceNumbers.length === 0) {
+          message = "Order has been marked as a return order.";
+        } else if (invoiceNumbers.length === 1) {
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+                Order:{" "}
+                <Text className="font-bold text-[#000000]">
+                  {invoiceNumbers[0]}
+                </Text>{" "}
+                has been marked as a return order.
+              </Text>
+            </View>
+          );
+        } else {
+          // For multiple orders
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+              {invoiceNumbers.map((invNo: string, index: number) => (
+                <Text
+                  key={index}
+                  className="text-center font-bold text-[#000000] mb-1"
+                >
+                  {invNo}
+                </Text>
+              ))}
+              <Text className="text-center text-[#4E4E4E] mt-2">
+                have been marked as return orders.
+              </Text>
+            </View>
+          );
+        }
+
+        setSuccessMessage(message);
+        setShowSuccessModal(true);
+
+        // Add backup navigation timeout in case modal doesn't auto-close
         setTimeout(() => {
-          setShowSuccess(false);
-          setSelectedReason(null);
-          setOtherReason("");
-          setInvoiceNumbers([]);
-          navigation.goBack();
-        }, 3000);
+          if (showSuccessModal) {
+            setShowSuccessModal(false);
+            navigation.navigate("Home");
+          }
+        }, 4000); // 4 seconds as backup (1 second longer than modal duration)
       } else {
         Alert.alert("Error", result.message || "Failed to submit return order");
       }
     } catch (error: any) {
       console.error("Error submitting return order:", error);
-      const errorMessage = error.response?.data?.message || "Failed to submit return order. Please try again.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to submit return order. Please try again.";
       Alert.alert("Error", errorMessage);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+    navigation.navigate("Home");
   };
 
   const getPlaceholderText = (): string => {
@@ -204,16 +232,18 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     <View className="flex-1 bg-white">
       {/* Header */}
       <View className="bg-white px-4 py-4 flex-row items-center justify-between">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           className="w-10 h-10 items-center justify-center"
         >
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text className="text-lg font-semibold text-gray-900">
-          {selectedLanguage === "En" ? "Return Order" : 
-           selectedLanguage === "Si" ? "ඇණවුම ආපසු" : 
-           "ஆர்டரைத் திருப்பி"}
+          {selectedLanguage === "En"
+            ? "Return Order"
+            : selectedLanguage === "Si"
+            ? "ඇණවුම ආපසු"
+            : "ஆர்டரைத் திருப்பி"}
         </Text>
         <TouchableOpacity
           onPress={() => setShowLanguageMenu(true)}
@@ -230,7 +260,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           <Text className="text-gray-600 mt-4">Loading reasons...</Text>
         </View>
       ) : (
-        <ScrollView 
+        <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 24 }}
           showsVerticalScrollIndicator={false}
@@ -246,9 +276,11 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
           {/* Question */}
           <Text className="text-center text-base font-semibold text-gray-900 mb-6">
-            {selectedLanguage === "En" ? "Why are you returning the order?" :
-             selectedLanguage === "Si" ? "ඔබ ඇණවුම ආපසු යවන්නේ ඇයි?" :
-             "நீங்கள் ஆர்டரை ஏன் திருப்பி அனுப்புகிறீர்கள்?"}
+            {selectedLanguage === "En"
+              ? "Why are you returning the order?"
+              : selectedLanguage === "Si"
+              ? "ඔබ ඇණවුම ආපසු යවන්නේ ඇයි?"
+              : "நீங்கள் ஆர்டரை ஏன் திருப்பி அனுப்புகிறீர்கள்?"}
           </Text>
 
           {/* Reason Options */}
@@ -305,9 +337,9 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 multiline
                 numberOfLines={4}
                 className="bg-white border border-[#A4AAB7] rounded-xl p-4 text-sm text-gray-900"
-                style={{ 
+                style={{
                   textAlignVertical: "top",
-                  minHeight: 100
+                  minHeight: 100,
                 }}
               />
             </View>
@@ -318,107 +350,65 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             onPress={handleSubmit}
             disabled={
               submitting ||
-              !selectedReason || 
-              (selectedReason && isOtherReason(selectedReason) && !otherReason.trim())
+              !selectedReason ||
+              (selectedReason &&
+                isOtherReason(selectedReason) &&
+                !otherReason.trim())
             }
-            className={`rounded-full py-3 mr-6 ml-6 items-center mb-6 ${
-              selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                ? "bg-[#F7CA21]" 
+            className={`rounded-full py-3 items-center mb-6 ${
+              selectedReason &&
+              (!isOtherReason(selectedReason) || otherReason.trim())
+                ? "bg-[#F7CA21]"
                 : "bg-[#DCDCDC]"
             }`}
             style={{
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 
-                selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                  ? 0.1 
+              shadowOpacity:
+                selectedReason &&
+                (!isOtherReason(selectedReason) || otherReason.trim())
+                  ? 0.1
                   : 0,
               shadowRadius: 4,
-              elevation: 
-                selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                  ? 3 
+              elevation:
+                selectedReason &&
+                (!isOtherReason(selectedReason) || otherReason.trim())
+                  ? 3
                   : 0,
             }}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#000" />
             ) : (
-              <Text className={`text-base font-semibold ${
-                selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                  ? "text-black" 
-                  : "text-black"
-              }`}>
-                {selectedLanguage === "En" ? "Submit" :
-                 selectedLanguage === "Si" ? "ඉදිරිපත් කරන්න" :
-                 "சமர்ப்பிக்கவும்"}
+              <Text
+                className={`text-base font-semibold ${
+                  selectedReason &&
+                  (!isOtherReason(selectedReason) || otherReason.trim())
+                    ? "text-black"
+                    : "text-black"
+                }`}
+              >
+                {selectedLanguage === "En"
+                  ? "Submit"
+                  : selectedLanguage === "Si"
+                  ? "ඉදිරිපත් කරන්න"
+                  : "சமர்ப்பிக்கவும்"}
               </Text>
             )}
           </TouchableOpacity>
         </ScrollView>
       )}
 
-      {/* Success Modal */}
-<Modal visible={showSuccess} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 items-center justify-center px-6">
-          <View 
-            className="bg-white rounded-3xl p-8 items-center w-80"
-            style={{
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
-          >
-            {/* Close Button */}
-            <TouchableOpacity
-              onPress={() => {
-                setShowSuccess(false);
-                setSelectedReason(null);
-                setOtherReason("");
-                setInvoiceNumbers([]);
-                navigation.goBack();
-              }}
-              className="absolute top-4 right-4 z-10"
-            >
-              <Ionicons name="close" size={24} color="#000" />
-            </TouchableOpacity>
-
-            <View className="bg-yellow-100 rounded-full p-4 mb-4">
-              <Ionicons name="checkmark" size={48} color="#facc15" />
-            </View>
-            
-            <Text className="text-xl font-bold text-gray-900 mb-2">
-              {selectedLanguage === "En" ? "Successful!" :
-               selectedLanguage === "Si" ? "සාර්ථකයි!" :
-               "வெற்றிகரமாக!"}
-            </Text>
-            
-            {/* Display Invoice Numbers */}
-            {invoiceNumbers.length > 0 && (
-              <View className="mb-3 w-full">
-                {invoiceNumbers.map((invNo, index) => (
-                  <Text 
-                    key={index} 
-                    className="text-sm font-semibold text-gray-900 text-center mb-1"
-                  >
-                    {selectedLanguage === "En" ? "Order : " :
-                     selectedLanguage === "Si" ? "ඇණවුම : " :
-                     "ஆர்டர் : "}
-                    {invNo}
-                  </Text>
-                ))}
-              </View>
-            )}
-            
-            <Text className="text-sm text-gray-600 text-center">
-              {selectedLanguage === "En" ? "has been marked as a return order." :
-               selectedLanguage === "Si" ? "ආපසු යැවීමේ ඇණවුමක් ලෙස සලකුණු කර ඇත." :
-               "திருப்பி அனுப்பும் ஆர்டராக குறிக்கப்பட்டுள்ளது."}
-            </Text>
-          </View>
-        </View>
-      </Modal>
+      {/* Success Alert Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Successful!"
+        message={successMessage}
+        type="success"
+        onClose={handleSuccessModalClose}
+        autoClose={true}
+        duration={3000}
+      />
 
       {/* Language Menu Modal */}
       <Modal visible={showLanguageMenu} transparent animationType="fade">
@@ -427,7 +417,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           onPress={() => setShowLanguageMenu(false)}
           className="flex-1 bg-black/50 items-end justify-start pt-16 px-6"
         >
-          <View 
+          <View
             className="bg-white rounded-2xl w-40 overflow-hidden mr-2"
             style={{
               shadowColor: "#000",
@@ -441,7 +431,9 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <TouchableOpacity
                 key={index}
                 onPress={() => {
-                  setSelectedLanguage(languageMap[lang as keyof typeof languageMap].code);
+                  setSelectedLanguage(
+                    languageMap[lang as keyof typeof languageMap].code
+                  );
                   setShowLanguageMenu(false);
                 }}
                 className={`p-4 ${

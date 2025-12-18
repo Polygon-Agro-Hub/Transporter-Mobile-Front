@@ -65,7 +65,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
 
-function MainDrawer() {
+function HomeDrawer() {
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -151,14 +151,14 @@ function AppContent() {
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Main" component={MainDrawer} />
+            <Stack.Screen name="Home" component={HomeDrawer} />
             <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
-             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
-             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
+            <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
+            <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />

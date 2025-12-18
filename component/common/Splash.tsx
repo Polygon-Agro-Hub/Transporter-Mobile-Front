@@ -135,17 +135,17 @@ const Splash: React.FC = () => {
         // Save to AsyncStorage for future app starts
         await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
-        // Navigate to Main/Home
-        navigation.navigate("Main", { screen: "Home" });
+        // Navigate to Home
+        navigation.navigate("Home");
       } else {
         console.log("Failed to fetch profile, using cached data if available.");
         // Even if API fails, navigate with cached data
-        navigation.navigate("Main", { screen: "Home" });
+        navigation.navigate("Home");
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
       // Even if there's an error, navigate with cached data
-      navigation.navigate("Main", { screen: "Home" });
+      navigation.navigate("Home");
     }
   };
 

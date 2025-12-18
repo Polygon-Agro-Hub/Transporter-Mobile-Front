@@ -8,7 +8,7 @@ import {
   Modal,
   Image,
   ActivityIndicator,
-  Alert
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import CustomHeader from "../common/CustomHeader";
@@ -42,12 +42,14 @@ interface Reason {
 const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const { orderIds } = route.params;
   console.log("order Hold page orderid", orderIds);
-  
+
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">("En");
+  const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">(
+    "En"
+  );
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -114,7 +116,9 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
       if (result.status === "success" && result.data) {
         // Sort by indexNo to maintain order
-        const sortedReasons = result.data.sort((a: Reason, b: Reason) => a.indexNo - b.indexNo);
+        const sortedReasons = result.data.sort(
+          (a: Reason, b: Reason) => a.indexNo - b.indexNo
+        );
         setReasons(sortedReasons);
       } else {
         Alert.alert("Error", "Failed to fetch reasons");
@@ -128,7 +132,10 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   // Get the current language key for displaying reasons
-  const getCurrentLanguageKey = (): "rsnEnglish" | "rsnSinhala" | "rsnTamil" => {
+  const getCurrentLanguageKey = ():
+    | "rsnEnglish"
+    | "rsnSinhala"
+    | "rsnTamil" => {
     if (selectedLanguage === "En") return "rsnEnglish";
     if (selectedLanguage === "Si") return "rsnSinhala";
     return "rsnTamil";
@@ -161,7 +168,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       const requestBody = {
         orderIds: orderIds,
         holdReasonId: selectedReason.id,
-        note: isOtherReason(selectedReason) ? otherReason.trim() : null
+        note: isOtherReason(selectedReason) ? otherReason.trim() : null,
       };
 
       console.log("Submitting hold order:", requestBody);
@@ -172,7 +179,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
         }
       );
@@ -181,13 +188,13 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
       if (result.status === "success") {
         console.log("Hold order submitted successfully:", result.data);
-        
+
         // Fetch invoice numbers before showing success modal
         await fetchInvoiceNumbers(orderIdsList);
-        
+
         // Show success modal
         setShowSuccess(true);
-        
+
         setTimeout(() => {
           setShowSuccess(false);
           setSelectedReason(null);
@@ -201,13 +208,17 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       }
     } catch (error: any) {
       console.error("Error submitting hold order:", error);
-      
+
       // Handle specific error responses
       if (error.response) {
-        const errorMessage = error.response.data?.message || "Failed to submit hold order";
+        const errorMessage =
+          error.response.data?.message || "Failed to submit hold order";
         Alert.alert("Error", errorMessage);
       } else if (error.request) {
-        Alert.alert("Error", "No response from server. Please check your connection.");
+        Alert.alert(
+          "Error",
+          "No response from server. Please check your connection."
+        );
       } else {
         Alert.alert("Error", "An unexpected error occurred. Please try again.");
       }
@@ -226,16 +237,18 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     <View className="flex-1 bg-white">
       {/* Header */}
       <View className="bg-white px-4 py-4 flex-row items-center justify-between ">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           className="w-10 h-10 items-center justify-center"
         >
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text className="text-lg font-semibold text-gray-900">
-          {selectedLanguage === "En" ? "Hold Order" : 
-           selectedLanguage === "Si" ? "ඇණවුම රඳවා ගන්න" : 
-           "ஆர்டரை வைத்திருங்கள்"}
+          {selectedLanguage === "En"
+            ? "Hold Order"
+            : selectedLanguage === "Si"
+            ? "ඇණවුම රඳවා ගන්න"
+            : "ஆர்டரை வைத்திருங்கள்"}
         </Text>
         <TouchableOpacity
           onPress={() => setShowLanguageMenu(true)}
@@ -252,7 +265,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           <Text className="text-gray-600 mt-4">Loading reasons...</Text>
         </View>
       ) : (
-        <ScrollView 
+        <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 24 }}
           showsVerticalScrollIndicator={false}
@@ -268,9 +281,11 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
           {/* Question */}
           <Text className="text-center text-base font-semibold text-gray-900 mb-6">
-            {selectedLanguage === "En" ? "Why are you holding the order?" :
-             selectedLanguage === "Si" ? "ඔබ ඇණවුම රඳවා තබන්නේ ඇයි?" :
-             "நீங்கள் ஆர்டரை ஏன் வைத்திருக்கிறீர்கள்?"}
+            {selectedLanguage === "En"
+              ? "Why are you holding the order?"
+              : selectedLanguage === "Si"
+              ? "ඔබ ඇණවුම රඳවා තබන්නේ ඇයි?"
+              : "நீங்கள் ஆர்டரை ஏன் வைத்திருக்கிறீர்கள்?"}
           </Text>
 
           {/* Reason Options */}
@@ -327,9 +342,9 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 multiline
                 numberOfLines={4}
                 className="bg-white border border-[#A4AAB7] rounded-xl p-4 text-sm text-gray-900"
-                style={{ 
+                style={{
                   textAlignVertical: "top",
-                  minHeight: 100
+                  minHeight: 100,
                 }}
               />
             </View>
@@ -340,25 +355,35 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             onPress={handleSubmit}
             disabled={
               submitting ||
-              !selectedReason || 
-              (selectedReason && isOtherReason(selectedReason) && !otherReason.trim())
+              !selectedReason ||
+              (selectedReason &&
+                isOtherReason(selectedReason) &&
+                !otherReason.trim())
             }
             className={`rounded-full py-3 mr-6 ml-6 items-center mb-6 ${
-              submitting || !selectedReason || (selectedReason && isOtherReason(selectedReason) && !otherReason.trim())
+              submitting ||
+              !selectedReason ||
+              (selectedReason &&
+                isOtherReason(selectedReason) &&
+                !otherReason.trim())
                 ? "bg-[#DCDCDC]"
                 : "bg-[#F7CA21]"
             }`}
             style={{
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 
-                !submitting && selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                  ? 0.1 
+              shadowOpacity:
+                !submitting &&
+                selectedReason &&
+                (!isOtherReason(selectedReason) || otherReason.trim())
+                  ? 0.1
                   : 0,
               shadowRadius: 4,
-              elevation: 
-                !submitting && selectedReason && (!isOtherReason(selectedReason) || otherReason.trim())
-                  ? 3 
+              elevation:
+                !submitting &&
+                selectedReason &&
+                (!isOtherReason(selectedReason) || otherReason.trim())
+                  ? 3
                   : 0,
             }}
           >
@@ -366,9 +391,11 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <ActivityIndicator size="small" color="#000" />
             ) : (
               <Text className="text-base font-semibold text-black">
-                {selectedLanguage === "En" ? "Submit" :
-                 selectedLanguage === "Si" ? "ඉදිරිපත් කරන්න" :
-                 "சமர்ப்பிக்கவும்"}
+                {selectedLanguage === "En"
+                  ? "Submit"
+                  : selectedLanguage === "Si"
+                  ? "ඉදිරිපත් කරන්න"
+                  : "சமர்ப்பிக்கவும்"}
               </Text>
             )}
           </TouchableOpacity>
@@ -378,7 +405,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       {/* Success Modal */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <View className="flex-1 bg-black/50 items-center justify-center px-6">
-          <View 
+          <View
             className="bg-white rounded-3xl p-8 items-center w-80"
             style={{
               shadowColor: "#000",
@@ -392,24 +419,32 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <Ionicons name="checkmark" size={48} color="#facc15" />
             </View>
             <Text className="text-xl font-bold text-gray-900 mb-2">
-              {selectedLanguage === "En" ? "Successful!" :
-               selectedLanguage === "Si" ? "සාර්ථකයි!" :
-               "வெற்றிகரமாக!"}
+              {selectedLanguage === "En"
+                ? "Successful!"
+                : selectedLanguage === "Si"
+                ? "සාර්ථකයි!"
+                : "வெற்றிகரமாக!"}
             </Text>
-            
+
             {/* Invoice Numbers Display */}
             {invoiceNumbers.length > 0 && (
               <View className="w-full mb-3">
                 {invoiceNumbers.map((invoice, index) => (
                   <View key={index} className="mb-2">
                     <Text className="text-sm text-gray-600 text-center">
-                      {selectedLanguage === "En" ? "Order" :
-                       selectedLanguage === "Si" ? "ඇණවුම" :
-                       "ஆர்டர்"}{" "}
-                      <Text className="font-semibold text-gray-900">{invoice}</Text>
-                      {" "}{selectedLanguage === "En" ? "has been put on hold for the moment." :
-                       selectedLanguage === "Si" ? "මොහොතකට රඳවා තබා ඇත." :
-                       "தற்போதைக்கு நிறுத்தி வைக்கப்பட்டுள்ளது."}
+                      {selectedLanguage === "En"
+                        ? "Order"
+                        : selectedLanguage === "Si"
+                        ? "ඇණවුම"
+                        : "ஆர்டர்"}{" "}
+                      <Text className="font-semibold text-gray-900">
+                        {invoice}
+                      </Text>{" "}
+                      {selectedLanguage === "En"
+                        ? "has been put on hold for the moment."
+                        : selectedLanguage === "Si"
+                        ? "මොහොතකට රඳවා තබා ඇත."
+                        : "தற்போதைக்கு நிறுத்தி வைக்கப்பட்டுள்ளது."}
                     </Text>
                   </View>
                 ))}
@@ -419,9 +454,11 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             {/* Fallback message if no invoices */}
             {invoiceNumbers.length === 0 && (
               <Text className="text-sm text-gray-600 text-center">
-                {selectedLanguage === "En" ? "Order(s) have been marked as hold." :
-                 selectedLanguage === "Si" ? "ඇණවුම් රඳවා තබා ඇත." :
-                 "ஆர்டர்கள் நிறுத்தி வைக்கப்பட்டுள்ளன."}
+                {selectedLanguage === "En"
+                  ? "Order(s) have been marked as hold."
+                  : selectedLanguage === "Si"
+                  ? "ඇණවුම් රඳවා තබා ඇත."
+                  : "ஆர்டர்கள் நிறுத்தி வைக்கப்பட்டுள்ளன."}
               </Text>
             )}
           </View>
@@ -435,7 +472,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           onPress={() => setShowLanguageMenu(false)}
           className="flex-1 bg-black/50 items-end justify-start pt-16 px-6"
         >
-          <View 
+          <View
             className="bg-white rounded-2xl w-40 overflow-hidden mr-2"
             style={{
               shadowColor: "#000",
@@ -449,7 +486,9 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <TouchableOpacity
                 key={index}
                 onPress={() => {
-                  setSelectedLanguage(languageMap[lang as keyof typeof languageMap].code);
+                  setSelectedLanguage(
+                    languageMap[lang as keyof typeof languageMap].code
+                  );
                   setShowLanguageMenu(false);
                 }}
                 className={`p-4 ${
