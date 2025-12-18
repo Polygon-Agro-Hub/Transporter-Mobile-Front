@@ -23,7 +23,8 @@ interface JobsScreenProp {
 
 interface DriverOrder {
   driverOrderId: number;
-  orderId: number;
+  processOrderId: number;
+  marketOrderId: number;
   drvStatus: string;
   isHandOver: boolean;
   fullName: string;
@@ -32,7 +33,10 @@ interface DriverOrder {
   allDriverOrderIds: number[];
   allOrderIds: number[];
   allScheduleTimes: string[];
+  primaryScheduleTime: string;
   sequenceNumber: string;
+  allProcessOrderIds?: number[];
+  processOrderIds?: number[];
 }
 
 interface OrderStatistics {
@@ -75,6 +79,11 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             Authorization: `Bearer ${token}`,
           },
         }
+      );
+
+      console.log(
+        "FINAL ORDERS RESPONSE:",
+        JSON.stringify(todoHoldResponse.data.data.orders, null, 2)
       );
 
       if (todoHoldResponse.data.status === "success") {
@@ -129,10 +138,14 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   // Combine todo and hold orders for display
   const getTodoDisplayOrders = () => {
     const allOrders = [...todoOrders, ...holdOrders];
+
     return allOrders.map((order, index) => ({
       id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
       name: order.fullName || "Customer",
-      time: order.sheduleTime || "Not Scheduled",
+      time:
+        order.primaryScheduleTime ||
+        order.allScheduleTimes[0] ||
+        "Not Scheduled",
       count: order.jobCount || 1,
       status: order.drvStatus,
       orderData: order,
@@ -144,7 +157,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return completedOrders.map((order, index) => ({
       id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
       name: order.fullName || "Customer",
-      time: order.sheduleTime || "Not Scheduled",
+      time:
+        order.primaryScheduleTime ||
+        order.allScheduleTimes[0] ||
+        "Not Scheduled",
       count: order.jobCount || 1,
       status: "Completed",
       orderData: order,
@@ -163,11 +179,33 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     activeTab === "todo" ? getTodoDisplayOrders() : getCompletedDisplayOrders();
 
   const navigateToOrderDetails = (orderData: DriverOrder) => {
-    // Get order IDs array - use allOrderIds if available, otherwise create array with single orderId
-    const orderIds = orderData.allOrderIds || [orderData.orderId];
+    console.log("Navigating with order data:", orderData);
+
+    // Get processOrderId from the orderData - THIS IS THE KEY CHANGE
+    const processOrderId = orderData.processOrderId;
+
+    // If processOrderId exists, use it; otherwise fall back to marketOrderId
+    const primaryOrderId = processOrderId || orderData.marketOrderId;
+
+    // Get order IDs array
+    const orderIds = orderData.allOrderIds || [orderData.marketOrderId];
+
+    // Get process order IDs array if available
+    const processOrderIds = orderData.allProcessOrderIds ||
+      orderData.processOrderIds || [primaryOrderId];
+
+    console.log("Passing to OrderDetails:", {
+      primaryOrderId,
+      processOrderIds,
+      orderIds,
+      processOrderId: processOrderId,
+    });
 
     navigation.navigate("OrderDetails", {
-      orderIds: orderIds,
+      orderIds: orderIds, // Keep backward compatibility
+      processOrderIds: processOrderIds, // Add process order IDs
+      primaryProcessOrderId: processOrderId, // Single process order ID
+      marketOrderIds: orderData.allOrderIds || [orderData.marketOrderId],
     });
   };
 
@@ -297,12 +335,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
               }`}
               onPress={() => {
                 if (activeTab === "todo") {
-                  const orderIds = item.orderData.allOrderIds || [
-                    item.orderData.orderId,
-                  ];
-                  navigation.navigate("OrderDetails", {
-                    orderIds: orderIds,
-                  });
+                  navigateToOrderDetails(item.orderData);
                 }
               }}
             >
@@ -329,7 +362,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                       color="#FF0000"
                     />
                     <Text className="text-[#647B94] text-xs mr-2">
-                      Need Add Hold Reson here
+                      Need Add Hold Reason here
                     </Text>
                   </View>
                 )}
