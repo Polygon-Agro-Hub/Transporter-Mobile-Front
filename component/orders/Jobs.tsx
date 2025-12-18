@@ -202,10 +202,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     });
 
     navigation.navigate("OrderDetails", {
-      orderIds: orderIds, // Keep backward compatibility
-      processOrderIds: processOrderIds, // Add process order IDs
-      primaryProcessOrderId: processOrderId, // Single process order ID
-      marketOrderIds: orderData.allOrderIds || [orderData.marketOrderId],
+      processOrderIds: processOrderIds,
     });
   };
 

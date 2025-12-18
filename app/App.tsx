@@ -43,6 +43,8 @@ import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
 import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
 import { RootStackParamList } from "@/component/types";
 import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
+import OrderReturn from "@/component/orders/OrderReturn";
+import HoldOrder from "@/component/orders/HoldOrder";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -63,7 +65,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
 
-function MainDrawer() {
+function HomeDrawer() {
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -149,21 +151,23 @@ function AppContent() {
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Main" component={MainDrawer} />
+            <Stack.Screen name="Home" component={HomeDrawer} />
             <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
-             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
-             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
+            <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
+            <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />
-            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation } />
             <Stack.Screen name="MyJourney" component={MyJourney} />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
             <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
+            <Stack.Screen name="OrderReturn" component={OrderReturn} />
+            <Stack.Screen name="HoldOrder" component={HoldOrder} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>
