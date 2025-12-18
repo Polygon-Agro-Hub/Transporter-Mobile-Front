@@ -46,7 +46,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: scanQRImage,
       label: "Scan QR",
       color: "#3B82F6",
-      action: () => navigation.navigate("QRScan"),
+      action: () => navigation.navigate("AssignOrderQR"),
     },
     {
       image: packsImage,
@@ -64,7 +64,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       image: ongoingImage,
       label: "Ongoing",
       color: "#F59E0B",
-      action: () => navigation.navigate("EndJourneyConfirmation"),
+      action: () => navigation.navigate("ReturnOrders"),
     },
     {
       image: returnImage,

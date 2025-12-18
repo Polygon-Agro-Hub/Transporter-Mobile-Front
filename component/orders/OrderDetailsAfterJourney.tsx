@@ -377,85 +377,89 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
         </View>
 
         {/* Orders List with Selection */}
-    <View className="mb-6 space-y-4">
-  {orders.map((order, index) => (
-    <View
-      key={`${order.orderId}-${index}`}
-      className={`rounded-xl border py-2 px-4 bg-white flex-row items-center ${
-        selectedOrders.includes(order.orderId)
-          ? "border-[#F7CA21] border bg-[#FFF2BF]"
-          : "border-[#A4AAB7]"
-      }`}
-    >
-      <TouchableOpacity
-        className="flex-1"
-        onPress={() => toggleOrderSelection(order.orderId)}
-      >
-        <View className="flex-row justify-between items-center">
-          <Text className="font-bold text-sm">
-            #{order.processOrder.invNo || `ORD${order.orderId}`}
-          </Text>
-          {order.processOrder.status?.toLowerCase() === "hold" && (
-            <Text className="text-[#FF0000] text-xs font-semibold">
-              (On Hold)
-            </Text>
-          )}
-        </View>
+        <View className="mb-6 space-y-4">
+          {orders.map((order, index) => (
+            <View
+              key={`${order.orderId}-${index}`}
+              className={`rounded-xl border py-2 px-4 bg-white flex-row items-center ${
+                selectedOrders.includes(order.orderId)
+                  ? "border-[#F7CA21] border bg-[#FFF2BF]"
+                  : "border-[#A4AAB7]"
+              }`}
+            >
+              <TouchableOpacity
+                className="flex-1"
+                onPress={() => toggleOrderSelection(order.orderId)}
+              >
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-bold text-sm">
+                    #{order.processOrder.invNo || `ORD${order.orderId}`}
+                  </Text>
+                  {order.processOrder.status?.toLowerCase() === "hold" && (
+                    <Text className="text-[#FF0000] text-xs font-semibold">
+                      (On Hold)
+                    </Text>
+                  )}
+                </View>
 
-        <View className="flex-row items-center mt-1">
-          <Ionicons name="time" size={16} color="black" />
-          <Text className="ml-2 text-sm">
-            {order.sheduleTime || "Not Scheduled"}
-          </Text>
-        </View>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="time" size={16} color="black" />
+                  <Text className="ml-2 text-sm">
+                    {order.sheduleTime || "Not Scheduled"}
+                  </Text>
+                </View>
 
-        <View className="flex-row items-center mt-1">
-          {order.processOrder.isPaid ? (
-            <FontAwesome6
-              name="circle-check"
-              size={16}
-              color="#F7CA21"
-            />
-          ) : (
-            <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-          )}
-          <Text className="ml-2 text-sm">
-            {order.processOrder.isPaid ? (
-              <Text className="text-black">Already Paid!</Text>
-            ) : (
-              <Text>
-                {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
-                : {formatCurrency(order.pricing)}
-              </Text>
-            )}
-          </Text>
-        </View>
-      </TouchableOpacity>
+                <View className="flex-row items-center mt-1">
+                  {order.processOrder.isPaid ? (
+                    <FontAwesome6
+                      name="circle-check"
+                      size={16}
+                      color="#F7CA21"
+                    />
+                  ) : (
+                    <FontAwesome6 name="coins" size={16} color="#F7CA21" />
+                  )}
+                  <Text className="ml-2 text-sm">
+                    {order.processOrder.isPaid ? (
+                      <Text className="text-black">Already Paid!</Text>
+                    ) : (
+                      <Text>
+                        {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
+                        : {formatCurrency(order.pricing)}
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              </TouchableOpacity>
 
-      {/* QR Code Icon on the right */}
-      <TouchableOpacity
-        onPress={() => {
-          if (order.processOrder.invNo) {
-            navigation.navigate("VerifyOrderByQR", { 
-              invNo: order.processOrder.invNo
-            });
-          } else {
-            // Show error if no invoice number
-            setAlertModal({
-              visible: true,
-              title: "No Invoice Number",
-              message: "This order doesn't have an invoice number to scan.",
-              type: "error",
-            });
-          }
-        }}
-        className="ml-3 p-3 bg-white rounded-full"
-      >
-        <FontAwesome6 name="qrcode" size={20} color="black" />
-      </TouchableOpacity>
-    </View>
-  ))}
-</View>
+              {/* QR Code Icon on the right */}
+              <TouchableOpacity
+                onPress={() => {
+                  if (order.processOrder.invNo) {
+                    navigation.navigate("VerifyOrderQR", {
+                      invNo: order.processOrder.invNo,
+                      orderId: order.orderId,
+                      allOrderIds: orders.map((o) => o.orderId),
+                      totalToScan: orders.length,
+                    });
+                  } else {
+                    // Show error if no invoice number
+                    setAlertModal({
+                      visible: true,
+                      title: "No Invoice Number",
+                      message:
+                        "This order doesn't have an invoice number to scan.",
+                      type: "error",
+                    });
+                  }
+                }}
+                className="ml-3 p-3 bg-white rounded-full"
+              >
+                <FontAwesome6 name="qrcode" size={20} color="black" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
       </ScrollView>
 
       {/* Bottom Action Buttons */}

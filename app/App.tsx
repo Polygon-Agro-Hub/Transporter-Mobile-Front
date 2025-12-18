@@ -33,7 +33,7 @@ import LoginScreen from "@/component/auth/LoginScreen";
 import ChangePassword from "@/component/auth/ChangePassword";
 import ProfileScreen from "@/component/auth/Profile";
 import ReturnOrders from "@/component/orders/ReturnOrders";
-import QRScan from "@/component/orders/QRScan";
+import AssignOrderQR from "@/component/qr/AssignOrderQR";
 import Jobs from "@/component/orders/Jobs";
 import OrderDetails from "@/component/orders/OrderDetails";
 import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
@@ -42,7 +42,7 @@ import SignatureScreen from "@/component/orders/SignatureScreen";
 import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
 import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
 import { RootStackParamList } from "@/component/types";
-import VerifyOrderByQR from "@/component/qr/VerifyOrderByQR";
+import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -155,8 +155,8 @@ function AppContent() {
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
-             <Stack.Screen name="QRScan" component={QRScan}  />
-             <Stack.Screen name="VerifyOrderByQR" component={VerifyOrderByQR}  />
+             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
+             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />

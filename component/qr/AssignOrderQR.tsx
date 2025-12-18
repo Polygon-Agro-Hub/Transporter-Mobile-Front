@@ -21,13 +21,13 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 
-type QRScanNavigationProp = StackNavigationProp<RootStackParamList, "QRScan">;
+type AssignOrderQRNavigationProp = StackNavigationProp<RootStackParamList, "AssignOrderQR">;
 
-interface QRScanProps {
-  navigation: QRScanNavigationProp;
+interface AssignOrderQRProps {
+  navigation: AssignOrderQRNavigationProp;
 }
 
-const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
+const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -679,4 +679,4 @@ const QRScan: React.FC<QRScanProps> = ({ navigation }) => {
   );
 };
 
-export default QRScan;
+export default AssignOrderQR;
