@@ -45,46 +45,74 @@ interface TripData {
   address?: string;
   payment?: string;
   distanceToGo?: string;
+  orderId?: number;
+  processOrderId?: number;
+  marketOrderId?: number;
 }
 
 interface OrderDetails {
   orderId: number;
+  processOrderId?: number;
+  marketOrderId?: number;
   customerName: string;
   scheduleTime: string;
   packCount: number;
   address: string;
   payment: string;
+  status?: string;
+}
+
+interface UserDetails {
+  id: number;
+  title: string;
+  firstName: string;
+  lastName: string;
+  phoneCode: string;
+  phoneNumber: string;
+  image: string | null;
+  address: string;
+}
+
+interface OrderItem {
+  orderId: number;
+  processOrderId?: number;
+  marketOrderId?: number;
+  sheduleTime: string;
+  pricing: string;
+  status?: string;
+}
+
+interface APIResponse {
+  user: UserDetails;
+  orders: OrderItem[];
 }
 
 const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
+  // Extract all parameters from route
+  const { 
+    orderIds, 
+    processOrderIds = [], 
+    primaryProcessOrderId,
+    marketOrderIds = [] 
+  } = route.params;
+  
+  console.log("Received in MyJourney:", {
+    orderIds,
+    processOrderIds,
+    primaryProcessOrderId,
+    marketOrderIds
+  });
+  
+  // Use processOrderIds if available, otherwise fall back to orderIds
+  const activeOrderIds = processOrderIds.length > 0 ? processOrderIds : orderIds;
+  
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderDetails[]>([]);
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
 
   // Simulate trip data from backend (you can replace this with real data)
-  const [todoJobs, setTodoJobs] = useState<TripData[]>([
-    {
-      id: "01",
-      name: "Mr. Kusal Dias",
-      time: "8:00AM - 2:00PM",
-      count: 2,
-      status: "Pending",
-      address: "11/A, Galle Rd, Dehiwala",
-      payment: "Cash : LKR 1,800.00",
-      distanceToGo: "2km",
-    },
-    {
-      id: "02",
-      name: "Mrs. Anjali Perera",
-      time: "2:00PM - 8:00PM",
-      count: 1,
-      status: "Pending",
-      address: "45, Main Street, Colombo 05",
-      payment: "Cash : LKR 1,200.00",
-      distanceToGo: "3.5km",
-    },
-  ]);
+  const [todoJobs, setTodoJobs] = useState<TripData[]>([]);
 
   // Current active trip
   const [currentTrip, setCurrentTrip] = useState<TripData | null>(null);
@@ -94,16 +122,10 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
 
   // Fetch order details when component mounts
   useEffect(() => {
-    if (orderIds && orderIds.length > 0) {
+    if (activeOrderIds && activeOrderIds.length > 0) {
       fetchOrderDetails();
     }
-    
-    // Initialize with first pending trip
-    const pendingTrip = todoJobs.find((job) => job.status === "Pending");
-    if (pendingTrip) {
-      setCurrentTrip(pendingTrip);
-    }
-  }, [orderIds]);
+  }, [activeOrderIds]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -115,30 +137,58 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
         return;
       }
 
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      const orderIdsString = Array.isArray(activeOrderIds)
+        ? activeOrderIds.join(",")
+        : String(activeOrderIds);
 
+      console.log("Fetching order details with IDs:", orderIdsString);
+
+      // Add parameter to indicate if these are process order IDs
+      const isProcessOrder = processOrderIds.length > 0;
+      
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
-          params: { orderIds: orderIdsString },
+          params: { 
+            orderIds: orderIdsString,
+            isProcessOrderIds: isProcessOrder ? 1 : 0 
+          },
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       if (response.data.status === "success") {
-        const data = response.data.data;
+        const data: APIResponse = response.data.data;
+        
+        if (data.user) {
+          setUserDetails(data.user);
+        }
+        
         if (data.orders && data.orders.length > 0) {
-          // Transform API data to match your TripData structure
-          const formattedOrders: OrderDetails[] = data.orders.map((order: any, index: number) => ({
-            orderId: order.orderId,
-            customerName: data.user?.firstName + " " + data.user?.lastName || "Customer",
-            scheduleTime: order.sheduleTime || "Not Scheduled",
-            packCount: 1, // You might need to adjust this based on your data
-            address: data.user?.address || "Address not specified",
-            payment: `Cash : ${order.pricing || "0.00"}`,
-          }));
+          // Transform API data to match your OrderDetails structure
+          const formattedOrders: OrderDetails[] = data.orders.map((order: OrderItem, index: number) => {
+            // Determine the correct order ID based on what was passed
+            const orderId = isProcessOrder ? 
+              (order.processOrderId || order.orderId) : 
+              order.orderId;
+            
+            const marketOrderId = marketOrderIds[index] || order.marketOrderId;
+            const processOrderId = isProcessOrder ? 
+              (processOrderIds[index] || order.processOrderId) : 
+              undefined;
+            
+            return {
+              orderId: orderId,
+              processOrderId: processOrderId,
+              marketOrderId: marketOrderId,
+              customerName: data.user?.firstName + " " + data.user?.lastName || "Customer",
+              scheduleTime: order.sheduleTime || "Not Scheduled",
+              packCount: 1, // You might need to adjust this based on your data
+              address: data.user?.address || "Address not specified",
+              payment: order.pricing ? `Cash : ${order.pricing}` : "Cash : 0.00",
+              status: order.status || "Pending",
+            };
+          });
           
           setOrders(formattedOrders);
           
@@ -149,14 +199,36 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
               name: order.customerName,
               time: order.scheduleTime,
               count: order.packCount,
-              status: "Pending" as const,
+              status: order.status === "Hold" ? "Pending" : 
+                     order.status === "InProgress" ? "InProgress" as const :
+                     order.status === "Completed" ? "Completed" as const :
+                     "Pending" as const,
               address: order.address,
               payment: order.payment,
               distanceToGo: `${Math.floor(Math.random() * 5) + 1}km`, // Random distance for demo
+              orderId: order.orderId,
+              processOrderId: order.processOrderId,
+              marketOrderId: order.marketOrderId,
             }));
             
             setTodoJobs(updatedJobs);
-            setCurrentTrip(updatedJobs[0]);
+            
+            // Find first non-completed trip
+            const firstPendingTrip = updatedJobs.find((job) => 
+              job.status === "Pending" || job.status === "InProgress"
+            );
+            
+            if (firstPendingTrip) {
+              setCurrentTrip(firstPendingTrip);
+              setCurrentOrderIndex(updatedJobs.findIndex(job => job.id === firstPendingTrip.id));
+              
+              // Set journey status based on trip status
+              if (firstPendingTrip.status === "InProgress") {
+                setJourneyStatus("in_progress");
+              } else {
+                setJourneyStatus("not_started");
+              }
+            }
           }
         }
       }
@@ -232,10 +304,16 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
     if (nextTrip) {
       // If there's another trip, move to it
       setCurrentTrip(nextTrip);
+      setCurrentOrderIndex(currentIndex + 1);
       setJourneyStatus("not_started");
     } else {
       // If this was the last trip, navigate to OrderDetailsAfterJourney
-      navigation.navigate("OrderDetailsAfterJourney", { orderIds });
+      navigation.navigate("OrderDetailsAfterJourney", { 
+        orderIds: activeOrderIds,
+        processOrderIds: processOrderIds,
+        primaryProcessOrderId: primaryProcessOrderId,
+        marketOrderIds: marketOrderIds
+      });
       setCurrentTrip(null);
       setJourneyStatus("not_started");
     }
@@ -243,7 +321,34 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
 
   // Function to navigate directly to OrderDetailsAfterJourney (for testing)
   const handleGoToAfterJourney = () => {
-    navigation.navigate("OrderDetailsAfterJourney", { orderIds });
+    navigation.navigate("OrderDetailsAfterJourney", { 
+      orderIds: activeOrderIds,
+      processOrderIds: processOrderIds,
+      primaryProcessOrderId: primaryProcessOrderId,
+      marketOrderIds: marketOrderIds
+    });
+  };
+
+  // Handle phone call
+  const handlePhoneCall = () => {
+    if (userDetails?.phoneCode && userDetails?.phoneNumber) {
+      const phoneNumber = `${userDetails.phoneCode}${userDetails.phoneNumber}`;
+      Alert.alert(
+        "Call Customer",
+        `Do you want to call ${userDetails.firstName} ${userDetails.lastName}?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Call",
+            onPress: () => {
+              // You would use Linking.openURL here
+              // Linking.openURL(`tel:${phoneNumber}`);
+              Alert.alert("Calling", `Would call: ${phoneNumber}`);
+            },
+          },
+        ]
+      );
+    }
   };
 
   if (loading) {
@@ -321,6 +426,10 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                       <Text className="text-sm text-black mt-1 text-center font-semibold">
                         No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
                       </Text>
+                      <Text className="text-xs text-gray-500 text-center">
+                        Order ID: {currentTrip.orderId}
+                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
+                      </Text>
                     </View>
                   </View>
 
@@ -352,6 +461,10 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                       </Text>
                       <Text className="text-sm text-black mt-1 text-center font-semibold">
                         No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
+                      </Text>
+                      <Text className="text-xs text-gray-500 text-center">
+                        Order ID: {currentTrip.orderId}
+                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
                       </Text>
                     </View>
                   </View>
@@ -387,13 +500,15 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                       <Text className="text-base font-semibold text-black">
                         {currentTrip.name}
                       </Text>
+                      <Text className="text-xs text-gray-500">
+                        Order ID: {currentTrip.orderId}
+                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
+                      </Text>
                     </View>
 
                     <TouchableOpacity
                       className="bg-[#FFD700] w-12 h-12 rounded-full items-center justify-center"
-                      onPress={() => {
-                        Alert.alert("Call", `Call ${currentTrip.name}`);
-                      }}
+                      onPress={handlePhoneCall}
                     >
                       <FontAwesome5 name="phone-alt" size={20} color="black" />
                     </TouchableOpacity>
@@ -460,6 +575,11 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                   <Text className="text-xs text-gray-600 mt-1 text-center">
                     Ready for scanning {orders.length} order{orders.length !== 1 ? 's' : ''}
                   </Text>
+                  {primaryProcessOrderId && (
+                    <Text className="text-xs text-gray-500 text-center">
+                      Primary Process Order ID: {primaryProcessOrderId}
+                    </Text>
+                  )}
                 </View>
               </View>
 
