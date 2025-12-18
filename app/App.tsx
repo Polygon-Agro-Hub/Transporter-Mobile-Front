@@ -43,6 +43,8 @@ import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
 import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
 import { RootStackParamList } from "@/component/types";
 import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
+import OrderReturn from "@/component/orders/OrderReturn";
+import HoldOrder from "@/component/orders/HoldOrder";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -160,10 +162,12 @@ function AppContent() {
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
             <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />
-            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation } />
             <Stack.Screen name="MyJourney" component={MyJourney} />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
             <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
+            <Stack.Screen name="OrderReturn" component={OrderReturn} />
+            <Stack.Screen name="HoldOrder" component={HoldOrder} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

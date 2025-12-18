@@ -6,7 +6,7 @@ import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import Foundation from "@expo/vector-icons/Foundation";
-
+import { RouteProp } from "@react-navigation/native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 
 const locationImage = require("@/assets/images/orders/location.webp");
@@ -16,16 +16,29 @@ type EndJourneyNavigationProp = StackNavigationProp<
   "EndJourneyConfirmation"
 >;
 
+type EndJourneyRouteProp = RouteProp<RootStackParamList, "EndJourneyConfirmation">;
+
 interface EndJourneyProps {
   navigation: EndJourneyNavigationProp;
+  route: EndJourneyRouteProp;
 }
 
-const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
+const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation, route }) => {
+  const { orderIds } = route.params;
+
+  console.log("order ids", orderIds);
+
   const handleHoldOrder = () => {
+    navigation.navigate("HoldOrder", {
+        orderIds: orderIds,
+      });
     console.log("Hold Order pressed");
   };
 
   const handleReturnOrder = () => {
+    navigation.navigate("OrderReturn" , {
+        orderIds: orderIds,
+      });
     console.log("Return Order pressed");
   };
 

@@ -31,4 +31,10 @@ export type RootStackParamList = {
   };
   SignatureScreen: undefined;
   DeliverySuccessful: undefined;
+  OrderReturn:{
+    orderIds: number[];
+  };
+  HoldOrder:{
+    orderIds: number[];
+  };
 };
