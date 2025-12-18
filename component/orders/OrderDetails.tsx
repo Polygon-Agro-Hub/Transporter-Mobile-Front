@@ -69,7 +69,25 @@ interface OrderDetailsResponse {
 }
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
+  // ADD THESE NEW PARAMETERS
+  const { 
+    orderIds, 
+    processOrderIds = [], 
+    primaryProcessOrderId,
+    marketOrderIds = [] 
+  } = route.params;
+  
+  console.log("Received in OrderDetails:", {
+    orderIds,
+    processOrderIds,
+    primaryProcessOrderId,
+    marketOrderIds
+  });
+  
+  // Use processOrderIds if available, otherwise fall back to orderIds
+  const activeOrderIds = processOrderIds.length > 0 ? processOrderIds : orderIds;
+  const activePrimaryOrderId = primaryProcessOrderId || (orderIds && orderIds[0]);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -100,16 +118,23 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      // Use processOrderIds if available, otherwise fall back to orderIds
+      const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
+      
+      // Convert ids array to comma-separated string
+      const orderIdsString = Array.isArray(idsToUse)
+        ? idsToUse.join(",")
+        : String(idsToUse);
+
+      console.log("Fetching order details with IDs:", orderIdsString);
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: {
             orderIds: orderIdsString,
+            // You might need to add a parameter to indicate these are process order IDs
+            isProcessOrderIds: processOrderIds.length > 0 ? 1 : 0,
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -222,15 +247,21 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      // Use processOrderIds if available, otherwise fall back to orderIds
+      const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
+      
+      // Convert ids array to comma-separated string
+      const orderIdsString = Array.isArray(idsToUse)
+        ? idsToUse.join(",")
+        : String(idsToUse);
+
+      console.log("Starting journey with IDs:", orderIdsString);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/start-journey`,
         {
           orderIds: orderIdsString,
+          isProcessOrderIds: processOrderIds.length > 0 ? 1 : 0,
         },
         {
           headers: {
@@ -241,7 +272,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        navigation.navigate("MyJourney", { orderIds });
+        // Pass the same parameters to MyJourney
+        navigation.navigate("MyJourney", { 
+          orderIds: idsToUse,
+          processOrderIds: processOrderIds,
+          primaryProcessOrderId: primaryProcessOrderId,
+          marketOrderIds: marketOrderIds
+        });
 
         // No need to refresh order details since we're navigating away
       } else {
@@ -288,7 +325,16 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       ...alertModal,
       visible: false,
     });
-    navigation.navigate("MyJourney", { orderIds });
+    
+    // Use processOrderIds if available, otherwise fall back to orderIds
+    const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
+    
+    navigation.navigate("MyJourney", { 
+      orderIds: idsToUse,
+      processOrderIds: processOrderIds,
+      primaryProcessOrderId: primaryProcessOrderId,
+      marketOrderIds: marketOrderIds
+    });
   };
 
   if (loading) {
