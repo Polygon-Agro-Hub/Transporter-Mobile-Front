@@ -10,26 +10,28 @@ export type RootStackParamList = {
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
-    VerifyOrderQR: {
+  VerifyOrderQR: {
     invNo: string;
     orderId: number;
     allOrderIds: number[]; 
-    totalToScan: number; 
+    totalToScan: number;
   };
   Jobs: undefined;
   OrderDetails: {
-    orderIds: number[];
+    processOrderIds: number[];
   };
   OrderDetailsAfterJourney: {
-    orderIds: number[];
+    processOrderIds: number[];
   };
   EndJourneyConfirmation: {
-    orderIds: number[];
+    processOrderIds: number[]; 
   };
   MyJourney: {
-    orderIds: number[];
+    processOrderIds: number[];
   };
-  SignatureScreen: undefined;
+  SignatureScreen: {
+    processOrderIds: number[];
+  };
   DeliverySuccessful: undefined;
   OrderReturn:{
     orderIds: number[];

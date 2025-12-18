@@ -69,7 +69,9 @@ interface OrderDetailsResponse {
 }
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
+  // ONLY use processOrderIds parameter
+  const { processOrderIds = [] } = route.params;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -100,16 +102,24 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      // Check if we have processOrderIds
+      if (!processOrderIds || processOrderIds.length === 0) {
+        throw new Error("No process order IDs provided");
+      }
+
+      // Convert processOrderIds array to comma-separated string
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
+
+      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: {
-            orderIds: orderIdsString,
+            orderIds: processOrderIdsString,
+            isProcessOrderIds: 1, // Always send this as 1 since we're using processOrderIds
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -222,15 +232,18 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      // Use processOrderIds
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
+
+      console.log("Starting journey with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/start-journey`,
         {
-          orderIds: orderIdsString,
+          orderIds: processOrderIdsString,
+          isProcessOrderIds: 1, // Always send as process order IDs
         },
         {
           headers: {
@@ -241,7 +254,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        navigation.navigate("MyJourney", { orderIds });
+        // Pass only processOrderIds to MyJourney
+        navigation.navigate("MyJourney", {
+          processOrderIds: processOrderIds,
+        });
 
         // No need to refresh order details since we're navigating away
       } else {
@@ -288,7 +304,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       ...alertModal,
       visible: false,
     });
-    navigation.navigate("MyJourney", { orderIds });
+
+    // Navigate to MyJourney with processOrderIds
+    navigation.navigate("MyJourney", {
+      processOrderIds: processOrderIds,
+    });
   };
 
   if (loading) {

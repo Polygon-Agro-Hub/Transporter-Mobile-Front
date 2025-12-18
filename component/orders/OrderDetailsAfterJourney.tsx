@@ -70,13 +70,14 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
   navigation,
   route,
 }) => {
-  const { orderIds } = route.params;
+  // ONLY use processOrderIds parameter
+  const { processOrderIds = [] } = route.params;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [alertModal, setAlertModal] = useState({
     visible: false,
     title: "",
@@ -100,16 +101,24 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(orderIds)
-        ? orderIds.join(",")
-        : String(orderIds);
+      // Check if we have processOrderIds
+      if (!processOrderIds || processOrderIds.length === 0) {
+        throw new Error("No process order IDs provided");
+      }
+
+      // Convert processOrderIds array to comma-separated string
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
+
+      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: {
-            orderIds: orderIdsString,
+            orderIds: processOrderIdsString,
+            isProcessOrderIds: 1, // Always send as 1 since we're using processOrderIds
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -126,8 +135,6 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
 
         setUserDetails(data.user);
         setOrders(data.orders);
-        // Initialize all orders as selected
-        setSelectedOrders(data.orders.map((order) => order.orderId));
       } else {
         throw new Error(
           response.data.message || "Failed to fetch order details"
@@ -158,33 +165,26 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
     }
   };
 
-  const toggleOrderSelection = (orderId: number) => {
-    setSelectedOrders((prev) => {
-      if (prev.includes(orderId)) {
-        return prev.filter((id) => id !== orderId);
-      } else {
-        return [...prev, orderId];
-      }
-    });
-  };
-
-  const selectAllOrders = () => {
-    if (selectedOrders.length === orders.length) {
-      setSelectedOrders([]);
+  const handleScanOrder = (order: OrderItem) => {
+    if (order.processOrder.invNo) {
+      // Get the index of this order in the orders array
+      const orderIndex = orders.findIndex(o => o.orderId === order.orderId);
+      
+      // Navigate to QR scanning screen with processOrderIds
+      navigation.navigate("VerifyOrderQR", {
+        invNo: order.processOrder.invNo,
+        orderId: order.orderId,
+        allOrderIds: processOrderIds, // Pass processOrderIds as allOrderIds
+        totalToScan: orders.length,
+      });
     } else {
-      setSelectedOrders(orders.map((order) => order.orderId));
-    }
-  };
-
-  const handleScanToProceed = () => {
-    if (selectedOrders.length === 0) {
+      // Show error if no invoice number
       setAlertModal({
         visible: true,
-        title: "No Orders Selected",
-        message: "Please select at least one order to proceed with scanning.",
+        title: "No Invoice Number",
+        message: "This order doesn't have an invoice number to scan.",
         type: "error",
       });
-      return;
     }
   };
 
@@ -227,13 +227,6 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
 
     const firstOrder = orders[0];
     return firstOrder?.sheduleTime || "Not Scheduled";
-  };
-
-  // Check if any order has Hold status
-  const hasHoldOrder = () => {
-    return orders.some(
-      (order) => order.processOrder.status?.toLowerCase() === "hold"
-    );
   };
 
   if (loading) {
@@ -323,7 +316,10 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
               Great Work!
             </Text>
             <Text className="text-sm text-black mt-1">
-              Please select orders and scan to proceed!
+              Tap on any order card to scan QR code
+            </Text>
+            <Text className="text-xs text-gray-500 mt-2">
+              {orders.length} order{orders.length !== 1 ? 's' : ''} to scan
             </Text>
           </View>
         </View>
@@ -376,21 +372,16 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
           </View>
         </View>
 
-        {/* Orders List with Selection */}
+        {/* Orders List - Entire cards are clickable */}
         <View className="mb-6 space-y-4">
           {orders.map((order, index) => (
-            <View
+            <TouchableOpacity
               key={`${order.orderId}-${index}`}
-              className={`rounded-xl border py-2 px-4 bg-white flex-row items-center ${
-                selectedOrders.includes(order.orderId)
-                  ? "border-[#F7CA21] border bg-[#FFF2BF]"
-                  : "border-[#A4AAB7]"
-              }`}
+              className="rounded-xl border border-[#F7CA21] py-3 px-4 flex-row items-center justify-between bg-[#FFF2BF]"
+              onPress={() => handleScanOrder(order)}
+              activeOpacity={0.7}
             >
-              <TouchableOpacity
-                className="flex-1"
-                onPress={() => toggleOrderSelection(order.orderId)}
-              >
+              <View className="flex-1">
                 <View className="flex-row justify-between items-center">
                   <Text className="font-bold text-sm">
                     #{order.processOrder.invNo || `ORD${order.orderId}`}
@@ -402,14 +393,14 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
                   )}
                 </View>
 
-                <View className="flex-row items-center mt-1">
+                <View className="flex-row items-center mt-2">
                   <Ionicons name="time" size={16} color="black" />
                   <Text className="ml-2 text-sm">
                     {order.sheduleTime || "Not Scheduled"}
                   </Text>
                 </View>
 
-                <View className="flex-row items-center mt-1">
+                <View className="flex-row items-center mt-2">
                   {order.processOrder.isPaid ? (
                     <FontAwesome6
                       name="circle-check"
@@ -430,34 +421,13 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
                     )}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </View>
 
               {/* QR Code Icon on the right */}
-              <TouchableOpacity
-                onPress={() => {
-                  if (order.processOrder.invNo) {
-                    navigation.navigate("VerifyOrderQR", {
-                      invNo: order.processOrder.invNo,
-                      orderId: order.orderId,
-                      allOrderIds: orders.map((o) => o.orderId),
-                      totalToScan: orders.length,
-                    });
-                  } else {
-                    // Show error if no invoice number
-                    setAlertModal({
-                      visible: true,
-                      title: "No Invoice Number",
-                      message:
-                        "This order doesn't have an invoice number to scan.",
-                      type: "error",
-                    });
-                  }
-                }}
-                className="ml-3 p-3 bg-white rounded-full"
-              >
+              <View className="ml-3 p-3 bg-white rounded-full border border-gray-200">
                 <FontAwesome6 name="qrcode" size={20} color="black" />
-              </TouchableOpacity>
-            </View>
+              </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
