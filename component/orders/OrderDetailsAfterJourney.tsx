@@ -70,16 +70,8 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
   navigation,
   route,
 }) => {
-  const {
-    orderIds,
-    processOrderIds = [],
-    primaryProcessOrderId,
-    marketOrderIds = [],
-  } = route.params;
-
-  // Use processOrderIds if available, otherwise fall back to orderIds
-  const activeOrderIds =
-    processOrderIds.length > 0 ? processOrderIds : orderIds;
+  // ONLY use processOrderIds parameter
+  const { processOrderIds = [] } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,19 +101,24 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
         return;
       }
 
-      // Convert orderIds array to comma-separated string
-      const orderIdsString = Array.isArray(activeOrderIds)
-        ? activeOrderIds.join(",")
-        : String(activeOrderIds);
+      // Check if we have processOrderIds
+      if (!processOrderIds || processOrderIds.length === 0) {
+        throw new Error("No process order IDs provided");
+      }
 
-      console.log("Fetching order details with IDs:", orderIdsString);
+      // Convert processOrderIds array to comma-separated string
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
+
+      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: {
-            orderIds: orderIdsString,
-            isProcessOrderIds: processOrderIds.length > 0 ? 1 : 0,
+            orderIds: processOrderIdsString,
+            isProcessOrderIds: 1, // Always send as 1 since we're using processOrderIds
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -170,11 +167,14 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
 
   const handleScanOrder = (order: OrderItem) => {
     if (order.processOrder.invNo) {
-      // Navigate to QR scanning screen
+      // Get the index of this order in the orders array
+      const orderIndex = orders.findIndex(o => o.orderId === order.orderId);
+      
+      // Navigate to QR scanning screen with processOrderIds
       navigation.navigate("VerifyOrderQR", {
         invNo: order.processOrder.invNo,
         orderId: order.orderId,
-        allOrderIds: orders.map((o) => o.orderId),
+        allOrderIds: processOrderIds, // Pass processOrderIds as allOrderIds
         totalToScan: orders.length,
       });
     } else {
@@ -318,11 +318,9 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
             <Text className="text-sm text-black mt-1">
               Tap on any order card to scan QR code
             </Text>
-            {primaryProcessOrderId && (
-              <Text className="text-xs text-gray-500 mt-2">
-                Process Order ID: {primaryProcessOrderId}
-              </Text>
-            )}
+            <Text className="text-xs text-gray-500 mt-2">
+              {orders.length} order{orders.length !== 1 ? 's' : ''} to scan
+            </Text>
           </View>
         </View>
 

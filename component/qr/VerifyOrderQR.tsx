@@ -38,11 +38,10 @@ interface ScanData {
 
 const SCAN_STORAGE_KEY = "@order_qr_scans";
 
-const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
-  navigation,
-  route,
-}) => {
+const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({ navigation, route }) => {
   const { invNo, orderId, allOrderIds, totalToScan } = route.params;
+  // Note: allOrderIds here are actually processOrderIds
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -86,7 +85,7 @@ const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
       const storedScans = await AsyncStorage.getItem(SCAN_STORAGE_KEY);
       if (storedScans) {
         const scans: ScanData[] = JSON.parse(storedScans);
-        // Filter scans for current order IDs
+        // Filter scans for current order IDs (which are actually processOrderIds)
         const relevantScans = scans.filter((scan) =>
           allOrderIds.includes(scan.orderId)
         );
@@ -164,9 +163,9 @@ const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
         }
       }, 1000);
 
-      // Navigate to confirmation screen
+      // Navigate to confirmation screen with processOrderIds
       navigation.replace("EndJourneyConfirmation", {
-        orderIds: allOrderIds,
+        processOrderIds: allOrderIds, // Pass as processOrderIds
       });
     }
   };
@@ -439,6 +438,9 @@ const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
               Package: <Text className="font-bold text-[#000000]">{invNo}</Text>{" "}
               has been successfully verified.
             </Text>
+            <Text className="text-center text-[#4E4E4E]">
+              Scanned: {newScanCount} of {totalToScan}
+            </Text>
           </View>
         );
         setModalType("success");
@@ -449,7 +451,7 @@ const VerifyOrderQR: React.FC<VerifyOrderQRProps> = ({
           // Navigate after a short delay to show success message
           setTimeout(() => {
             navigation.replace("EndJourneyConfirmation", {
-              orderIds: allOrderIds,
+              processOrderIds: allOrderIds, // Pass as processOrderIds
             });
           }, 2000);
         }

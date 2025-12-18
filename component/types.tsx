@@ -14,33 +14,23 @@ export type RootStackParamList = {
     invNo: string;
     orderId: number;
     allOrderIds: number[]; 
-    totalToScan: number; 
+    totalToScan: number;
   };
   Jobs: undefined;
   OrderDetails: {
-    orderIds: number[];
-    processOrderIds?: number[]; 
-    primaryProcessOrderId?: number; 
-    marketOrderIds?: number[]; 
+    processOrderIds: number[];
   };
   OrderDetailsAfterJourney: {
-    orderIds: number[];
-    processOrderIds?: number[];
-    primaryProcessOrderId?: number; 
-    marketOrderIds?: number[];
+    processOrderIds: number[];
   };
   EndJourneyConfirmation: {
-    orderIds: number[];
-    processOrderIds?: number[]; 
-    primaryProcessOrderId?: number; 
-    marketOrderIds?: number[]; 
+    processOrderIds: number[]; 
   };
   MyJourney: {
-    orderIds: number[];
-    processOrderIds?: number[]; 
-    primaryProcessOrderId?: number; 
-    marketOrderIds?: number[]; 
+    processOrderIds: number[];
   };
-  SignatureScreen: undefined;
+  SignatureScreen: {
+    processOrderIds: number[];
+  };
   DeliverySuccessful: undefined;
 };

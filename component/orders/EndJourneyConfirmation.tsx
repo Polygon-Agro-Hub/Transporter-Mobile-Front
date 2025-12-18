@@ -1,12 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import Foundation from "@expo/vector-icons/Foundation";
-
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 
 const locationImage = require("@/assets/images/orders/location.webp");
@@ -16,22 +15,32 @@ type EndJourneyNavigationProp = StackNavigationProp<
   "EndJourneyConfirmation"
 >;
 
+type EndJourneyRouteProp = RouteProp<RootStackParamList, "EndJourneyConfirmation">;
+
 interface EndJourneyProps {
   navigation: EndJourneyNavigationProp;
+  route: EndJourneyRouteProp;
 }
 
-const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
+const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation, route }) => {
+  // Get processOrderIds from route params
+  const { processOrderIds = [] } = route.params;
+
   const handleHoldOrder = () => {
     console.log("Hold Order pressed");
+    console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleReturnOrder = () => {
     console.log("Return Order pressed");
+    console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleGetSignature = () => {
-    console.log("SignatureScreen");
-    navigation.navigate("SignatureScreen");
+    console.log("Navigating to SignatureScreen with Process Order IDs:", processOrderIds);
+    navigation.navigate("SignatureScreen", {
+      processOrderIds: processOrderIds,
+    });
   };
 
   return (
@@ -110,6 +119,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </View>
   );

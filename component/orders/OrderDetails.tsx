@@ -69,25 +69,9 @@ interface OrderDetailsResponse {
 }
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
-  // ADD THESE NEW PARAMETERS
-  const { 
-    orderIds, 
-    processOrderIds = [], 
-    primaryProcessOrderId,
-    marketOrderIds = [] 
-  } = route.params;
-  
-  console.log("Received in OrderDetails:", {
-    orderIds,
-    processOrderIds,
-    primaryProcessOrderId,
-    marketOrderIds
-  });
-  
-  // Use processOrderIds if available, otherwise fall back to orderIds
-  const activeOrderIds = processOrderIds.length > 0 ? processOrderIds : orderIds;
-  const activePrimaryOrderId = primaryProcessOrderId || (orderIds && orderIds[0]);
-  
+  // ONLY use processOrderIds parameter
+  const { processOrderIds = [] } = route.params;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -118,23 +102,24 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Use processOrderIds if available, otherwise fall back to orderIds
-      const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
-      
-      // Convert ids array to comma-separated string
-      const orderIdsString = Array.isArray(idsToUse)
-        ? idsToUse.join(",")
-        : String(idsToUse);
+      // Check if we have processOrderIds
+      if (!processOrderIds || processOrderIds.length === 0) {
+        throw new Error("No process order IDs provided");
+      }
 
-      console.log("Fetching order details with IDs:", orderIdsString);
+      // Convert processOrderIds array to comma-separated string
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
+
+      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: {
-            orderIds: orderIdsString,
-            // You might need to add a parameter to indicate these are process order IDs
-            isProcessOrderIds: processOrderIds.length > 0 ? 1 : 0,
+            orderIds: processOrderIdsString,
+            isProcessOrderIds: 1, // Always send this as 1 since we're using processOrderIds
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -247,21 +232,18 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Use processOrderIds if available, otherwise fall back to orderIds
-      const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
-      
-      // Convert ids array to comma-separated string
-      const orderIdsString = Array.isArray(idsToUse)
-        ? idsToUse.join(",")
-        : String(idsToUse);
+      // Use processOrderIds
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
 
-      console.log("Starting journey with IDs:", orderIdsString);
+      console.log("Starting journey with Process Order IDs:", processOrderIdsString);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/start-journey`,
         {
-          orderIds: orderIdsString,
-          isProcessOrderIds: processOrderIds.length > 0 ? 1 : 0,
+          orderIds: processOrderIdsString,
+          isProcessOrderIds: 1, // Always send as process order IDs
         },
         {
           headers: {
@@ -272,12 +254,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        // Pass the same parameters to MyJourney
-        navigation.navigate("MyJourney", { 
-          orderIds: idsToUse,
+        // Pass only processOrderIds to MyJourney
+        navigation.navigate("MyJourney", {
           processOrderIds: processOrderIds,
-          primaryProcessOrderId: primaryProcessOrderId,
-          marketOrderIds: marketOrderIds
         });
 
         // No need to refresh order details since we're navigating away
@@ -325,15 +304,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       ...alertModal,
       visible: false,
     });
-    
-    // Use processOrderIds if available, otherwise fall back to orderIds
-    const idsToUse = processOrderIds.length > 0 ? processOrderIds : orderIds;
-    
-    navigation.navigate("MyJourney", { 
-      orderIds: idsToUse,
+
+    // Navigate to MyJourney with processOrderIds
+    navigation.navigate("MyJourney", {
       processOrderIds: processOrderIds,
-      primaryProcessOrderId: primaryProcessOrderId,
-      marketOrderIds: marketOrderIds
     });
   };
 

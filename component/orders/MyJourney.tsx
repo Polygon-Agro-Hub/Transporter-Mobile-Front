@@ -8,7 +8,6 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
@@ -45,15 +44,11 @@ interface TripData {
   address?: string;
   payment?: string;
   distanceToGo?: string;
-  orderId?: number;
   processOrderId?: number;
-  marketOrderId?: number;
 }
 
 interface OrderDetails {
-  orderId: number;
-  processOrderId?: number;
-  marketOrderId?: number;
+  processOrderId: number;
   customerName: string;
   scheduleTime: string;
   packCount: number;
@@ -76,7 +71,6 @@ interface UserDetails {
 interface OrderItem {
   orderId: number;
   processOrderId?: number;
-  marketOrderId?: number;
   sheduleTime: string;
   pricing: string;
   status?: string;
@@ -88,30 +82,17 @@ interface APIResponse {
 }
 
 const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
-  // Extract all parameters from route
-  const { 
-    orderIds, 
-    processOrderIds = [], 
-    primaryProcessOrderId,
-    marketOrderIds = [] 
-  } = route.params;
+  // Extract only processOrderIds from route
+  const { processOrderIds = [] } = route.params;
   
-  console.log("Received in MyJourney:", {
-    orderIds,
-    processOrderIds,
-    primaryProcessOrderId,
-    marketOrderIds
-  });
-  
-  // Use processOrderIds if available, otherwise fall back to orderIds
-  const activeOrderIds = processOrderIds.length > 0 ? processOrderIds : orderIds;
+  console.log("Received in MyJourney - Process Order IDs:", processOrderIds);
   
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
 
-  // Simulate trip data from backend (you can replace this with real data)
+  // Trip data from backend
   const [todoJobs, setTodoJobs] = useState<TripData[]>([]);
 
   // Current active trip
@@ -122,10 +103,10 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
 
   // Fetch order details when component mounts
   useEffect(() => {
-    if (activeOrderIds && activeOrderIds.length > 0) {
+    if (processOrderIds && processOrderIds.length > 0) {
       fetchOrderDetails();
     }
-  }, [activeOrderIds]);
+  }, [processOrderIds]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -137,21 +118,18 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
         return;
       }
 
-      const orderIdsString = Array.isArray(activeOrderIds)
-        ? activeOrderIds.join(",")
-        : String(activeOrderIds);
+      const processOrderIdsString = Array.isArray(processOrderIds)
+        ? processOrderIds.join(",")
+        : String(processOrderIds);
 
-      console.log("Fetching order details with IDs:", orderIdsString);
+      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
 
-      // Add parameter to indicate if these are process order IDs
-      const isProcessOrder = processOrderIds.length > 0;
-      
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
           params: { 
-            orderIds: orderIdsString,
-            isProcessOrderIds: isProcessOrder ? 1 : 0 
+            orderIds: processOrderIdsString,
+            isProcessOrderIds: 1 
           },
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -167,23 +145,13 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
         if (data.orders && data.orders.length > 0) {
           // Transform API data to match your OrderDetails structure
           const formattedOrders: OrderDetails[] = data.orders.map((order: OrderItem, index: number) => {
-            // Determine the correct order ID based on what was passed
-            const orderId = isProcessOrder ? 
-              (order.processOrderId || order.orderId) : 
-              order.orderId;
-            
-            const marketOrderId = marketOrderIds[index] || order.marketOrderId;
-            const processOrderId = isProcessOrder ? 
-              (processOrderIds[index] || order.processOrderId) : 
-              undefined;
+            const processOrderId = order.processOrderId || processOrderIds[index];
             
             return {
-              orderId: orderId,
               processOrderId: processOrderId,
-              marketOrderId: marketOrderId,
               customerName: data.user?.firstName + " " + data.user?.lastName || "Customer",
               scheduleTime: order.sheduleTime || "Not Scheduled",
-              packCount: 1, // You might need to adjust this based on your data
+              packCount: 1,
               address: data.user?.address || "Address not specified",
               payment: order.pricing ? `Cash : ${order.pricing}` : "Cash : 0.00",
               status: order.status || "Pending",
@@ -205,10 +173,8 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                      "Pending" as const,
               address: order.address,
               payment: order.payment,
-              distanceToGo: `${Math.floor(Math.random() * 5) + 1}km`, // Random distance for demo
-              orderId: order.orderId,
+              distanceToGo: `${Math.floor(Math.random() * 5) + 1}km`,
               processOrderId: order.processOrderId,
-              marketOrderId: order.marketOrderId,
             }));
             
             setTodoJobs(updatedJobs);
@@ -309,23 +275,17 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
     } else {
       // If this was the last trip, navigate to OrderDetailsAfterJourney
       navigation.navigate("OrderDetailsAfterJourney", { 
-        orderIds: activeOrderIds,
         processOrderIds: processOrderIds,
-        primaryProcessOrderId: primaryProcessOrderId,
-        marketOrderIds: marketOrderIds
       });
       setCurrentTrip(null);
       setJourneyStatus("not_started");
     }
   };
 
-  // Function to navigate directly to OrderDetailsAfterJourney (for testing)
+  // Function to navigate directly to OrderDetailsAfterJourney
   const handleGoToAfterJourney = () => {
     navigation.navigate("OrderDetailsAfterJourney", { 
-      orderIds: activeOrderIds,
       processOrderIds: processOrderIds,
-      primaryProcessOrderId: primaryProcessOrderId,
-      marketOrderIds: marketOrderIds
     });
   };
 
@@ -427,8 +387,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                         No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
                       </Text>
                       <Text className="text-xs text-gray-500 text-center">
-                        Order ID: {currentTrip.orderId}
-                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
+                        Process Order: {currentTrip.processOrderId}
                       </Text>
                     </View>
                   </View>
@@ -463,8 +422,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                         No: #{currentTrip.id} (Order {currentOrderIndex + 1} of {orders.length})
                       </Text>
                       <Text className="text-xs text-gray-500 text-center">
-                        Order ID: {currentTrip.orderId}
-                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
+                        Process Order: {currentTrip.processOrderId}
                       </Text>
                     </View>
                   </View>
@@ -501,8 +459,7 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                         {currentTrip.name}
                       </Text>
                       <Text className="text-xs text-gray-500">
-                        Order ID: {currentTrip.orderId}
-                        {currentTrip.processOrderId && ` | Process Order: ${currentTrip.processOrderId}`}
+                        Process Order: {currentTrip.processOrderId}
                       </Text>
                     </View>
 
@@ -575,11 +532,6 @@ const MyJourney: React.FC<MyJourneyProps> = ({ navigation, route }) => {
                   <Text className="text-xs text-gray-600 mt-1 text-center">
                     Ready for scanning {orders.length} order{orders.length !== 1 ? 's' : ''}
                   </Text>
-                  {primaryProcessOrderId && (
-                    <Text className="text-xs text-gray-500 text-center">
-                      Primary Process Order ID: {primaryProcessOrderId}
-                    </Text>
-                  )}
                 </View>
               </View>
 
