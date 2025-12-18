@@ -25,16 +25,24 @@ import CustomDrawerContent from "@/Items/CustomDrawerContent";
 
 import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
-import Splash from "@/component/Splash";
+import Splash from "@/component/common/Splash";
 import Home from "@/component/Home";
-import ComplaintsList from "@/component/ComplaintsList";
-import AddComplaint from "@/component/AddComplaint"
-import LoginScreen from "@/component/LoginScreen";
-import ChangePassword from "@/component/ChangePassword";
-import ProfileScreen from "@/component/Profile";
-import Jobs from "@/component/Jobs";
-import OrderDetails from "@/component/OrderDetails";
-import EndJourneyConfirmation from "@/component/EndJourneyConfirmation";
+import ComplaintsList from "@/component/complaints/ComplaintsList";
+import AddComplaint from "@/component/complaints/AddComplaint"
+import LoginScreen from "@/component/auth/LoginScreen";
+import ChangePassword from "@/component/auth/ChangePassword";
+import ProfileScreen from "@/component/auth/Profile";
+import ReturnOrders from "@/component/orders/ReturnOrders";
+import AssignOrderQR from "@/component/qr/AssignOrderQR";
+import Jobs from "@/component/orders/Jobs";
+import OrderDetails from "@/component/orders/OrderDetails";
+import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
+import MyJourney from "@/component/orders/MyJourney";
+import SignatureScreen from "@/component/orders/SignatureScreen";
+import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
+import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
+import { RootStackParamList } from "@/component/types";
+import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -51,7 +59,7 @@ NativeWindStyleSheet.setOutput({
   allowFontScaling: false,
 };
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator();
 const windowDimensions = Dimensions.get("window");
 
@@ -146,9 +154,16 @@ function AppContent() {
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen}  />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
+             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
+             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
+            <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
+            <Stack.Screen name="MyJourney" component={MyJourney} />
+            <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
+            <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

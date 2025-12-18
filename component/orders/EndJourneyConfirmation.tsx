@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "@/component/common/CustomHeader";
 import Foundation from "@expo/vector-icons/Foundation";
 
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
@@ -30,13 +30,13 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
   };
 
   const handleGetSignature = () => {
-    console.log("Get Digital Signature");
-    // navigation.navigate("DigitalSignature");
+    console.log("SignatureScreen");
+    navigation.navigate("SignatureScreen");
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <View className="flex-1 bg-white">
+      <ScrollView showsVerticalScrollIndicator={true}>
         <CustomHeader
           title="End of the Journey"
           showBackButton={true}
@@ -45,7 +45,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         />
 
         {/* Icon Section */}
-        <View className="items-center mb-6">
+        <View className="items-center my-6">
           <Image
             source={locationImage}
             className="w-40 h-40"
@@ -54,7 +54,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         </View>
 
         {/* Trouble Section */}
-        <View className="items-center px-6">
+        <View className="items-center px-4">
           <Text className="text-xl font-semibold text-black mb-1">
             Having trouble?
           </Text>
@@ -92,7 +92,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
         </View>
 
         {/* Signature Section */}
-        <View className="items-center px-6 mb-10">
+        <View className="items-center px-4 mb-10">
           <Text className="text-lg font-semibold text-black mb-1">
             Ready to complete the order?
           </Text>
@@ -111,7 +111,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

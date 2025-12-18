@@ -12,17 +12,20 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "./types";
-import { Entypo, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { RootStackParamList } from "../types";
+import {
+  FontAwesome5,
+  FontAwesome6,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
-import { setUser, setUserProfile } from "../store/authSlice";
-import AlertModal from "./models/AlertModal";
+import { setUser, setUserProfile } from "../../store/authSlice";
+import { AlertModal } from "../common/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -246,12 +249,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
-            source={require("../assets/logo.webp")}
+            source={require("@/assets/logo.webp")}
             className="w-auto h-[22%]"
             resizeMode="contain"
           />
           <Image
-            source={require("../assets/truck.webp")}
+            source={require("@/assets/truck.webp")}
             className="w-auto h-[60%]"
             resizeMode="contain"
           />
@@ -282,8 +285,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-4 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <FontAwesome name="user" size={20} color="#F7CA21" />
-
+                  <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
                   <TextInput
                     className="flex-1  text-base  text-white placeholder:ml-4"
                     autoCapitalize="characters"
@@ -307,7 +309,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
               >
                 <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={22} color="#F7CA21" />
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
                   <TextInput
                     className="flex-1 text-base placeholder:ml-2 text-white"
                     secureTextEntry={secureTextEntry}
@@ -320,8 +322,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     onPress={() => setSecureTextEntry(!secureTextEntry)}
                     className="mr-4"
                   >
-                    <Entypo
-                      name={secureTextEntry ? "eye-with-line" : "eye"}
+                    <FontAwesome5
+                      name={secureTextEntry ? "eye-slash" : "eye"}
                       size={24}
                       color="white"
                     />
@@ -354,7 +356,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         message={modalMessage}
         type={modalType}
         onClose={() => setModalVisible(false)}
-        duration={2000}
+        duration={4000}
         autoClose={true}
       />
     </KeyboardAvoidingView>

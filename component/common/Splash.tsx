@@ -9,13 +9,13 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 
-const splashscreen = require("../assets/images/splash.png");
+const splashscreen = require("@/assets/images/splash.png");
 
 type SplashNavigationProp = NativeStackNavigationProp<
   RootStackParamList,

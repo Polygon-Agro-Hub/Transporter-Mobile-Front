@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import CustomHeader from "./CustomHeader";
+import CustomHeader from "../common/CustomHeader";
 import { useSelector } from "react-redux";
 import { selectAuthToken } from "@/store/authSlice";
 import { environment } from "@/environment/environment";
@@ -242,11 +242,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             />
             <InfoCard
               label="Vehicle"
-              value={profileData?.vehicle || "Not available"}
+              value={profileData?.vType || "Not available"}
             />
             <InfoCard
               label="Vehicle's Registration Number"
-              value={profileData?.vehicleNo || "Not available"}
+              value={profileData?.vRegNo || "Not available"}
             />
           </View>
         </ScrollView>
