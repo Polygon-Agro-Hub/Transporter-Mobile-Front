@@ -7,7 +7,6 @@ import { Feather } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import Foundation from "@expo/vector-icons/Foundation";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-
 const locationImage = require("@/assets/images/orders/location.webp");
 
 type EndJourneyNavigationProp = StackNavigationProp<
@@ -23,15 +22,22 @@ interface EndJourneyProps {
 }
 
 const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({ navigation, route }) => {
+  const { orderIds } = route.params;
+  console.log("order ids", orderIds);
   // Get processOrderIds from route params
   const { processOrderIds = [] } = route.params;
-
   const handleHoldOrder = () => {
+    navigation.navigate("HoldOrder", {
+        orderIds: orderIds,
+      });
     console.log("Hold Order pressed");
     console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleReturnOrder = () => {
+    navigation.navigate("OrderReturn" , {
+        orderIds: orderIds,
+      });
     console.log("Return Order pressed");
     console.log("Process Order IDs:", processOrderIds);
   };

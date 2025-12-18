@@ -33,4 +33,10 @@ export type RootStackParamList = {
     processOrderIds: number[];
   };
   DeliverySuccessful: undefined;
+  OrderReturn:{
+    orderIds: number[];
+  };
+  HoldOrder:{
+    orderIds: number[];
+  };
 };
