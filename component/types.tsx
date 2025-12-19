@@ -16,6 +16,10 @@ export type RootStackParamList = {
     allOrderIds: number[]; 
     totalToScan: number;
   };
+  ReturnOrderQR: {
+    invoiceNumber: string;
+    orderId: number;
+  };
   Jobs: undefined;
   OrderDetails: {
     processOrderIds: number[];

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,17 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import { Feather } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../store/authSlice";
+import axios from "axios";
+import { environment } from "@/environment/environment";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Progress from 'react-native-progress';
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -27,52 +32,195 @@ interface HomeProps {
   navigation: HomeNavigationProp;
 }
 
+interface AmountData {
+  totalOrders: number;
+  totalCashAmount: number;
+  todoOrders: number;
+  completedOrders: number;
+  onTheWayOrders: number;
+  holdOrders: number;
+  returnOrders: number;
+  returnReceivedOrders: number;
+  cashOrders: number;
+}
+
+// Default values for amountData
+const defaultAmountData: AmountData = {
+  totalOrders: 0,
+  totalCashAmount: 0,
+  todoOrders: 0,
+  completedOrders: 0,
+  onTheWayOrders: 0,
+  holdOrders: 0,
+  returnOrders: 0,
+  returnReceivedOrders: 0,
+  cashOrders: 0,
+};
+
 const Home: React.FC<HomeProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [amountData, setAmountData] = useState<AmountData>(defaultAmountData);
+  const [error, setError] = useState<string | null>(null);
 
   // Get user profile from Redux
   const userProfile = useSelector(selectUserProfile);
 
-  const onRefresh = () => {
+  // Fetch amount data from API
+  const fetchAmountData = useCallback(async () => {
+    try {
+      setError(null);
+      const token = await AsyncStorage.getItem("token");
+      
+      if (!token) {
+        setError("No authentication token found");
+        setAmountData(defaultAmountData);
+        return;
+      }
+
+      // Replace with your actual API endpoint
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-amount`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      if (response.data.status === "success" && response.data.data) {
+        setAmountData({
+          ...defaultAmountData,
+          ...response.data.data,
+        });
+      } else {
+        setError("Invalid response format");
+        setAmountData(defaultAmountData);
+      }
+    } catch (error) {
+      console.error("Error fetching amount data:", error);
+      setError("Failed to load data");
+      setAmountData(defaultAmountData);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAmountData();
+  }, [fetchAmountData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    await fetchAmountData();
+    setRefreshing(false);
   };
 
-  const quickActions = [
-    {
-      image: scanQRImage,
-      label: "Scan QR",
-      color: "#3B82F6",
-      action: () => navigation.navigate("AssignOrderQR"),
-    },
-    {
-      image: packsImage,
-      label: "3 Packs",
-      color: "#10B981",
-      action: () => navigation.navigate("Splash"),
-    },
-    {
-      image: myComplaintImage,
-      label: "My Complaints",
-      color: "#8B5CF6",
-      action: () => navigation.navigate("ComplaintsList"),
-    },
-    {
-      image: ongoingImage,
-      label: "Ongoing",
-      color: "#F59E0B",
-      action: () => navigation.navigate("ReturnOrders"),
-    },
-    {
-      image: returnImage,
-      label: "2 Return",
-      color: "#F59E0B",
-      action: () => navigation.navigate("ReturnOrders"),
+  // Safe function to get cash amount
+  const getCashAmount = () => {
+    const cash = amountData?.totalCashAmount;
+    // Handle cases where cash might be undefined, null, or not a number
+    if (cash === undefined || cash === null || isNaN(cash)) {
+      return 0;
     }
-  ];
+    return cash;
+  };
+
+  // Determine the motivational message based on progress
+  const getMotivationalMessage = () => {
+    const total = amountData?.totalOrders || 0;
+    const completed = amountData?.completedOrders || 0;
+    const todo = amountData?.todoOrders || 0;
+    
+    const completionRate = total > 0 
+      ? Math.round((completed / total) * 100)
+      : 0;
+
+    // If no orders at all - Style 1 (Light yellow with target icon)
+    if (total === 0) {
+      return {
+        title: "Have a nice Day!",
+        subtitle: "Scan packages to start..",
+        bgColor: "#FFF2BF", // Very light yellow
+        showPercentage: false,
+        percentage: 0,
+        style: 1, // First style
+      };
+    }
+    
+    // If there are orders but all completed
+    if (total > 0 && todo === 0) {
+      return {
+        title: "Great Work!",
+        subtitle: "Click on Close button to end the shift.",
+        bgColor: "#FFF8E1", // Very light yellow
+        showPercentage: false,
+        percentage: 100,
+        style: 1, // First style
+      };
+    }
+    
+    // If there are orders to complete - Style 2 (Bright yellow with percentage)
+    return {
+      title: "Way more to go!",
+      subtitle: `${todo} Location${todo > 1 ? 's' : ''} to go..`,
+      bgColor: "#F7CA21", // Bright yellow like in the image
+      showPercentage: true,
+      percentage: completionRate,
+      style: 2, // Second style
+    };
+  };
+
+  const motivationalMsg = getMotivationalMessage();
+
+  // Build quick actions dynamically
+  const buildQuickActions = () => {
+    const actions = [
+      {
+        image: scanQRImage,
+        label: "Scan",
+        color: "#3B82F6",
+        action: () => navigation.navigate("AssignOrderQR"),
+      },
+      {
+        image: packsImage,
+        label: `${amountData?.totalOrders || 0} Packs`,
+        color: "#10B981",
+        action: () => navigation.navigate("Splash"),
+      },
+      {
+        image: myComplaintImage,
+        label: "My Complaints",
+        color: "#8B5CF6",
+        action: () => navigation.navigate("ComplaintsList"),
+      },
+    ];
+
+    // Add Ongoing if there are "On the way" orders
+    if ((amountData?.onTheWayOrders || 0) > 0) {
+      actions.push({
+        image: ongoingImage,
+        label: "Ongoing",
+        color: "#FFF2BF",
+        action: () => navigation.navigate("ReturnOrders"),
+      });
+    }
+
+    // Add Return if there are return orders
+    if ((amountData?.returnOrders || 0) > 0) {
+      actions.push({
+        image: returnImage,
+        label: `${amountData?.returnOrders || 0} Return`,
+        color: "#F59E0B",
+        action: () => navigation.navigate("ReturnOrders"),
+      });
+    }
+
+    return actions;
+  };
+
+  const quickActions = buildQuickActions();
 
   // Function to split array into chunks of 2 for rows
   const chunkArray = (arr: any[], size: number) => {
@@ -85,6 +233,52 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   const actionRows = chunkArray(quickActions, 2);
 
+  // Handle cash received navigation
+  const handleCashReceivedPress = () => {
+    const cashAmount = getCashAmount();
+    if (cashAmount > 0) {
+      navigation.navigate("Jobs");
+    }
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  // If there's an error, show error state
+  if (error && !loading) {
+    return (
+      <ScrollView
+        className="flex-1 bg-white"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View className="flex-1 items-center justify-center p-4 mt-20">
+          <Feather name="alert-circle" size={48} color="#EF4444" />
+          <Text className="text-lg font-bold text-gray-900 mt-4">
+            Unable to Load Data
+          </Text>
+          <Text className="text-gray-600 text-center mt-2">
+            {error}. Pull down to refresh.
+          </Text>
+          <TouchableOpacity
+            className="mt-4 bg-blue-500 px-6 py-3 rounded-lg"
+            onPress={onRefresh}
+          >
+            <Text className="text-white font-medium">Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  const cashAmount = getCashAmount();
+
   return (
     <ScrollView
       className="flex-1 bg-white"
@@ -95,7 +289,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     >
       {/* Header */}
       <View className="bg-white px-4 shadow-sm mt-4">
-        {/* Make whole user section clickable */}
         <TouchableOpacity
           className="flex-row items-center"
           activeOpacity={0.7}
@@ -117,37 +310,76 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           {/* User Info */}
           <View className="flex-1">
             <Text className="text-xl font-bold text-gray-900">
-              Hi, {userProfile?.firstName || "User"}{" "}
-              {userProfile?.lastName || ""}
+              Hi, {userProfile?.firstName || "User"}
             </Text>
             <Text className="text-sm text-gray-500">View Profile</Text>
           </View>
 
-          {/* Optional arrow icon */}
+          {/* Arrow icon */}
           <Feather name="chevron-right" size={22} color="#ccc" />
         </TouchableOpacity>
       </View>
 
-      {/* Box 1: Have a nice day box */}
-      <TouchableOpacity className="mx-4 mt-8 mb-4 bg-[#FFF2BF] rounded-2xl p-5 flex-row items-center">
-        <View className="flex-1">
-          <Text className="text-lg font-bold text-gray-900">
-            Have a nice Day!
-          </Text>
-          <Text className="text-gray-700 mt-1">Scan packages to start..</Text>
-        </View>
-        <View className="ml-4">
-          <Image
-            source={smallImage}
-            className="w-20 h-20"
-            resizeMode="contain"
-          />
-        </View>
-      </TouchableOpacity>
+      {/* Box 1: Motivational message box */}
+      {motivationalMsg.style === 1 ? (
+        // Style 1: Light yellow background with target icon (no percentage)
+        <TouchableOpacity 
+          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+          style={{ backgroundColor: motivationalMsg.bgColor }}
+        >
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-gray-900">
+              {motivationalMsg.title}
+            </Text>
+            <Text className="text-gray-700 mt-1">{motivationalMsg.subtitle}</Text>
+          </View>
+          <View className="ml-4">
+            <Image
+              source={smallImage}
+              className="w-20 h-20"
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableOpacity>
+      ) : (
+        // Style 2: Bright yellow background with circular progress
+        <TouchableOpacity 
+          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+          style={{ backgroundColor: motivationalMsg.bgColor }}
+        >
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-gray-900">
+              {motivationalMsg.title}
+            </Text>
+            <Text className="text-gray-900 mt-1">{motivationalMsg.subtitle}</Text>
+          </View>
+          <View className="ml-4 relative items-center justify-center">
+            {/* Circular progress indicator */}
+            <Progress.Circle 
+              size={56}
+              progress={motivationalMsg.percentage / 100}
+              thickness={4}
+              color="#FFFFFF"
+              unfilledColor="#49454F29"
+              borderWidth={0}
+              showsText={true}
+              formatText={() => `${motivationalMsg.percentage}%`}
+              textStyle={{
+                fontSize: 12,
+                fontWeight: 'bold',
+                color: '#000000',
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Box 2: Cash Received box */}
-      <TouchableOpacity className="mx-4 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
-      onPress={()=> navigation.navigate("Jobs")}
+      <TouchableOpacity
+        className="mx-4 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
+        onPress={handleCashReceivedPress}
+        activeOpacity={cashAmount > 0 ? 0.7 : 1}
+        disabled={cashAmount === 0}
       >
         <View className="flex-row items-center flex-1">
           <Image
@@ -157,14 +389,22 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           />
           <View>
             <Text className="text-sm text-gray-500">Cash Received</Text>
-            <Text className="text-xl font-bold text-gray-900">Rs. 0.00</Text>
+            <Text className="text-xl font-bold text-gray-900">
+              Rs. {cashAmount}
+            </Text>
           </View>
         </View>
         <View className="ml-4">
-          {/* Right arrow icon */}
-          <View className="w-8 h-8 items-center justify-center">
-            <Feather name="chevron-right" size={30} color="#EBEBEB" />
-          </View>
+          {/* Right arrow icon - only visible if amount > 0 */}
+          {cashAmount > 0 ? (
+            <View className="w-8 h-8 items-center justify-center">
+              <Feather name="chevron-right" size={30} color="black" />
+            </View>
+          ) : (
+            <View className="w-8 h-8 items-center justify-center">
+              <Feather name="chevron-right" size={30} color="#EBEBEB" />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -180,7 +420,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                 activeOpacity={0.7}
                 style={{
                   width: "48%",
-                  backgroundColor: "#fff",
+                   backgroundColor: action.label === "Ongoing" ? action.color : "#fff", // Only yellow for Ongoing
                   borderRadius: 12,
                   padding: 16,
                   marginBottom: 6,
