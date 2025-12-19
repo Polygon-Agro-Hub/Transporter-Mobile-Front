@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { AlertModal } from "../common/AlertModal";
 import { Ionicons } from "@expo/vector-icons";
 import CustomHeader from "../common/CustomHeader";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -54,6 +55,13 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [invoiceNumbers, setInvoiceNumbers] = useState<string[]>([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  
+ 
+    const [successMessage, setSuccessMessage] = useState<
+      string | React.ReactNode
+    >("");
 
   const languageMap = {
     English: { code: "En" as const, key: "rsnEnglish" as const },
@@ -68,35 +76,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     fetchReasons();
   }, []);
 
-  const fetchInvoiceNumbers = async (orderIdsList: number[]) => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const invoices: string[] = [];
-
-      for (const orderId of orderIdsList) {
-        try {
-          const response = await axios.get(
-            `${environment.API_BASE_URL}api/return/get-invoice/${orderId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          if (response.data.status === "success" && response.data.data) {
-            invoices.push(response.data.data.invNo);
-          }
-        } catch (error) {
-          console.error(`Error fetching invoice for order ${orderId}:`, error);
-        }
-      }
-
-      setInvoiceNumbers(invoices);
-    } catch (error) {
-      console.error("Error fetching invoice numbers:", error);
-    }
-  };
 
   const fetchReasons = async () => {
     try {
@@ -146,86 +125,236 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return reason.rsnEnglish.toLowerCase() === "other";
   };
 
+  //   const handleSubmit = async () => {
+  //   if (!selectedReason) return;
+
+  //   if (isOtherReason(selectedReason) && !otherReason.trim()) {
+  //     Alert.alert("Required", "Please provide a reason in the text field.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setSubmitting(true);
+  //     const token = await AsyncStorage.getItem("token");
+  //     const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
+
+  //     const payload = {
+  //       orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
+  //       holdReasonId: selectedReason.id,
+  //       note: isOtherReason(selectedReason) ? otherReason.trim() : null,
+  //     };
+
+  //     console.log("Submitting return order:", payload);
+
+  //     const response = await axios.post(
+  //       `${environment.API_BASE_URL}api/hold/submit`,
+  //       payload,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     const result = response.data;
+  //     console.log("Return submit response:", result);
+
+  //     if (result.status === "success") {
+  //       // Get invoice numbers from the response - ensure it's an array of strings
+  //       const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
+  //       console.log("Invoice numbers from response:", invoiceNumbers);
+
+  //       // Create success message with bold invoice numbers
+  //       let message: string | React.ReactNode;
+
+  //       if (invoiceNumbers.length === 0) {
+  //         message = "Order has been marked as a return order.";
+  //       } else if (invoiceNumbers.length === 1) {
+  //         message = (
+  //           <View className="items-center">
+  //             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+  //               Order:{" "}
+  //               <Text className="font-bold text-[#000000]">
+  //                 {invoiceNumbers[0]}
+  //               </Text>{" "}
+  //               has been marked as a return order.
+  //             </Text>
+  //           </View>
+  //         );
+  //       } else {
+  //         // For multiple orders
+  //         message = (
+  //           <View className="items-center">
+  //             <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+  //             {invoiceNumbers.map((invNo: string, index: number) => (
+  //               <Text
+  //                 key={index}
+  //                 className="text-center font-bold text-[#000000] mb-1"
+  //               >
+  //                 {invNo}
+  //               </Text>
+  //             ))}
+  //             <Text className="text-center text-[#4E4E4E] mt-2">
+  //               has been put on hold for the moment.
+  //             </Text>
+  //           </View>
+  //         );
+  //       }
+
+  //       setSuccessMessage(message);
+  //       setShowSuccessModal(true);
+
+  //       // Add backup navigation timeout in case modal doesn't auto-close
+  //       setTimeout(() => {
+  //         if (showSuccessModal) {
+  //           setShowSuccessModal(false);
+  //           navigation.navigate("Home");
+  //         }
+  //       }, 4000); // 4 seconds as backup (1 second longer than modal duration)
+  //     } else {
+  //       Alert.alert("Error", result.message || "Failed to submit return order");
+  //     }
+  //   } catch (error: any) {
+  //     console.error("Error submitting return order:", error);
+  //     const errorMessage =
+  //       error.response?.data?.message ||
+  //       "Failed to submit return order. Please try again.";
+  //     Alert.alert("Error", errorMessage);
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
+
   const handleSubmit = async () => {
-    if (!selectedReason) {
-      Alert.alert("Required", "Please select a reason.");
-      return;
-    }
+  if (!selectedReason) return;
 
-    // If "Other" is selected, validate that otherReason is filled
-    if (isOtherReason(selectedReason) && !otherReason.trim()) {
-      Alert.alert("Required", "Please provide a reason in the text field.");
-      return;
-    }
+  if (isOtherReason(selectedReason) && !otherReason.trim()) {
+    Alert.alert("Required", "Please provide a reason in the text field.");
+    return;
+  }
 
-    try {
-      setSubmitting(true);
-      const token = await AsyncStorage.getItem("token");
+  try {
+    setSubmitting(true);
+    const token = await AsyncStorage.getItem("token");
+    const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
 
-      const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
+    const payload = {
+      orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
+      holdReasonId: selectedReason.id,
+      note: isOtherReason(selectedReason) ? otherReason.trim() : null,
+    };
 
-      // Prepare the request body
-      const requestBody = {
-        orderIds: orderIds,
-        holdReasonId: selectedReason.id,
-        note: isOtherReason(selectedReason) ? otherReason.trim() : null,
-      };
+    console.log("Submitting hold order:", payload);
 
-      console.log("Submitting hold order:", requestBody);
-
-      const response = await axios.post(
-        `${environment.API_BASE_URL}api/hold/submit`,
-        requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const result = response.data;
-
-      if (result.status === "success") {
-        console.log("Hold order submitted successfully:", result.data);
-
-        // Fetch invoice numbers before showing success modal
-        await fetchInvoiceNumbers(orderIdsList);
-
-        // Show success modal
-        setShowSuccess(true);
-
-        setTimeout(() => {
-          setShowSuccess(false);
-          setSelectedReason(null);
-          setOtherReason("");
-          setInvoiceNumbers([]);
-          // Navigate back or to another screen
-          navigation.goBack();
-        }, 3000);
-      } else {
-        Alert.alert("Error", result.message || "Failed to submit hold order");
+    const response = await axios.post(
+      `${environment.API_BASE_URL}api/hold/submit`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    } catch (error: any) {
-      console.error("Error submitting hold order:", error);
+    );
 
-      // Handle specific error responses
-      if (error.response) {
-        const errorMessage =
-          error.response.data?.message || "Failed to submit hold order";
-        Alert.alert("Error", errorMessage);
-      } else if (error.request) {
-        Alert.alert(
-          "Error",
-          "No response from server. Please check your connection."
+    const result = response.data;
+    console.log("Hold submit response:", result);
+
+    if (result.status === "success") {
+      // Get invoice numbers from the response - ensure it's an array of strings
+      const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
+      console.log("Invoice numbers from response:", invoiceNumbers);
+
+      // Create success message with bold invoice numbers
+      let message: string | React.ReactNode;
+
+      if (invoiceNumbers.length === 0) {
+        message = "Order has been put on hold for the moment.";
+      } else if (invoiceNumbers.length === 1) {
+        message = (
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+              Order:{" "}
+              <Text className="font-bold text-[#000000]">
+                {invoiceNumbers[0]}
+              </Text>{" "}
+              has been put on hold for the moment.
+            </Text>
+          </View>
         );
       } else {
-        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+        // For multiple orders
+        message = (
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+            {invoiceNumbers.map((invNo: string, index: number) => (
+              <Text
+                key={index}
+                className="text-center font-bold text-[#000000] mb-1"
+              >
+                {invNo}
+              </Text>
+            ))}
+            <Text className="text-center text-[#4E4E4E] mt-2">
+              have been put on hold for the moment.
+            </Text>
+          </View>
+        );
       }
-    } finally {
-      setSubmitting(false);
+
+      setSuccessMessage(message);
+      setShowSuccessModal(true);
+
+      // Add backup navigation timeout in case modal doesn't auto-close
+      setTimeout(() => {
+        if (showSuccessModal) {
+          setShowSuccessModal(false);
+          navigation.navigate("Home");
+        }
+      }, 4000); // 4 seconds as backup (1 second longer than modal duration)
+    } else {
+      Alert.alert("Error", result.message || "Failed to submit hold order");
     }
+  } catch (error: any) {
+    console.error("Error submitting hold order:", error);
+    
+    // Get error message from response
+    const errorMessage =
+      error.response?.data?.message ||
+      "Failed to submit hold order. Please try again.";
+    
+    // Check if it's an "already on hold" error
+    const isAlreadyOnHoldError = 
+      errorMessage.toLowerCase().includes("already") && 
+      errorMessage.toLowerCase().includes("hold");
+    
+    if (isAlreadyOnHoldError) {
+      // Show error modal for already held orders
+      setSuccessMessage(
+        <View className="items-center">
+          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+            {errorMessage}
+          </Text>
+        </View>
+      );
+      setShowErrorModal(true);
+    } else {
+      // Show regular alert for other errors
+      Alert.alert("Error", errorMessage);
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+    const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+    navigation.navigate("Home");
   };
+
 
   const getPlaceholderText = (): string => {
     if (selectedLanguage === "En") return "Please mention the reason here...";
@@ -402,68 +531,31 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         </ScrollView>
       )}
 
-      {/* Success Modal */}
-      <Modal visible={showSuccess} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 items-center justify-center px-6">
-          <View
-            className="bg-white rounded-3xl p-8 items-center w-80"
-            style={{
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
-          >
-            <View className="bg-yellow-100 rounded-full p-4 mb-4">
-              <Ionicons name="checkmark" size={48} color="#facc15" />
-            </View>
-            <Text className="text-xl font-bold text-gray-900 mb-2">
-              {selectedLanguage === "En"
-                ? "Successful!"
-                : selectedLanguage === "Si"
-                ? "සාර්ථකයි!"
-                : "வெற்றிகரமாக!"}
-            </Text>
+  {/* Success Alert Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Successful!"
+        message={successMessage}
+        type="success"
+        onClose={handleSuccessModalClose}
+        autoClose={true}
+        duration={3000}
+      />
 
-            {/* Invoice Numbers Display */}
-            {invoiceNumbers.length > 0 && (
-              <View className="w-full mb-3">
-                {invoiceNumbers.map((invoice, index) => (
-                  <View key={index} className="mb-2">
-                    <Text className="text-sm text-gray-600 text-center">
-                      {selectedLanguage === "En"
-                        ? "Order"
-                        : selectedLanguage === "Si"
-                        ? "ඇණවුම"
-                        : "ஆர்டர்"}{" "}
-                      <Text className="font-semibold text-gray-900">
-                        {invoice}
-                      </Text>{" "}
-                      {selectedLanguage === "En"
-                        ? "has been put on hold for the moment."
-                        : selectedLanguage === "Si"
-                        ? "මොහොතකට රඳවා තබා ඇත."
-                        : "தற்போதைக்கு நிறுத்தி வைக்கப்பட்டுள்ளது."}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Fallback message if no invoices */}
-            {invoiceNumbers.length === 0 && (
-              <Text className="text-sm text-gray-600 text-center">
-                {selectedLanguage === "En"
-                  ? "Order(s) have been marked as hold."
-                  : selectedLanguage === "Si"
-                  ? "ඇණවුම් රඳවා තබා ඇත."
-                  : "ஆர்டர்கள் நிறுத்தி வைக்கப்பட்டுள்ளன."}
-              </Text>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <AlertModal
+  visible={showErrorModal}
+  title="Error!"
+  message={successMessage}
+  type="error"
+  onClose={() => {
+    setShowErrorModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+    navigation.goBack();
+  }}
+  autoClose={true}
+  duration={3000}
+/>
 
       {/* Language Menu Modal */}
       <Modal visible={showLanguageMenu} transparent animationType="fade">
