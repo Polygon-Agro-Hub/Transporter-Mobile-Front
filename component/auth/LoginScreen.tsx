@@ -214,7 +214,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             passwordUpdated: passwordUpdated,
           });
         } else {
-          navigation.navigate("Main", { screen: "Home" });
+          navigation.navigate("Home");
         }
       }, 4000);
     } catch (error) {
