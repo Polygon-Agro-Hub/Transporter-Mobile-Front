@@ -45,6 +45,7 @@ import { RootStackParamList } from "@/component/types";
 import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
 import OrderReturn from "@/component/orders/OrderReturn";
 import HoldOrder from "@/component/orders/HoldOrder";
+import ReturnOrderQR from "@/component/qr/ReturnOrderQR";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -158,6 +159,7 @@ function AppContent() {
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
+            <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR}  />
             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />

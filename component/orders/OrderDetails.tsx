@@ -45,6 +45,12 @@ interface UserDetails {
   phoneNumber: string;
   image: string | null;
   address: string;
+  billingName: string;
+  billingTitle: string;
+  billingPhoneCode: string;
+  billingPhone: string;
+  buildingType: string;
+  deliveryMethod: string;
 }
 
 interface ProcessOrder {
@@ -59,6 +65,10 @@ interface ProcessOrder {
 interface OrderItem {
   orderId: number;
   sheduleTime: string;
+  fullName: string;
+  phonecode1: string;
+  phone1: string;
+  address: string;
   processOrder: ProcessOrder;
   pricing: string;
 }
@@ -112,7 +122,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         ? processOrderIds.join(",")
         : String(processOrderIds);
 
-      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
+      console.log(
+        "Fetching order details with Process Order IDs:",
+        processOrderIdsString
+      );
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
@@ -159,10 +172,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     fetchOrderUserDetails();
   };
 
-  const handlePhoneCall = () => {
-    if (userDetails?.phoneCode && userDetails?.phoneNumber) {
-      const phoneNumber = `${userDetails.phoneCode}${userDetails.phoneNumber}`;
-      Linking.openURL(`tel:${phoneNumber}`);
+  const handlePhoneCall = (phoneCode: string, phoneNumber: string) => {
+    if (phoneCode && phoneNumber) {
+      const phone = `${phoneCode}${phoneNumber}`;
+      Linking.openURL(`tel:${phone}`);
     }
   };
 
@@ -237,7 +250,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         ? processOrderIds.join(",")
         : String(processOrderIds);
 
-      console.log("Starting journey with Process Order IDs:", processOrderIdsString);
+      console.log(
+        "Starting journey with Process Order IDs:",
+        processOrderIdsString
+      );
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/start-journey`,
@@ -444,69 +460,76 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           {orders.map((order, index) => (
             <View
               key={`${order.orderId}-${index}`}
-              className="rounded-xl border border-[#A4AAB7] py-2 px-4 bg-white"
+              className="rounded-xl border border-[#A4AAB7] py-3 px-4 flex-row items-center justify-between bg-white"
             >
-              <Text className="font-bold text-sm">
-                #{order.processOrder.invNo || `ORD${order.orderId}`}
-              </Text>
-
-              <View className="flex-row items-center mt-1">
-                <Ionicons name="time" size={16} color="black" />
-                <Text className="ml-2 text-sm">
-                  {order.sheduleTime || "Not Scheduled"}
-                </Text>
-              </View>
-
-              <View className="flex-row items-center mt-1">
-                {order.processOrder.isPaid ? (
-                  <FontAwesome6 name="circle-check" size={16} color="#F7CA21" />
-                ) : (
-                  <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-                )}
-                <Text className="ml-2 text-sm">
-                  {order.processOrder.isPaid ? (
-                    <Text className="text-black">Already Paid!</Text>
-                  ) : (
-                    <Text>
-                      {formatPaymentMethod(order.processOrder.paymentMethod)} :{" "}
-                      {formatCurrency(order.pricing)}
-                      {order.processOrder.status?.toLowerCase() === "hold" &&
-                        " (On Hold)"}
+              <View className="flex-1">
+                {/* Full Name Row */}
+                <View className="flex mb-0.5">
+                  <Text className="font-bold text-sm text-black">
+                    #{order.processOrder.invNo || "N/A"}
+                  </Text>
+                  <Text className="font-bold text-sm flex-1">
+                    {order.fullName || "Customer"}
+                  </Text>
+                  {order.processOrder.status?.toLowerCase() === "hold" && (
+                    <Text className="text-[#FF0000] text-xs font-semibold ml-2">
+                      (On Hold)
                     </Text>
                   )}
-                </Text>
+                </View>
+
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="time" size={14} color="#000" />
+                  <Text className="ml-2 text-xs text-black">
+                    {order.sheduleTime || "Not Scheduled"}
+                  </Text>
+                </View>
+
+                <View className="flex-row items-center">
+                  {order.processOrder.isPaid ? (
+                    <FontAwesome6
+                      name="circle-check"
+                      size={14}
+                      color="#F7CA21"
+                    />
+                  ) : (
+                    <FontAwesome6 name="coins" size={14} color="#F7CA21" />
+                  )}
+                  <Text className="ml-2 text-xs text-black">
+                    {order.processOrder.isPaid ? (
+                      <Text className="text-black">Already Paid!</Text>
+                    ) : (
+                      <Text>
+                        {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
+                        : {formatCurrency(order.pricing)}
+                      </Text>
+                    )}
+                  </Text>
+                </View>
               </View>
+
+              {/* Call Button on the right side (replacing QR code) */}
+              <TouchableOpacity
+                className="ml-2 p-1 bg-[#F7CA21] rounded-full border border-gray-200 items-center justify-center"
+                onPress={() => handlePhoneCall(order.phonecode1, order.phone1)}
+                disabled={!order.phone1}
+                style={{
+                  width: 40,
+                  height: 40,
+                }}
+              >
+                <Ionicons name="call" size={20} color="black" />
+              </TouchableOpacity>
             </View>
           ))}
         </View>
       </ScrollView>
 
-      {/* Bottom Action Buttons */}
+      {/* Bottom Action Button (Only Start Journey) */}
       <View className="absolute bottom-0 w-full mx-3 px-8 mb-6">
-        <TouchableOpacity
-          className="rounded-full bg-white border border-[#CBD7E8] py-6 px-6 w-full justify-center"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 1, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }}
-          onPress={handlePhoneCall}
-          disabled={!userDetails?.phoneNumber}
-        >
-          <Text className="text-base font-bold text-center absolute left-0 right-0">
-            Make Phone Call
-          </Text>
-
-          <View className="absolute right-2 bg-[#F7CA21] w-10 h-10 rounded-full items-center justify-center">
-            <Ionicons name="call" size={24} color="#000" />
-          </View>
-        </TouchableOpacity>
-
         {/* Start/Restart Journey Button */}
         <TouchableOpacity
-          className="rounded-full bg-[#F7CA21] py-3 mt-5 items-center"
+          className="rounded-full bg-[#F7CA21] py-4 items-center"
           style={{
             shadowColor: "#000",
             shadowOffset: { width: 2, height: 2 },

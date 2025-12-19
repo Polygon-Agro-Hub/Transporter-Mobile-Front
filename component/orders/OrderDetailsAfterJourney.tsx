@@ -43,6 +43,12 @@ interface UserDetails {
   phoneNumber: string;
   image: string | null;
   address: string;
+  billingName: string;
+  billingTitle: string;
+  billingPhoneCode: string;
+  billingPhone: string;
+  buildingType: string;
+  deliveryMethod: string;
 }
 
 interface ProcessOrder {
@@ -57,6 +63,10 @@ interface ProcessOrder {
 interface OrderItem {
   orderId: number;
   sheduleTime: string;
+  fullName: string;
+  phonecode1: string;
+  phone1: string;
+  address: string;
   processOrder: ProcessOrder;
   pricing: string;
 }
@@ -111,7 +121,10 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
         ? processOrderIds.join(",")
         : String(processOrderIds);
 
-      console.log("Fetching order details with Process Order IDs:", processOrderIdsString);
+      console.log(
+        "Fetching order details with Process Order IDs:",
+        processOrderIdsString
+      );
 
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
@@ -158,18 +171,18 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
     fetchOrderUserDetails();
   };
 
-  const handlePhoneCall = () => {
-    if (userDetails?.phoneCode && userDetails?.phoneNumber) {
-      const phoneNumber = `${userDetails.phoneCode}${userDetails.phoneNumber}`;
-      Linking.openURL(`tel:${phoneNumber}`);
+  const handlePhoneCall = (phoneCode: string, phoneNumber: string) => {
+    if (phoneCode && phoneNumber) {
+      const fullPhoneNumber = `${phoneCode}${phoneNumber}`;
+      Linking.openURL(`tel:${fullPhoneNumber}`);
     }
   };
 
   const handleScanOrder = (order: OrderItem) => {
     if (order.processOrder.invNo) {
       // Get the index of this order in the orders array
-      const orderIndex = orders.findIndex(o => o.orderId === order.orderId);
-      
+      const orderIndex = orders.findIndex((o) => o.orderId === order.orderId);
+
       // Navigate to QR scanning screen with processOrderIds
       navigation.navigate("VerifyOrderQR", {
         invNo: order.processOrder.invNo,
@@ -318,9 +331,6 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
             <Text className="text-sm text-black mt-1">
               Tap on any order card to scan QR code
             </Text>
-            <Text className="text-xs text-gray-500 mt-2">
-              {orders.length} order{orders.length !== 1 ? 's' : ''} to scan
-            </Text>
           </View>
         </View>
 
@@ -375,86 +385,96 @@ const OrderDetailsAfterJourney: React.FC<OrderDetailsAfterJourneyProp> = ({
         {/* Orders List - Entire cards are clickable */}
         <View className="mb-6 space-y-4">
           {orders.map((order, index) => (
-            <TouchableOpacity
+            <View
               key={`${order.orderId}-${index}`}
-              className="rounded-xl border border-[#F7CA21] py-3 px-4 flex-row items-center justify-between bg-[#FFF2BF]"
-              onPress={() => handleScanOrder(order)}
-              activeOpacity={0.7}
+              className="rounded-xl border border-[#F7CA21] overflow-hidden bg-[#FFF2BF]"
             >
-              <View className="flex-1">
-                <View className="flex-row justify-between items-center">
-                  <Text className="font-bold text-sm">
-                    #{order.processOrder.invNo || `ORD${order.orderId}`}
-                  </Text>
-                  {order.processOrder.status?.toLowerCase() === "hold" && (
-                    <Text className="text-[#FF0000] text-xs font-semibold">
-                      (On Hold)
+              {/* Main Order Card (Clickable for QR scan) */}
+              <TouchableOpacity
+                className="py-3 px-4 flex-row items-center justify-between"
+                onPress={() => handleScanOrder(order)}
+                activeOpacity={0.7}
+              >
+                <View className="flex-1">
+                  {/* Full Name and Invoice Row */}
+                  <View className="flex mb-0.5">
+                    <Text className="font-bold text-sm text-black">
+                      #{order.processOrder.invNo || "N/A"}
                     </Text>
-                  )}
-                </View>
+                    <Text className="font-bold text-sm text-black">
+                      {order.fullName || "Customer"}
+                    </Text>
 
-                <View className="flex-row items-center mt-2">
-                  <Ionicons name="time" size={16} color="black" />
-                  <Text className="ml-2 text-sm">
-                    {order.sheduleTime || "Not Scheduled"}
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center mt-2">
-                  {order.processOrder.isPaid ? (
-                    <FontAwesome6
-                      name="circle-check"
-                      size={16}
-                      color="#F7CA21"
-                    />
-                  ) : (
-                    <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-                  )}
-                  <Text className="ml-2 text-sm">
-                    {order.processOrder.isPaid ? (
-                      <Text className="text-black">Already Paid!</Text>
-                    ) : (
-                      <Text>
-                        {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
-                        : {formatCurrency(order.pricing)}
+                    {order.processOrder.status?.toLowerCase() === "hold" && (
+                      <Text className="text-[#FF0000] text-xs font-semibold ml-2">
+                        (Hold)
                       </Text>
                     )}
+                  </View>
+
+                  <View className="flex ">
+                    <View className="flex-row items-center mb-1">
+                      <Ionicons name="time" size={14} color="#000" />
+                      <Text className="ml-2 text-xs text-black">
+                        {order.sheduleTime || "Not Scheduled"}
+                      </Text>
+                    </View>
+
+                    <View className="flex-row items-center">
+                      {order.processOrder.isPaid ? (
+                        <FontAwesome6
+                          name="circle-check"
+                          size={14}
+                          color="#F7CA21"
+                        />
+                      ) : (
+                        <FontAwesome6 name="coins" size={14} color="#F7CA21" />
+                      )}
+                      <Text className="ml-2 text-xs text-black">
+                        {order.processOrder.isPaid ? (
+                          <Text className="text-black">Already Paid!</Text>
+                        ) : (
+                          <Text>
+                            {formatPaymentMethod(
+                              order.processOrder.paymentMethod
+                            )}{" "}
+                            : {formatCurrency(order.pricing)}
+                          </Text>
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* QR Code Icon on the right */}
+                <View className=" w-10 h-10  bg-white rounded-full items-center justify-center">
+                  <FontAwesome6 name="qrcode" size={20} color="black" />
+                </View>
+              </TouchableOpacity>
+
+              {/* Divider Line */}
+              <View className="border-t border-[#F7CA21] mx-4" />
+
+              {/* Make Phone Call Button for this specific order */}
+              <TouchableOpacity
+                className="flex-row justify-between items-center py-2 px-4"
+                onPress={() => handlePhoneCall(order.phonecode1, order.phone1)}
+                disabled={!order.phone1}
+              >
+                <View className="flex-row items-center">
+                  <Text className="ml-2 text-sm font-semibold">
+                    Make Phone Call
                   </Text>
                 </View>
-              </View>
 
-              {/* QR Code Icon on the right */}
-              <View className="ml-3 p-3 bg-white rounded-full border border-gray-200">
-                <FontAwesome6 name="qrcode" size={20} color="black" />
-              </View>
-            </TouchableOpacity>
+                <View className="bg-[#F7CA21] w-10 h-10 rounded-full items-center justify-center">
+                  <Ionicons name="call" size={18} color="#000" />
+                </View>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       </ScrollView>
-
-      {/* Bottom Action Buttons */}
-      <View className="absolute bottom-0 w-full px-6 pb-6 bg-white pt-4">
-        <TouchableOpacity
-          className="rounded-full bg-white border border-[#CBD7E8] py-6 px-6 w-full justify-center"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 1, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-          }}
-          onPress={handlePhoneCall}
-          disabled={!userDetails?.phoneNumber}
-        >
-          <Text className="text-base font-bold text-center absolute left-0 right-0">
-            Make Phone Call
-          </Text>
-
-          <View className="absolute right-2 bg-[#F7CA21] w-10 h-10 rounded-full items-center justify-center">
-            <Ionicons name="call" size={24} color="#000" />
-          </View>
-        </TouchableOpacity>
-      </View>
 
       {/* Alert Modal */}
       <AlertModal
