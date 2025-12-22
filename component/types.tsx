@@ -4,12 +4,14 @@ export type RootStackParamList = {
   Lanuage: undefined;
   Splash: undefined;
   ComplaintsList: undefined;
+    ReceivedCash: { scannedOfficerId?: string } | undefined;
   AddComplaint: undefined;
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
+  ReceivedCashQR:{amount: number , selectedCount:number};
   VerifyOrderQR: {
     invNo: string;
     orderId: number;
