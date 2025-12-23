@@ -237,7 +237,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const handleCashReceivedPress = () => {
     const cashAmount = getCashAmount();
     if (cashAmount > 0) {
-      navigation.navigate("Jobs");
+      navigation.navigate("ReceivedCash");
     }
   };
 
