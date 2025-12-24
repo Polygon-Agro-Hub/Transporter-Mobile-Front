@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Linking,
   RefreshControl,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import {
@@ -49,6 +50,8 @@ interface UserDetails {
   billingTitle: string;
   billingPhoneCode: string;
   billingPhone: string;
+  billingPhoneCode2: string | null;
+  billingPhone2: string | null;
   buildingType: string;
   deliveryMethod: string;
 }
@@ -68,6 +71,10 @@ interface OrderItem {
   fullName: string;
   phonecode1: string;
   phone1: string;
+  phonecode2: string | null;
+  phone2: string | null;
+  longitude: string | null;
+  latitude: string | null;
   address: string;
   processOrder: ProcessOrder;
   pricing: string;
@@ -79,7 +86,6 @@ interface OrderDetailsResponse {
 }
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
-  // ONLY use processOrderIds parameter
   const { processOrderIds = [] } = route.params;
 
   const [loading, setLoading] = useState(true);
@@ -87,7 +93,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [startingJourney, setStartingJourney] = useState(false);
+  const [startingJourney, setStartingJourney] = useState<string | null>(null); // Track which order is being started
   const [alertModal, setAlertModal] = useState({
     visible: false,
     title: "",
@@ -112,12 +118,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Check if we have processOrderIds
       if (!processOrderIds || processOrderIds.length === 0) {
         throw new Error("No process order IDs provided");
       }
 
-      // Convert processOrderIds array to comma-separated string
       const processOrderIdsString = Array.isArray(processOrderIds)
         ? processOrderIds.join(",")
         : String(processOrderIds);
@@ -132,7 +136,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         {
           params: {
             orderIds: processOrderIdsString,
-            isProcessOrderIds: 1, // Always send this as 1 since we're using processOrderIds
+            isProcessOrderIds: 1,
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -179,6 +183,28 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     }
   };
 
+  const handleOpenLocation = (
+    latitude: string | null,
+    longitude: string | null
+  ) => {
+    if (!latitude || !longitude) {
+      Alert.alert(
+        "Location Not Available",
+        "Location coordinates are not available for this order."
+      );
+      return;
+    }
+
+    // Open in Google Maps
+    const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert(
+        "Error",
+        "Could not open Google Maps. Please make sure it is installed."
+      );
+    });
+  };
+
   const formatCurrency = (amount: string) => {
     if (!amount) return "Rs. 0.00";
     const numAmount = parseFloat(amount);
@@ -216,26 +242,39 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const getScheduleTimeDisplay = () => {
     if (!orders || orders.length === 0) return "Not Scheduled";
 
-    // Return the first order's schedule time
     const firstOrder = orders[0];
     return firstOrder?.sheduleTime || "Not Scheduled";
   };
 
-  // Check if any order has Hold status
-  const hasHoldOrder = () => {
-    return orders.some(
-      (order) => order.processOrder.status?.toLowerCase() === "hold"
+  const getJourneyButtonText = (status: string) => {
+    return status?.toLowerCase() === "collected" ? "Start Journey" : "Continue";
+  };
+
+  const getCardStyle = (status: string) => {
+    const isOnTheWay = status?.toLowerCase() === "on the way";
+    return {
+      backgroundColor: isOnTheWay ? "#FFF2BF" : "#FFFFFF",
+      borderColor: isOnTheWay ? "#F7CA21" : "#A4AAB7",
+      borderWidth: 1,
+    };
+  };
+
+  const findOrdersWithSameLocation = (orderId: number) => {
+    const currentOrder = orders.find((order) => order.orderId === orderId);
+    if (!currentOrder || !currentOrder.longitude || !currentOrder.latitude) {
+      return [currentOrder];
+    }
+
+    return orders.filter(
+      (order) =>
+        order.longitude === currentOrder.longitude &&
+        order.latitude === currentOrder.latitude
     );
   };
 
-  // Get button text based on order status
-  const getJourneyButtonText = () => {
-    return hasHoldOrder() ? "Restart the Journey" : "Start Journey";
-  };
-
-  const handleStartJourney = async () => {
+  const handleStartJourneyForOrder = async (orderId: number) => {
     try {
-      setStartingJourney(true);
+      setStartingJourney(orderId.toString());
       setError(null);
 
       const token = await AsyncStorage.getItem("token");
@@ -245,13 +284,23 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Use processOrderIds
-      const processOrderIdsString = Array.isArray(processOrderIds)
-        ? processOrderIds.join(",")
-        : String(processOrderIds);
+      // Find all orders with same location
+      const ordersWithSameLocation = findOrdersWithSameLocation(orderId);
+      const processOrderIdsToUpdate = ordersWithSameLocation
+        .filter(
+          (order): order is OrderItem =>
+            order != null && order?.processOrder?.id != null
+        )
+        .map((order) => order.processOrder.id);
+
+      if (processOrderIdsToUpdate.length === 0) {
+        throw new Error("No valid process orders found");
+      }
+
+      const processOrderIdsString = processOrderIdsToUpdate.join(",");
 
       console.log(
-        "Starting journey with Process Order IDs:",
+        "Starting journey for process orders:",
         processOrderIdsString
       );
 
@@ -259,7 +308,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         `${environment.API_BASE_URL}api/order/start-journey`,
         {
           orderIds: processOrderIdsString,
-          isProcessOrderIds: 1, // Always send as process order IDs
+          isProcessOrderIds: 1,
         },
         {
           headers: {
@@ -270,19 +319,32 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        // Pass only processOrderIds to MyJourney
-        navigation.navigate("MyJourney", {
+        // Update local state to reflect status change
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            if (processOrderIdsToUpdate.includes(order.processOrder.id)) {
+              return {
+                ...order,
+                processOrder: {
+                  ...order.processOrder,
+                  status: "On the Way",
+                },
+              };
+            }
+            return order;
+          })
+        );
+
+        // Navigate to EndJourneyConfirmation with all processOrderIds
+        navigation.navigate("EndJourneyConfirmation", {
           processOrderIds: processOrderIds,
         });
-
-        // No need to refresh order details since we're navigating away
       } else {
         throw new Error(response.data.message || "Failed to start journey");
       }
     } catch (error: any) {
       console.error("Error starting journey:", error);
 
-      // Check if this is the "ongoing activity" error
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
@@ -310,19 +372,17 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         });
       }
     } finally {
-      setStartingJourney(false);
+      setStartingJourney(null);
     }
   };
 
   const handleOpenOngoingActivity = () => {
-    // Close the modal
     setAlertModal({
       ...alertModal,
       visible: false,
     });
 
-    // Navigate to MyJourney with processOrderIds
-    navigation.navigate("MyJourney", {
+    navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: processOrderIds,
     });
   };
@@ -386,7 +446,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   }
 
   return (
-    <View className="flex-1 bg-white justify-center items-center">
+    <View className="flex-1 bg-white">
       <CustomHeader
         title="Order Details"
         navigation={navigation}
@@ -396,7 +456,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 160 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         className="px-6"
         refreshControl={
           <RefreshControl
@@ -408,7 +468,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         }
       >
         {/* Avatar and User Details */}
-        <View className="items-center">
+        <View className="items-center mt-4">
           {userDetails.image ? (
             <Image
               source={{ uri: userDetails.image }}
@@ -425,7 +485,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             {getFullName()}
           </Text>
 
-          {/* Address Display */}
           {userDetails.address &&
             userDetails.address !== "Address not specified" && (
               <View className="flex-row mt-1 max-w-[90%]">
@@ -456,99 +515,149 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         </View>
 
         {/* Orders List */}
-        <View className="mt-6 space-y-5">
-          {orders.map((order, index) => (
-            <View
-              key={`${order.orderId}-${index}`}
-              className="rounded-xl border border-[#A4AAB7] py-3 px-4 flex-row items-center justify-between bg-white"
-            >
-              <View className="flex-1">
-                {/* Full Name Row */}
-                <View className="flex mb-0.5">
+        <View className="mt-6 space-y-4">
+          {orders.map((order, index) => {
+            const hasPhone2 = order.phonecode2 && order.phone2;
+            const hasLocation = order.latitude && order.longitude;
+
+            return (
+              <View
+                key={`${order.orderId}-${index}`}
+                style={getCardStyle(order.processOrder.status)}
+                className="rounded-xl p-4"
+              >
+                {/* Header with Invoice and Name */}
+                <View className="flex mb-3">
                   <Text className="font-bold text-sm text-black">
                     #{order.processOrder.invNo || "N/A"}
                   </Text>
-                  <Text className="font-bold text-sm flex-1">
+                  <Text className="font-bold text-base flex-1">
                     {order.fullName || "Customer"}
                   </Text>
-                  {order.processOrder.status?.toLowerCase() === "hold" && (
-                    <Text className="text-[#FF0000] text-xs font-semibold ml-2">
-                      (On Hold)
+                </View>
+
+                {/* Schedule Time */}
+                <View className="flex-row justify-between">
+                  <View className="flex-row items-center mb-3">
+                    <Ionicons name="time" size={16} color="#000" />
+                    <Text className="ml-2 text-sm text-black">
+                      {order.sheduleTime || "Not Scheduled"}
+                    </Text>
+                  </View>
+
+                  {/* Payment Info */}
+                  <View className="flex-row items-center mb-4">
+                    {order.processOrder.isPaid ? (
+                      <FontAwesome6
+                        name="circle-check"
+                        size={16}
+                        color="#F7CA21"
+                      />
+                    ) : (
+                      <FontAwesome6 name="coins" size={16} color="#F7CA21" />
+                    )}
+                    <Text className="ml-2 text-sm text-black">
+                      {order.processOrder.isPaid ? (
+                        <Text className="text-black">Already Paid!</Text>
+                      ) : (
+                        <Text>
+                          {formatPaymentMethod(
+                            order.processOrder.paymentMethod
+                          )}{" "}
+                          : {formatCurrency(order.pricing)}
+                        </Text>
+                      )}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Action Buttons Row */}
+                <View className="flex-row justify-between items-center mb-4">
+                  {/* Phone 1 Button */}
+                  <TouchableOpacity
+                    className="items-center"
+                    onPress={() =>
+                      handlePhoneCall(orders[0].phonecode1, orders[0].phone1)
+                    }
+                  >
+                    <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center">
+                      <Ionicons name="call" size={24} color="black" />
+                    </View>
+                    <Text className="mt-2 font-semibold">Num 1</Text>
+                  </TouchableOpacity>
+
+                  {/* Phone 2 Button (only if available) */}
+                  {hasPhone2 && (
+                    <TouchableOpacity
+                      className="items-center"
+                      onPress={() =>
+                        orders[0].phone2 &&
+                        handlePhoneCall(
+                          orders[0].phonecode2!,
+                          orders[0].phone2!
+                        )
+                      }
+                    >
+                      <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center">
+                        <Ionicons name="call" size={24} color="black" />
+                      </View>
+                      <Text className="mt-2 font-semibold">Num 2</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Location Button */}
+                  <TouchableOpacity
+                    className="items-center"
+                    onPress={() =>
+                      handleOpenLocation(
+                        orders[0].latitude,
+                        orders[0].longitude
+                      )
+                    }
+                  >
+                    <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center relative">
+                      <Ionicons name="location-sharp" size={24} color="black" />
+                    </View>
+                    <Text className="mt-2 font-semibold">Location</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Start Journey/Continue Button */}
+                <TouchableOpacity
+                  className="rounded-full bg-[#F7CA21] py-3 items-center"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 2, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 5,
+                    elevation: 4,
+                  }}
+                  onPress={() => handleStartJourneyForOrder(order.orderId)}
+                  disabled={startingJourney === order.orderId.toString()}
+                >
+                  {startingJourney === order.orderId.toString() ? (
+                    <ActivityIndicator size="small" color="#000" />
+                  ) : (
+                    <Text className="text-base font-bold">
+                      {getJourneyButtonText(order.processOrder.status)}
                     </Text>
                   )}
-                </View>
+                </TouchableOpacity>
 
-                <View className="flex-row items-center mb-1">
-                  <Ionicons name="time" size={14} color="#000" />
-                  <Text className="ml-2 text-xs text-black">
-                    {order.sheduleTime || "Not Scheduled"}
+                {/* Info Text for same location orders */}
+                {findOrdersWithSameLocation(order.orderId).length > 1 && (
+                  <Text className="text-xs text-gray-500 text-center mt-2">
+                    This order shares location with{" "}
+                    {findOrdersWithSameLocation(order.orderId).length - 1} other
+                    order(s)
                   </Text>
-                </View>
-
-                <View className="flex-row items-center">
-                  {order.processOrder.isPaid ? (
-                    <FontAwesome6
-                      name="circle-check"
-                      size={14}
-                      color="#F7CA21"
-                    />
-                  ) : (
-                    <FontAwesome6 name="coins" size={14} color="#F7CA21" />
-                  )}
-                  <Text className="ml-2 text-xs text-black">
-                    {order.processOrder.isPaid ? (
-                      <Text className="text-black">Already Paid!</Text>
-                    ) : (
-                      <Text>
-                        {formatPaymentMethod(order.processOrder.paymentMethod)}{" "}
-                        : {formatCurrency(order.pricing)}
-                      </Text>
-                    )}
-                  </Text>
-                </View>
+                )}
               </View>
-
-              {/* Call Button on the right side (replacing QR code) */}
-              <TouchableOpacity
-                className="ml-2 p-1 bg-[#F7CA21] rounded-full border border-gray-200 items-center justify-center"
-                onPress={() => handlePhoneCall(order.phonecode1, order.phone1)}
-                disabled={!order.phone1}
-                style={{
-                  width: 40,
-                  height: 40,
-                }}
-              >
-                <Ionicons name="call" size={20} color="black" />
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
 
-      {/* Bottom Action Button (Only Start Journey) */}
-      <View className="absolute bottom-0 w-full mx-3 px-8 mb-6">
-        {/* Start/Restart Journey Button */}
-        <TouchableOpacity
-          className="rounded-full bg-[#F7CA21] py-4 items-center"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 2, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 5,
-            elevation: 4,
-          }}
-          onPress={handleStartJourney}
-          disabled={startingJourney}
-        >
-          {startingJourney ? (
-            <ActivityIndicator size="small" color="#000" />
-          ) : (
-            <Text className="text-base font-bold">
-              {getJourneyButtonText()}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
       <AlertModal
         visible={alertModal.visible}
         title={alertModal.title}

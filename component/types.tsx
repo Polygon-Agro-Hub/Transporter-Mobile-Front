@@ -32,9 +32,6 @@ export type RootStackParamList = {
   EndJourneyConfirmation: {
     processOrderIds: number[]; 
   };
-  MyJourney: {
-    processOrderIds: number[];
-  };
   SignatureScreen: {
     processOrderIds: number[];
   };

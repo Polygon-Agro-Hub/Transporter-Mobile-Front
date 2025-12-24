@@ -187,7 +187,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         image: packsImage,
         label: `${amountData?.totalOrders || 0} Packs`,
         color: "#10B981",
-        action: () => navigation.navigate("Splash"),
+        action: () => navigation.navigate("Jobs"),
       },
       {
         image: myComplaintImage,
