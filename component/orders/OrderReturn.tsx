@@ -40,8 +40,10 @@ interface Reason {
 }
 
 const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
+  const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } = route.params;
   console.log("Order Return page orderIds:", orderIds);
+  console.log("All Process Order IDs:", allProcessOrderIds);
+  console.log("Remaining Orders:", remainingOrders);
 
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
@@ -115,234 +117,172 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return reason.rsnEnglish.toLowerCase() === "other";
   };
 
-  // const handleSubmit = async () => {
-  //   if (!selectedReason) return;
-
-  //   if (isOtherReason(selectedReason) && !otherReason.trim()) {
-  //     Alert.alert("Required", "Please provide a reason in the text field.");
-  //     return;
-  //   }
-
-  //   try {
-  //     setSubmitting(true);
-  //     const token = await AsyncStorage.getItem("token");
-  //     const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
-
-  //     const payload = {
-  //       orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
-  //       returnReasonId: selectedReason.id,
-  //       note: isOtherReason(selectedReason) ? otherReason.trim() : null,
-  //     };
-
-  //     console.log("Submitting return order:", payload);
-
-  //     const response = await axios.post(
-  //       `${environment.API_BASE_URL}api/return/submit`,
-  //       payload,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     const result = response.data;
-  //     console.log("Return submit response:", result);
-
-  //     if (result.status === "success") {
-  //       // Get invoice numbers from the response - ensure it's an array of strings
-  //       const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-  //       console.log("Invoice numbers from response:", invoiceNumbers);
-
-  //       // Create success message with bold invoice numbers
-  //       let message: string | React.ReactNode;
-
-  //       if (invoiceNumbers.length === 0) {
-  //         message = "Order has been marked as a return order.";
-  //       } else if (invoiceNumbers.length === 1) {
-  //         message = (
-  //           <View className="items-center">
-  //             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-  //               Order:{" "}
-  //               <Text className="font-bold text-[#000000]">
-  //                 {invoiceNumbers[0]}
-  //               </Text>{" "}
-  //               has been marked as a return order.
-  //             </Text>
-  //           </View>
-  //         );
-  //       } else {
-  //         // For multiple orders
-  //         message = (
-  //           <View className="items-center">
-  //             <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
-  //             {invoiceNumbers.map((invNo: string, index: number) => (
-  //               <Text
-  //                 key={index}
-  //                 className="text-center font-bold text-[#000000] mb-1"
-  //               >
-  //                 {invNo}
-  //               </Text>
-  //             ))}
-  //             <Text className="text-center text-[#4E4E4E] mt-2">
-  //               have been marked as return orders.
-  //             </Text>
-  //           </View>
-  //         );
-  //       }
-
-  //       setSuccessMessage(message);
-  //       setShowSuccessModal(true);
-
-  //       // Add backup navigation timeout in case modal doesn't auto-close
-  //       setTimeout(() => {
-  //         if (showSuccessModal) {
-  //           setShowSuccessModal(false);
-  //           navigation.navigate("Home");
-  //         }
-  //       }, 4000); // 4 seconds as backup (1 second longer than modal duration)
-  //     } else {
-  //       Alert.alert("Error", result.message || "Failed to submit return order");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("Error submitting return order:", error);
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       "Failed to submit return order. Please try again.";
-  //     Alert.alert("Error", errorMessage);
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
-
   const handleSubmit = async () => {
-  if (!selectedReason) return;
+    if (!selectedReason) return;
 
-  if (isOtherReason(selectedReason) && !otherReason.trim()) {
-    Alert.alert("Required", "Please provide a reason in the text field.");
-    return;
-  }
+    if (isOtherReason(selectedReason) && !otherReason.trim()) {
+      Alert.alert("Required", "Please provide a reason in the text field.");
+      return;
+    }
 
-  try {
-    setSubmitting(true);
-    const token = await AsyncStorage.getItem("token");
-    const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
+    try {
+      setSubmitting(true);
+      const token = await AsyncStorage.getItem("token");
+      const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
 
-    const payload = {
-      orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
-      returnReasonId: selectedReason.id,
-      note: isOtherReason(selectedReason) ? otherReason.trim() : null,
-    };
+      const payload = {
+        orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
+        returnReasonId: selectedReason.id,
+        note: isOtherReason(selectedReason) ? otherReason.trim() : null,
+      };
 
-    console.log("Submitting return order:", payload);
+      console.log("Submitting return order:", payload);
 
-    const response = await axios.post(
-      `${environment.API_BASE_URL}api/return/submit`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/return/submit`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = response.data;
+      console.log("Return submit response:", result);
+
+      if (result.status === "success") {
+        // Get invoice numbers from the response - ensure it's an array of strings
+        const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
+        console.log("Invoice numbers from response:", invoiceNumbers);
+
+        // Create success message with bold invoice numbers
+        let message: string | React.ReactNode;
+
+        if (invoiceNumbers.length === 0) {
+          message = "Order has been marked as a return order.";
+        } else if (invoiceNumbers.length === 1) {
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+                Order:{" "}
+                <Text className="font-bold text-[#000000]">
+                  {invoiceNumbers[0]}
+                </Text>{" "}
+                has been marked as a return order.
+              </Text>
+            </View>
+          );
+        } else {
+          // For multiple orders
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+              {invoiceNumbers.map((invNo: string, index: number) => (
+                <Text
+                  key={index}
+                  className="text-center font-bold text-[#000000] mb-1"
+                >
+                  {invNo}
+                </Text>
+              ))}
+              <Text className="text-center text-[#4E4E4E] mt-2">
+                have been marked as return orders.
+              </Text>
+            </View>
+          );
+        }
+
+        setSuccessMessage(message);
+        setShowSuccessModal(true);
+
+        // Notify parent component about order completion
+        if (onOrderComplete && orderIds && orderIds.length > 0) {
+          onOrderComplete(orderIds[0]);
+        }
+
+        // Add backup navigation timeout in case modal doesn't auto-close
+        setTimeout(() => {
+          if (showSuccessModal) {
+            setShowSuccessModal(false);
+            handleNavigationAfterSuccess();
+          }
+        }, 4000);
+      } else {
+        Alert.alert("Error", result.message || "Failed to submit return order");
       }
-    );
-
-    const result = response.data;
-    console.log("Return submit response:", result);
-
-    if (result.status === "success") {
-      // Get invoice numbers from the response - ensure it's an array of strings
-      const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-      console.log("Invoice numbers from response:", invoiceNumbers);
-
-      // Create success message with bold invoice numbers
-      let message: string | React.ReactNode;
-
-      if (invoiceNumbers.length === 0) {
-        message = "Order has been marked as a return order.";
-      } else if (invoiceNumbers.length === 1) {
-        message = (
+    } catch (error: any) {
+      console.error("Error submitting return order:", error);
+      
+      // Get error message from response
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to submit return order. Please try again.";
+      
+      // Check if it's an "already returned" error
+      const isAlreadyReturnedError = 
+        errorMessage.toLowerCase().includes("already") && 
+        errorMessage.toLowerCase().includes("return");
+      
+      if (isAlreadyReturnedError) {
+        // Show error modal for already returned orders
+        setSuccessMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
-              <Text className="font-bold text-[#000000]">
-                {invoiceNumbers[0]}
-              </Text>{" "}
-              has been marked as a return order.
+              {errorMessage}
             </Text>
           </View>
         );
+        setShowErrorModal(true);
       } else {
-        // For multiple orders
-        message = (
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
-            {invoiceNumbers.map((invNo: string, index: number) => (
-              <Text
-                key={index}
-                className="text-center font-bold text-[#000000] mb-1"
-              >
-                {invNo}
-              </Text>
-            ))}
-            <Text className="text-center text-[#4E4E4E] mt-2">
-              have been marked as return orders.
-            </Text>
-          </View>
-        );
+        // Show regular alert for other errors
+        Alert.alert("Error", errorMessage);
       }
-
-      setSuccessMessage(message);
-      setShowSuccessModal(true);
-
-      // Add backup navigation timeout in case modal doesn't auto-close
-      setTimeout(() => {
-        if (showSuccessModal) {
-          setShowSuccessModal(false);
-          navigation.navigate("Home");
-        }
-      }, 4000); // 4 seconds as backup (1 second longer than modal duration)
-    } else {
-      Alert.alert("Error", result.message || "Failed to submit return order");
+    } finally {
+      setSubmitting(false);
     }
-  } catch (error: any) {
-    console.error("Error submitting return order:", error);
-    
-    // Get error message from response
-    const errorMessage =
-      error.response?.data?.message ||
-      "Failed to submit return order. Please try again.";
-    
-    // Check if it's an "already returned" error
-    const isAlreadyReturnedError = 
-      errorMessage.toLowerCase().includes("already") && 
-      errorMessage.toLowerCase().includes("return");
-    
-    if (isAlreadyReturnedError) {
-      // Show error modal for already returned orders
-      setSuccessMessage(
-        <View className="items-center">
-          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-            {errorMessage}
-          </Text>
-        </View>
-      );
-      setShowErrorModal(true);
+  };
+
+  const handleNavigationAfterSuccess = () => {
+    // Check if there are remaining orders to process
+    if (remainingOrders && remainingOrders.length > 0) {
+      // There are more orders, navigate back to OrderDetails
+      console.log("Navigating to OrderDetails with remaining orders:", remainingOrders);
+      navigation.navigate("OrderDetails", {
+        processOrderIds: allProcessOrderIds || remainingOrders,
+      });
     } else {
-      // Show regular alert for other errors
-      Alert.alert("Error", errorMessage);
+      // No more orders, navigate to Home
+      console.log("No more orders, navigating to Home");
+      navigation.navigate("Home");
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setSelectedReason(null);
     setOtherReason("");
-    navigation.navigate("Home");
+    handleNavigationAfterSuccess();
+  };
+
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+    
+    // Check if there are remaining orders to process
+    if (remainingOrders && remainingOrders.length > 0) {
+      // There are more orders, navigate back to OrderDetails
+      console.log("Error modal closed, navigating to OrderDetails with remaining orders:", remainingOrders);
+      navigation.navigate("OrderDetails", {
+        processOrderIds: allProcessOrderIds || remainingOrders,
+      });
+    } else {
+      // No more orders, navigate to Home
+      console.log("Error modal closed, no more orders, navigating to Home");
+      navigation.navigate("Home");
+    }
   };
 
   const getPlaceholderText = (): string => {
@@ -533,22 +473,16 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         duration={3000}
       />
 
-
-{/* Error Alert Modal */}
-<AlertModal
-  visible={showErrorModal}
-  title="Error!"
-  message={successMessage}
-  type="error"
-  onClose={() => {
-    setShowErrorModal(false);
-    setSelectedReason(null);
-    setOtherReason("");
-    navigation.goBack();
-  }}
-  autoClose={true}
-  duration={3000}
-/>
+      {/* Error Alert Modal */}
+      <AlertModal
+        visible={showErrorModal}
+        title="Error!"
+        message={successMessage}
+        type="error"
+        onClose={handleErrorModalClose}
+        autoClose={true}
+        duration={3000}
+      />
 
       {/* Language Menu Modal */}
       <Modal visible={showLanguageMenu} transparent animationType="fade">

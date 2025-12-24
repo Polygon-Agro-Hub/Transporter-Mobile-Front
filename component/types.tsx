@@ -4,18 +4,18 @@ export type RootStackParamList = {
   Lanuage: undefined;
   Splash: undefined;
   ComplaintsList: undefined;
-    ReceivedCash: { scannedOfficerId?: string } | undefined;
+  ReceivedCash: { scannedOfficerId?: string } | undefined;
   AddComplaint: undefined;
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
-  ReceivedCashQR:{amount: number , selectedCount:number};
+  ReceivedCashQR: { amount: number; selectedCount: number };
   VerifyOrderQR: {
     invNo: string;
     orderId: number;
-    allOrderIds: number[]; 
+    allOrderIds: number[];
     totalToScan: number;
   };
   ReturnOrderQR: {
@@ -26,20 +26,30 @@ export type RootStackParamList = {
   OrderDetails: {
     processOrderIds: number[];
   };
-  OrderDetailsAfterJourney: {
-    processOrderIds: number[];
-  };
   EndJourneyConfirmation: {
-    processOrderIds: number[]; 
+    processOrderIds: number[];
+    allProcessOrderIds?: number[];
+    remainingOrders?: number[];
+    orderData?: any;
+    onOrderComplete?: (completedId: number) => void;
   };
   SignatureScreen: {
     processOrderIds: number[];
+    allProcessOrderIds?: number[];
+    remainingOrders?: number[];
+    onOrderComplete?: (completedId: number) => void;
+  };
+  HoldOrder: {
+    orderIds: number[];
+    allProcessOrderIds?: number[];
+    remainingOrders?: number[];
+    onOrderComplete?: (completedId: number) => void;
+  };
+  OrderReturn: {
+    orderIds: number[];
+    allProcessOrderIds?: number[];
+    remainingOrders?: number[];
+    onOrderComplete?: (completedId: number) => void;
   };
   DeliverySuccessful: undefined;
-  OrderReturn:{
-    orderIds: number[];
-  };
-  HoldOrder:{
-    orderIds: number[];
-  };
 };

@@ -15,6 +15,7 @@ interface CustomHeaderProps {
   showBackButton?: boolean;
   showLanguageSelector?: boolean;
   navigation?: StackNavigationProp<any>;
+  onBackPress?: () => void; 
   onLanguageChange?: (language: string) => void;
   dark?: boolean;
 }
@@ -24,6 +25,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
   showBackButton = true,
   showLanguageSelector = false,
   navigation,
+  onBackPress,
   onLanguageChange,
   dark = false,
 }) => {
@@ -52,7 +54,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
       <View style={{ width: wp(15) }}>
         {showBackButton && navigation && (
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={onBackPress ?? (() => navigation.goBack())}
             className="items-start"
           >
             <Entypo

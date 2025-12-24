@@ -93,7 +93,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [startingJourney, setStartingJourney] = useState<string | null>(null); // Track which order is being started
+  const [startingJourney, setStartingJourney] = useState<string | null>(null);
+  const [completedOrders, setCompletedOrders] = useState<number[]>([]);
+  const [showContinueButton, setShowContinueButton] = useState(false);
   const [alertModal, setAlertModal] = useState({
     visible: false,
     title: "",
@@ -144,6 +146,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         }
       );
 
+      console.log(
+        "Order details response:",
+        JSON.stringify(response.data, null, 2)
+      );
+
       if (response.data.status === "success") {
         const data: OrderDetailsResponse = response.data.data;
 
@@ -153,6 +160,42 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
         setUserDetails(data.user);
         setOrders(data.orders);
+
+        // Debug: Log each order's status
+        console.log("Orders with status:");
+        data.orders.forEach((order, index) => {
+          console.log(
+            `Order ${index + 1}: ID=${order.processOrder.id}, Status=${
+              order.processOrder.status
+            }`
+          );
+        });
+
+        // Initialize completed orders based on status
+        const completed = data.orders
+          .filter(
+            (order) =>
+              order.processOrder.status.toLowerCase() === "completed" ||
+              order.processOrder.status.toLowerCase() === "return"
+          )
+          .map((order) => order.processOrder.id);
+
+        console.log("Completed orders IDs:", completed);
+        setCompletedOrders(completed);
+
+        // Show continue button if there are pending orders
+        const pendingOrders = data.orders.filter(
+          (order) => !completed.includes(order.processOrder.id)
+        );
+
+        console.log("Pending orders count:", pendingOrders.length);
+        console.log("Completed orders count:", completed.length);
+
+        if (pendingOrders.length > 0 && completed.length > 0) {
+          setShowContinueButton(true);
+        } else {
+          setShowContinueButton(false);
+        }
       } else {
         throw new Error(
           response.data.message || "Failed to fetch order details"
@@ -195,7 +238,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       return;
     }
 
-    // Open in Google Maps
     const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
     Linking.openURL(url).catch(() => {
       Alert.alert(
@@ -247,14 +289,47 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   };
 
   const getJourneyButtonText = (status: string) => {
-    return status?.toLowerCase() === "collected" ? "Start Journey" : "Continue";
+    const normalizedStatus = status?.toLowerCase();
+
+    if (normalizedStatus === "todo") return "Start Journey";
+    if (normalizedStatus === "on the way" || normalizedStatus === "hold")
+      return "Continue";
+
+    // FOR COMPLETED / RETURN
+    return "Start Journey";
+  };
+
+  const isButtonEnabled = (status: string) => {
+    const normalizedStatus = status?.toLowerCase();
+
+    return (
+      normalizedStatus === "todo" ||
+      normalizedStatus === "on the way" ||
+      normalizedStatus === "hold"
+    );
   };
 
   const getCardStyle = (status: string) => {
-    const isOnTheWay = status?.toLowerCase() === "on the way";
+    const normalizedStatus = status?.toLowerCase();
+    console.log(
+      `getCardStyle: status=${status}, normalized=${normalizedStatus}`
+    );
+
+    // If status is "Todo", use white background
+    if (normalizedStatus === "todo") {
+      console.log("Card style: White background");
+      return {
+        backgroundColor: "#FFFFFF",
+        borderColor: "#A4AAB7",
+        borderWidth: 1,
+      };
+    }
+
+    // For all other statuses, use yellow background
+    console.log("Card style: Yellow background");
     return {
-      backgroundColor: isOnTheWay ? "#FFF2BF" : "#FFFFFF",
-      borderColor: isOnTheWay ? "#F7CA21" : "#A4AAB7",
+      backgroundColor: "#FFF2BF",
+      borderColor: "#F7CA21",
       borderWidth: 1,
     };
   };
@@ -284,32 +359,52 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      // Find all orders with same location
-      const ordersWithSameLocation = findOrdersWithSameLocation(orderId);
-      const processOrderIdsToUpdate = ordersWithSameLocation
-        .filter(
-          (order): order is OrderItem =>
-            order != null && order?.processOrder?.id != null
-        )
-        .map((order) => order.processOrder.id);
-
-      if (processOrderIdsToUpdate.length === 0) {
-        throw new Error("No valid process orders found");
+      const currentOrder = orders.find((order) => order.orderId === orderId);
+      if (!currentOrder || !currentOrder.processOrder?.id) {
+        throw new Error("Order not found");
       }
 
-      const processOrderIdsString = processOrderIdsToUpdate.join(",");
+      const processOrderId = currentOrder.processOrder.id;
+      const currentStatus = currentOrder.processOrder.status.toLowerCase();
 
       console.log(
-        "Starting journey for process orders:",
-        processOrderIdsString
+        `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
       );
+
+      // If status is already "On the way" or "Hold", navigate directly to EndJourneyConfirmation
+      if (currentStatus === "on the way" || currentStatus === "hold") {
+        console.log(
+          "Status is already on the way or hold, navigating directly"
+        );
+        const remainingOrders = orders
+          .filter((order) => order.processOrder.id !== processOrderId)
+          .map((order) => order.processOrder.id);
+
+        navigation.navigate("EndJourneyConfirmation", {
+          processOrderIds: [processOrderId],
+          allProcessOrderIds: processOrderIds,
+          remainingOrders: remainingOrders,
+          orderData: currentOrder,
+          onOrderComplete: (completedId: number) => {
+            handleOrderComplete(completedId);
+          },
+        });
+        return;
+      }
+
+      // Only start journey for "Todo" status
+      console.log("Starting journey for process order:", processOrderId);
+
+      const payload = {
+        orderIds: processOrderId.toString(),
+        isProcessOrderIds: 1,
+      };
+
+      console.log("Sending payload:", payload);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/start-journey`,
-        {
-          orderIds: processOrderIdsString,
-          isProcessOrderIds: 1,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -318,11 +413,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         }
       );
 
+      console.log("Start journey response:", response.data);
+
       if (response.data.status === "success") {
-        // Update local state to reflect status change
         setOrders((prevOrders) =>
           prevOrders.map((order) => {
-            if (processOrderIdsToUpdate.includes(order.processOrder.id)) {
+            if (order.processOrder.id === processOrderId) {
               return {
                 ...order,
                 processOrder: {
@@ -335,15 +431,29 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           })
         );
 
-        // Navigate to EndJourneyConfirmation with all processOrderIds
+        const remainingOrders = orders
+          .filter((order) => order.processOrder.id !== processOrderId)
+          .map((order) => order.processOrder.id);
+
         navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: processOrderIds,
+          processOrderIds: [processOrderId],
+          allProcessOrderIds: processOrderIds,
+          remainingOrders: remainingOrders,
+          orderData: currentOrder,
+          onOrderComplete: (completedId: number) => {
+            handleOrderComplete(completedId);
+          },
         });
       } else {
         throw new Error(response.data.message || "Failed to start journey");
       }
     } catch (error: any) {
       console.error("Error starting journey:", error);
+
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+      }
 
       const errorMessage =
         error.response?.data?.message ||
@@ -376,6 +486,31 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     }
   };
 
+  const handleOrderComplete = (completedId: number) => {
+    console.log(`handleOrderComplete: completedId=${completedId}`);
+    setCompletedOrders((prev) => {
+      const newCompleted = [...prev, completedId];
+
+      // Check if all orders are completed
+      const allOrderIds = orders.map((order) => order.processOrder.id);
+      const allCompleted = allOrderIds.every((id) => newCompleted.includes(id));
+
+      console.log(`All orders completed: ${allCompleted}`);
+
+      if (allCompleted) {
+        // Auto-navigate to Home after a short delay
+        setTimeout(() => {
+          console.log("All orders completed, navigating to Home");
+          navigation.navigate("Home");
+        }, 500);
+      } else {
+        setShowContinueButton(true);
+      }
+
+      return newCompleted;
+    });
+  };
+
   const handleOpenOngoingActivity = () => {
     setAlertModal({
       ...alertModal,
@@ -385,6 +520,17 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: processOrderIds,
     });
+  };
+
+  const getProgressPercentage = () => {
+    if (orders.length === 0) return 0;
+    const percentage = Math.round(
+      (completedOrders.length / orders.length) * 100
+    );
+    console.log(
+      `getProgressPercentage: completed=${completedOrders.length}, total=${orders.length}, percentage=${percentage}%`
+    );
+    return percentage;
   };
 
   if (loading) {
@@ -452,6 +598,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         navigation={navigation}
         showBackButton={true}
         showLanguageSelector={false}
+        onBackPress={() => navigation.navigate("Jobs")}
       />
 
       <ScrollView
@@ -467,6 +614,26 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           />
         }
       >
+        {/* Progress Bar for multiple orders */}
+        {orders.length > 1 && (
+          <View className="mt-4 mb-2">
+            <View className="flex-row items-center justify-between mb-1">
+              <Text className="text-sm font-medium text-gray-600">
+                Progress: {completedOrders.length} of {orders.length} orders
+              </Text>
+              <Text className="text-sm font-medium text-gray-600">
+                {getProgressPercentage()}%
+              </Text>
+            </View>
+            <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <View
+                className="h-full bg-[#F7CA21] rounded-full transition-all duration-300"
+                style={{ width: `${getProgressPercentage()}%` }}
+              />
+            </View>
+          </View>
+        )}
+
         {/* Avatar and User Details */}
         <View className="items-center mt-4">
           {userDetails.image ? (
@@ -519,21 +686,49 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           {orders.map((order, index) => {
             const hasPhone2 = order.phonecode2 && order.phone2;
             const hasLocation = order.latitude && order.longitude;
+            const status = order.processOrder.status;
+            const normalizedStatus = status.toLowerCase();
+            const isCompleted =
+              normalizedStatus === "completed" || normalizedStatus === "return";
+            const isTodo = normalizedStatus === "todo";
+            const buttonText = getJourneyButtonText(status);
+            const isButtonActive = isButtonEnabled(status);
+
+            console.log(`Rendering order ${index + 1}:`);
+            console.log(`  Status: ${status}`);
+            console.log(`  Normalized: ${normalizedStatus}`);
+            console.log(`  Button Text: "${buttonText}"`);
+            console.log(`  Button Active: ${isButtonActive}`);
+            console.log(`  Is Completed: ${isCompleted}`);
+            console.log(`  Is Todo: ${isTodo}`);
 
             return (
               <View
                 key={`${order.orderId}-${index}`}
-                style={getCardStyle(order.processOrder.status)}
+                style={getCardStyle(status)}
                 className="rounded-xl p-4"
               >
-                {/* Header with Invoice and Name */}
-                <View className="flex mb-3">
-                  <Text className="font-bold text-sm text-black">
-                    #{order.processOrder.invNo || "N/A"}
-                  </Text>
-                  <Text className="font-bold text-base flex-1">
-                    {order.fullName || "Customer"}
-                  </Text>
+                {/* Header with Invoice, Name and Status */}
+                <View className="flex-row justify-between items-start mb-3">
+                  <View className="flex-1">
+                    <Text className="font-bold text-sm text-black">
+                      #{order.processOrder.invNo || "N/A"}
+                    </Text>
+                    <Text className="font-bold text-base">
+                      {order.fullName || "Customer"}
+                    </Text>
+                    <Text className="text-xs text-gray-500 mt-1">
+                      Status: {status}
+                    </Text>
+                  </View>
+
+                  {isCompleted && (
+                    <View className="bg-green-100 px-3 py-1 rounded-full">
+                      <Text className="text-green-800 text-xs font-semibold">
+                        Completed
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* Schedule Time */}
@@ -577,10 +772,16 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <TouchableOpacity
                     className="items-center"
                     onPress={() =>
-                      handlePhoneCall(orders[0].phonecode1, orders[0].phone1)
+                      handlePhoneCall(order.phonecode1, order.phone1)
                     }
+                    disabled={isCompleted}
                   >
-                    <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center">
+                    <View
+                      className="w-12 h-12 rounded-full items-center justify-center"
+                      style={{
+                        backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
+                      }}
+                    >
                       <Ionicons name="call" size={24} color="black" />
                     </View>
                     <Text className="mt-2 font-semibold">Num 1</Text>
@@ -591,14 +792,17 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     <TouchableOpacity
                       className="items-center"
                       onPress={() =>
-                        orders[0].phone2 &&
-                        handlePhoneCall(
-                          orders[0].phonecode2!,
-                          orders[0].phone2!
-                        )
+                        order.phone2 &&
+                        handlePhoneCall(order.phonecode2!, order.phone2!)
                       }
+                      disabled={isCompleted}
                     >
-                      <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center">
+                      <View
+                        className="w-12 h-12 rounded-full items-center justify-center"
+                        style={{
+                          backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
+                        }}
+                      >
                         <Ionicons name="call" size={24} color="black" />
                       </View>
                       <Text className="mt-2 font-semibold">Num 2</Text>
@@ -609,38 +813,45 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <TouchableOpacity
                     className="items-center"
                     onPress={() =>
-                      handleOpenLocation(
-                        orders[0].latitude,
-                        orders[0].longitude
-                      )
+                      handleOpenLocation(order.latitude, order.longitude)
                     }
+                    disabled={isCompleted}
                   >
-                    <View className="w-12 h-12 rounded-full bg-[#F7CA21] items-center justify-center relative">
+                    <View
+                      className="w-12 h-12 rounded-full items-center justify-center relative"
+                      style={{
+                        backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
+                      }}
+                    >
                       <Ionicons name="location-sharp" size={24} color="black" />
                     </View>
                     <Text className="mt-2 font-semibold">Location</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Start Journey/Continue Button */}
+                {/* Journey Button - Only show if there's a button text */}
+
                 <TouchableOpacity
-                  className="rounded-full bg-[#F7CA21] py-3 items-center"
+                  className={`rounded-full py-3 items-center ${
+                    isButtonActive ? "bg-[#F7CA21]" : "bg-[#D1D5DB]"
+                  }`}
                   style={{
                     shadowColor: "#000",
                     shadowOffset: { width: 2, height: 2 },
-                    shadowOpacity: 0.2,
+                    shadowOpacity: isButtonActive ? 0.2 : 0,
                     shadowRadius: 5,
-                    elevation: 4,
+                    elevation: isButtonActive ? 4 : 0,
                   }}
                   onPress={() => handleStartJourneyForOrder(order.orderId)}
-                  disabled={startingJourney === order.orderId.toString()}
+                  disabled={
+                    startingJourney === order.orderId.toString() ||
+                    !isButtonActive
+                  }
                 >
                   {startingJourney === order.orderId.toString() ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
-                    <Text className="text-base font-bold">
-                      {getJourneyButtonText(order.processOrder.status)}
-                    </Text>
+                    <Text className="text-base font-bold">{buttonText}</Text>
                   )}
                 </TouchableOpacity>
 
