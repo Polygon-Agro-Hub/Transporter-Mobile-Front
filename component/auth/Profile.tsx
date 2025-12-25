@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Modal,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
@@ -17,9 +19,11 @@ import {
 } from "react-native-responsive-screen";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import CustomHeader from "../common/CustomHeader";
-import { useSelector } from "react-redux";
-import { selectAuthToken } from "@/store/authSlice";
+import { useSelector, useDispatch } from "react-redux";
+import { selectAuthToken, logoutUser } from "@/store/authSlice"; // Import logout action
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -34,9 +38,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Get token from Redux
   const token = useSelector(selectAuthToken);
+  const dispatch = useDispatch();
 
   // Function to format the createdAt date like "Jun 1, 2026"
   const formatJoinedDate = (dateString: string) => {
@@ -117,6 +123,31 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  // Handle logout confirmation
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(true);
+  };
+
+  // Perform logout
+  const performLogout = async () => {
+    try {
+      // Clear AsyncStorage
+      await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
+
+      // Dispatch logout action to clear Redux state
+      dispatch(logoutUser());
+
+      // Navigate to Login screen
+      navigation.navigate("Login");
+
+      // Close the modal
+      setShowLogoutModal(false);
+    } catch (error) {
+      console.error("Error during logout:", error);
+      Alert.alert("Error", "Failed to logout. Please try again.");
+    }
+  };
+
   const InfoCard = ({ label, value }: { label: string; value: string }) => (
     <View className="mb-4">
       <Text className="text-[#495D86] mb-1 font-medium">{label}</Text>
@@ -164,12 +195,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         style={{ flex: 1 }}
       >
         <ScrollView>
-          {/* Back Button */}
+          {/* Back Button with Logout Icon */}
           <CustomHeader
             title="My Profile"
             showBackButton={true}
             showLanguageSelector={false}
+            showLogoutButton={true} // Add logout button
             navigation={navigation}
+            onLogoutPress={handleLogoutConfirm} // Handle logout press
           />
 
           {/* Profile Image Section */}
@@ -251,6 +284,42 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <Text className="text-black font-semibold text-center mb-6">
+              Are you sure you want to logout?
+            </Text>
+
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                onPress={() => setShowLogoutModal(false)}
+                className="flex flex-row mr-2 py-3 px-4 rounded-full bg-[#DFE5F2] w-[48%] justify-center items-center"
+              >
+                <MaterialIcons name="close" size={20} color="black" />
+                <Text className="text-center font-medium ml-2">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={performLogout}
+                className="flex flex-row ml-2 py-3 px-4 bg-[#FF0000] rounded-full w-[48%] justify-center items-center"
+              >
+                <MaterialIcons name="logout" size={20} color="white" />
+                <Text className="text-center font-medium text-white ml-2">
+                  Logout
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

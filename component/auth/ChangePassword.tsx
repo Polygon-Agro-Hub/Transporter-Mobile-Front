@@ -25,7 +25,7 @@ import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
-import AlertModal from "../common/AlertModal";
+import { AlertModal } from "../common/AlertModal";
 
 type ChangePasswordNavigationProp = StackNavigationProp<
   RootStackParamList,
