@@ -16,7 +16,7 @@ import { selectUserProfile } from "../store/authSlice";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Progress from 'react-native-progress';
+import * as Progress from "react-native-progress";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -66,12 +66,14 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   // Get user profile from Redux
   const userProfile = useSelector(selectUserProfile);
 
-  // Fetch amount data from API
+  // Fetch amount data from API - always fetch when component mounts
   const fetchAmountData = useCallback(async () => {
     try {
       setError(null);
+      setLoading(true); // Always show loading when fetching
+
       const token = await AsyncStorage.getItem("token");
-      
+
       if (!token) {
         setError("No authentication token found");
         setAmountData(defaultAmountData);
@@ -88,7 +90,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           },
         }
       );
-      
+
       if (response.data.status === "success" && response.data.data) {
         setAmountData({
           ...defaultAmountData,
@@ -107,9 +109,19 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     }
   }, []);
 
+  // Fetch data when component mounts
   useEffect(() => {
     fetchAmountData();
   }, [fetchAmountData]);
+
+  // Fetch data when the screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchAmountData();
+    });
+
+    return unsubscribe;
+  }, [navigation, fetchAmountData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -120,22 +132,58 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   // Safe function to get cash amount
   const getCashAmount = () => {
     const cash = amountData?.totalCashAmount;
-    // Handle cases where cash might be undefined, null, or not a number
     if (cash === undefined || cash === null || isNaN(cash)) {
       return 0;
     }
     return cash;
   };
 
+  const getPacksCount = () => {
+    const todoOrders = amountData?.todoOrders || 0;
+    const holdOrders = amountData?.holdOrders || 0;
+    return todoOrders + holdOrders;
+  };
+
+  // Check if should show End My Shift button
+  const shouldShowEndShiftButton = () => {
+    const packsCount = getPacksCount();
+    const cashAmount = getCashAmount();
+    const returnOrders = amountData?.returnOrders || 0;
+
+    // Show End My Shift if:
+    // 1. No packs (packsCount === 0) AND cash > 0
+    // OR
+    // 2. No packs (packsCount === 0) AND return orders > 0
+    return packsCount === 0 && (cashAmount > 0 || returnOrders > 0);
+  };
+
+  // Handle End My Shift button press
+  const handleEndShiftPress = () => {
+    const cashAmount = getCashAmount();
+    const returnOrders = amountData?.returnOrders || 0;
+
+    if (cashAmount > 0) {
+      // Navigate to ReceivedCash page
+      navigation.navigate("ReceivedCash");
+    } else if (returnOrders > 0) {
+      // Navigate to ReturnOrders page
+      navigation.navigate("ReturnOrders");
+    }
+  };
+
   // Determine the motivational message based on progress
   const getMotivationalMessage = () => {
+    // Don't show motivational message if End My Shift button should be shown
+    if (shouldShowEndShiftButton()) {
+      return null;
+    }
+
     const total = amountData?.totalOrders || 0;
     const completed = amountData?.completedOrders || 0;
-    const todo = amountData?.todoOrders || 0;
-    
-    const completionRate = total > 0 
-      ? Math.round((completed / total) * 100)
-      : 0;
+    const packsCount = getPacksCount(); // Use packsCount here
+
+    const completionRate =
+      total > 0 ? Math.round((completed / total) * 100) : 0;
 
     // If no orders at all - Style 1 (Light yellow with target icon)
     if (total === 0) {
@@ -148,9 +196,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         style: 1, // First style
       };
     }
-    
+
     // If there are orders but all completed
-    if (total > 0 && todo === 0) {
+    if (total > 0 && packsCount === 0) {
+      // Changed from todo === 0 to packsCount === 0
       return {
         title: "Great Work!",
         subtitle: "Click on Close button to end the shift.",
@@ -160,11 +209,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         style: 1, // First style
       };
     }
-    
+
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
     return {
       title: "Way more to go!",
-      subtitle: `${todo} Location${todo > 1 ? 's' : ''} to go..`,
+      subtitle: `${packsCount} Location${packsCount > 1 ? "s" : ""} to go..`, // Use packsCount
       bgColor: "#F7CA21", // Bright yellow like in the image
       showPercentage: true,
       percentage: completionRate,
@@ -176,6 +225,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   // Build quick actions dynamically
   const buildQuickActions = () => {
+    const packsCount = getPacksCount();
     const actions = [
       {
         image: scanQRImage,
@@ -185,9 +235,9 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       },
       {
         image: packsImage,
-        label: `${amountData?.totalOrders || 0} Packs`,
+        label: `${packsCount} Packs`,
         color: "#10B981",
-        action: () => navigation.navigate("Splash"),
+        action: () => navigation.navigate("Jobs"),
       },
       {
         image: myComplaintImage,
@@ -237,14 +287,15 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const handleCashReceivedPress = () => {
     const cashAmount = getCashAmount();
     if (cashAmount > 0) {
-      navigation.navigate("Jobs");
+      navigation.navigate("ReceivedCash");
     }
   };
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#3B82F6" />
+      <View className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#FFC83D" />
+        <Text className="mt-4 text-gray-600">Loading data...</Text>
       </View>
     );
   }
@@ -278,6 +329,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   }
 
   const cashAmount = getCashAmount();
+  const showEndShiftButton = shouldShowEndShiftButton();
 
   return (
     <ScrollView
@@ -312,66 +364,101 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             <Text className="text-xl font-bold text-gray-900">
               Hi, {userProfile?.firstName || "User"}
             </Text>
-            <Text className="text-sm text-gray-500">View Profile</Text>
           </View>
-
-          {/* Arrow icon */}
-          <Feather name="chevron-right" size={22} color="#ccc" />
         </TouchableOpacity>
       </View>
 
-      {/* Box 1: Motivational message box */}
-      {motivationalMsg.style === 1 ? (
-        // Style 1: Light yellow background with target icon (no percentage)
-        <TouchableOpacity 
-          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
-          style={{ backgroundColor: motivationalMsg.bgColor }}
+      {/* Conditional Rendering: Either motivational message OR End My Shift button */}
+      {showEndShiftButton ? (
+        // END MY SHIFT BUTTON SECTION
+        <TouchableOpacity
+          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-col items-center justify-center border"
+          style={{
+            backgroundColor: "#FFFBEA", 
+            borderColor: "#F7CA21", 
+          }}
+          onPress={handleEndShiftPress}
+          activeOpacity={0.7}
         >
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-gray-900">
-              {motivationalMsg.title}
+          <View className="flex">
+            <Text className="text-lg font-bold text-black text-center">
+              Great Work!
             </Text>
-            <Text className="text-gray-700 mt-1">{motivationalMsg.subtitle}</Text>
+            <Text className="text-black mt-1 text-center">
+              Click on Close button to end the shift.
+            </Text>
           </View>
           <View className="ml-4">
-            <Image
-              source={smallImage}
-              className="w-20 h-20"
-              resizeMode="contain"
-            />
+            <TouchableOpacity
+              className="bg-[#F7CA21] px-14 py-3 rounded-full mt-2"
+              onPress={handleEndShiftPress}
+              activeOpacity={0.7}
+            >
+              <View className="flex-row items-center">
+                <Text className="font-bold text-black">End My Shift</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       ) : (
-        // Style 2: Bright yellow background with circular progress
-        <TouchableOpacity 
-          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
-          style={{ backgroundColor: motivationalMsg.bgColor }}
-        >
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-gray-900">
-              {motivationalMsg.title}
-            </Text>
-            <Text className="text-gray-900 mt-1">{motivationalMsg.subtitle}</Text>
-          </View>
-          <View className="ml-4 relative items-center justify-center">
-            {/* Circular progress indicator */}
-            <Progress.Circle 
-              size={56}
-              progress={motivationalMsg.percentage / 100}
-              thickness={4}
-              color="#FFFFFF"
-              unfilledColor="#49454F29"
-              borderWidth={0}
-              showsText={true}
-              formatText={() => `${motivationalMsg.percentage}%`}
-              textStyle={{
-                fontSize: 12,
-                fontWeight: 'bold',
-                color: '#000000',
-              }}
-            />
-          </View>
-        </TouchableOpacity>
+        // MOTIVATIONAL MESSAGE SECTION (only show if not showing End My Shift)
+        motivationalMsg &&
+        (motivationalMsg.style === 1 ? (
+          // Style 1: Light yellow background with target icon (no percentage)
+          <TouchableOpacity
+            className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+            style={{ backgroundColor: motivationalMsg.bgColor }}
+          >
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-gray-900">
+                {motivationalMsg.title}
+              </Text>
+              <Text className="text-gray-700 mt-1">
+                {motivationalMsg.subtitle}
+              </Text>
+            </View>
+            <View className="ml-4">
+              <Image
+                source={smallImage}
+                className="w-20 h-20"
+                resizeMode="contain"
+              />
+            </View>
+          </TouchableOpacity>
+        ) : (
+          // Style 2: Bright yellow background with circular progress
+          <TouchableOpacity
+            className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+            style={{ backgroundColor: motivationalMsg.bgColor }}
+          >
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-gray-900">
+                {motivationalMsg.title}
+              </Text>
+              <Text className="text-gray-900 mt-1">
+                {motivationalMsg.subtitle}
+              </Text>
+            </View>
+            <View className="ml-4 relative items-center justify-center">
+              {/* Circular progress indicator */}
+              <Progress.Circle
+                size={56}
+                progress={motivationalMsg.percentage / 100}
+                thickness={4}
+                color="#FFFFFF"
+                unfilledColor="#49454F29"
+                borderWidth={0}
+                showsText={true}
+                formatText={() => `${motivationalMsg.percentage}%`}
+                textStyle={{
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  color: "#000000",
+                }}
+              />
+            </View>
+          </TouchableOpacity>
+        ))
       )}
 
       {/* Box 2: Cash Received box */}
@@ -420,7 +507,8 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                 activeOpacity={0.7}
                 style={{
                   width: "48%",
-                   backgroundColor: action.label === "Ongoing" ? action.color : "#fff", // Only yellow for Ongoing
+                  backgroundColor:
+                    action.label === "Ongoing" ? action.color : "#fff",
                   borderRadius: 12,
                   padding: 16,
                   marginBottom: 6,

@@ -20,6 +20,7 @@ import CustomHeader from "../common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
+import { AlertModal } from "@/component/common/AlertModal";
 
 type SignatureScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -173,9 +174,18 @@ export default function SignatureScreen({
   const signatureRef = useRef<any>(null);
   const [loading, setLoading] = useState(false);
   const [signatureDrawn, setSignatureDrawn] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<
+    string | React.ReactNode
+  >("");
 
   // Get processOrderIds from route params
-  const { processOrderIds = [] } = route.params;
+  const {
+    processOrderIds = [],
+    allProcessOrderIds = [],
+    remainingOrders = [],
+    onOrderComplete,
+  } = route.params;
 
   // Use useFocusEffect to handle orientation changes
   useFocusEffect(
@@ -217,22 +227,6 @@ export default function SignatureScreen({
   const handleClear = () => {
     signatureRef.current?.clearSignature();
     setSignatureDrawn(false);
-  };
-
-  // Convert base64 to blob for file upload
-  const base64ToBlob = (base64: string) => {
-    // Remove data URL prefix if present
-    const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
-
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: "image/png" });
   };
 
   const saveSignature = async (signatureBase64: string) => {
@@ -277,7 +271,7 @@ export default function SignatureScreen({
         formData.append(`processOrderIds[${index}]`, id.toString());
       });
 
-      console.log("Saving signature for process orders:", processOrderIds);
+      console.log("Saving signature for order:", processOrderIds[0]);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/save-signature`,
@@ -294,22 +288,63 @@ export default function SignatureScreen({
       if (response.data.status === "success") {
         console.log("Signature saved successfully:", response.data);
 
-        // Show success alert and navigate to Home
-        Alert.alert(
-          "Success",
-          `Signature saved successfully for ${
-            response.data.data.processOrdersUpdated ||
-            response.data.data.totalOrders
-          } order(s)`,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                navigation.navigate("Home");
-              },
-            },
-          ]
-        );
+        // Call onOrderComplete if provided
+        if (onOrderComplete) {
+          onOrderComplete(processOrderIds[0]);
+        }
+
+        // Get invoice numbers from the response
+        const invoiceNumbers: string[] =
+          response.data.data?.invoiceNumbers || [];
+        console.log("Invoice numbers from response:", invoiceNumbers);
+
+        // Create success message with bold invoice numbers
+        let message: string | React.ReactNode;
+
+        if (invoiceNumbers.length === 0) {
+          message = "Signature saved successfully and order completed!";
+        } else if (invoiceNumbers.length === 1) {
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+                Order:{" "}
+                <Text className="font-bold text-[#000000]">
+                  {invoiceNumbers[0]}
+                </Text>{" "}
+                has been completed successfully!
+              </Text>
+            </View>
+          );
+        } else {
+          // For multiple orders
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+              {invoiceNumbers.map((invNo: string, index: number) => (
+                <Text
+                  key={index}
+                  className="text-center font-bold text-[#000000] mb-1"
+                >
+                  {invNo}
+                </Text>
+              ))}
+              <Text className="text-center text-[#4E4E4E] mt-2">
+                have been completed successfully!
+              </Text>
+            </View>
+          );
+        }
+
+        setSuccessMessage(message);
+        setShowSuccessModal(true);
+
+        // Add backup navigation timeout in case modal doesn't auto-close
+        setTimeout(() => {
+          if (showSuccessModal) {
+            setShowSuccessModal(false);
+            handleNavigationAfterSuccess();
+          }
+        }, 4000);
       } else {
         throw new Error(response.data.message || "Failed to save signature");
       }
@@ -319,14 +354,11 @@ export default function SignatureScreen({
       let errorMessage = "Failed to save signature. Please try again.";
 
       if (error.response) {
-        // Server responded with error
         errorMessage = error.response.data?.message || errorMessage;
         console.error("Server error response:", error.response.data);
       } else if (error.request) {
-        // Request made but no response
         errorMessage = "No response from server. Please check your connection.";
       } else if (error.message) {
-        // Other errors
         errorMessage = error.message;
       }
 
@@ -334,6 +366,35 @@ export default function SignatureScreen({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNavigationAfterSuccess = () => {
+    console.log("=== Navigation Decision ===");
+    console.log("Current order completed:", processOrderIds[0]);
+    console.log("All process order IDs:", allProcessOrderIds);
+    console.log("Remaining orders from params:", remainingOrders);
+
+    // Filter out the current completed order from remaining orders
+    const actualRemainingOrders =
+      remainingOrders?.filter((orderId) => orderId !== processOrderIds[0]) ||
+      [];
+
+    console.log(
+      "Actual remaining orders after filtering:",
+      actualRemainingOrders
+    );
+    console.log("Remaining count:", actualRemainingOrders.length);
+
+    // ALWAYS navigate back to OrderDetails, never to Home
+    console.log("✓ Navigating back to OrderDetails");
+    navigation.navigate("OrderDetails", {
+      processOrderIds: allProcessOrderIds,
+    });
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    handleNavigationAfterSuccess();
   };
 
   const handleOK = async (signature: string) => {
@@ -349,7 +410,7 @@ export default function SignatureScreen({
 
     Alert.alert(
       "Confirm Signature",
-      "Are you sure you want to save this signature and mark the orders as delivered?",
+      "Are you sure you want to save this signature and mark the order as delivered?",
       [
         {
           text: "Cancel",
@@ -414,6 +475,9 @@ export default function SignatureScreen({
     }
   `;
 
+  // Calculate remaining orders count
+  const remainingCount = remainingOrders?.length || 0;
+
   return (
     <View className="flex-1 bg-white">
       <CustomHeader
@@ -422,18 +486,6 @@ export default function SignatureScreen({
         showLanguageSelector={false}
         navigation={navigation}
       />
-
-      {/* Order Info */}
-      <View className="px-4 py-2 bg-blue-50 mx-4 mt-2 rounded-lg">
-        <Text className="text-center text-sm text-gray-700">
-          Signature for {processOrderIds.length} order
-          {processOrderIds.length !== 1 ? "s" : ""}
-          {processOrderIds.length > 0 &&
-            ` (ID${
-              processOrderIds.length !== 1 ? "s" : ""
-            }: ${processOrderIds.join(", ")})`}
-        </Text>
-      </View>
 
       {/* SIGNATURE AREA */}
       <View className="flex-1 mx-4 mb-4 mt-2">
@@ -524,6 +576,17 @@ export default function SignatureScreen({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Success Alert Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Successful!"
+        message={successMessage}
+        type="success"
+        onClose={handleSuccessModalClose}
+        autoClose={true}
+        duration={3000}
+      />
     </View>
   );
 }

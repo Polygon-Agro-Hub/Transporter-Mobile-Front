@@ -374,7 +374,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setScanned(false);
-    navigation.goBack();
+    navigation.navigate("Home")
   };
 
   const handleTimeoutModalClose = () => {

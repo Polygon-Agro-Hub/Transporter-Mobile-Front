@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -182,22 +183,33 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
         showLanguageSelector={false}
         navigation={navigation}
       />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Complaints List */}
-        <View className="px-4 py-4">
-          {complaints.length === 0 ? (
-            <View className="items-center justify-center py-20">
-              <Text className="text-gray-500 text-base">
-                No complaints found
-              </Text>
-            </View>
-          ) : (
-            complaints.map((complaint) => {
+
+      {complaints.length === 0 ? (
+        // Centered empty state
+        <View className="flex-1 items-center justify-center">
+          <View
+            className="items-center justify-center"
+            style={{
+              position: "absolute",
+              top: "50%",
+              transform: [{ translateY: -50 }],
+            }}
+          >
+            <Text className="text-[#495D86] text-base mb-2">
+              -- No Complaints Yet --
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Complaints List */}
+          <View className="px-4 py-4">
+            {complaints.map((complaint) => {
               const isWaiting = complaint.status === "Opened";
               const isAnswered = complaint.status === "Closed";
 
@@ -267,10 +279,10 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   </View>
                 </View>
               );
-            })
-          )}
-        </View>
-      </ScrollView>
+            })}
+          </View>
+        </ScrollView>
+      )}
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -301,47 +313,45 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
             {/* Close Button */}
             <TouchableOpacity
               onPress={handleCloseModal}
-              className="absolute top-4 right-4 bg-gray-200 rounded-full p-2"
+              className="absolute top-4 right-4 bg-gray-300 rounded-full p-2"
               style={{ zIndex: 1000 }}
             >
-              <AntDesign name="close" size={16} color="#000" />
+              <AntDesign name="close" size={16} color="#fff" />
             </TouchableOpacity>
 
             <ScrollView showsVerticalScrollIndicator={true} bounces={true}>
               <View className="p-6 pt-14">
                 {/* Header with User Name from Redux */}
-                <Text className="text-lg font-bold text-gray-900 mb-1">
+                <Text className="text-sm text-[#2D2D2D] mb-1">
                   Dear {getUserName()},
                 </Text>
 
                 {/* Main Message */}
-                <Text className="text-sm text-gray-700 leading-6 mb-4 mt-4">
+                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4 mt-4">
                   We are pleased to inform you that your complaint has been
                   resolved.
                 </Text>
 
                 {/* Admin Reply */}
                 <View className=" mb-2">
-                  <Text className="text-sm text-gray-800 leading-6">
+                  <Text className="text-sm text-[#2D2D2D] leading-6">
                     {selectedComplaint?.reply || "No reply provided yet."}
                   </Text>
                 </View>
 
                 {/* Footer Message */}
-                <Text className="text-sm text-gray-700 leading-6 mb-4">
+                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
                   If you have any further concerns or questions, feel free to
                   reach out. Thank you for your patience and understanding.
                 </Text>
 
                 {/* Signature */}
                 <View className="mt-4 pt-4 ">
-                  <Text className="text-sm font-semibold text-gray-900">
-                    Sincerely,
-                  </Text>
-                  <Text className="text-sm text-gray-700 mt-1">
+                  <Text className="text-sm text-gray-900">Sincerely,</Text>
+                  <Text className="text-sm text-[#2D2D2D] mt-1">
                     Polygon Customer Support Team
                   </Text>
-                  <Text className="text-xs text-gray-500 mt-2">
+                  <Text className="text-xs text-[#2D2D2D] mt-2">
                     {formatReplyDate(selectedComplaint?.replyTime || null)}
                   </Text>
                 </View>

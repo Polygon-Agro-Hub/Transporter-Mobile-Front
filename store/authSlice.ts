@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-// Profile data interface
 export interface ProfileData {
   firstName: string;
   lastName: string;
@@ -10,16 +9,15 @@ export interface ProfileData {
   firstNameTamil?: string;
   lastNameTamil?: string;
   empId: string;
+  image?: string;
 }
 
-// Auth state interface
 interface AuthState {
   token: string | null;
   empId: string | null;
   userProfile: ProfileData | null;
 }
 
-// Initial state
 const initialState: AuthState = {
   token: null,
   empId: null,
@@ -30,7 +28,6 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // Save token and empId
     setUser: (
       state,
       action: PayloadAction<{ token: string; empId: string }>
@@ -40,19 +37,24 @@ const authSlice = createSlice({
       state.empId = empId;
     },
 
-    // Save user profile
     setUserProfile: (state, action: PayloadAction<ProfileData>) => {
       state.userProfile = action.payload;
     },
 
-    // Clear auth data
+    // This action updates the profile image in Redux
+    updateProfileImage: (state, action: PayloadAction<string>) => {
+      if (state.userProfile) {
+        state.userProfile.image = action.payload;
+        state.userProfile.profileImg = action.payload; // Update both for compatibility
+      }
+    },
+
     logoutUser: (state) => {
       state.token = null;
       state.empId = null;
       state.userProfile = null;
     },
 
-    // NEW: Set full user data in one action
     setUserAndProfile: (
       state,
       action: PayloadAction<{
@@ -69,19 +71,20 @@ const authSlice = createSlice({
   },
 });
 
-// Export actions
-export const { setUser, setUserProfile, logoutUser, setUserAndProfile } = authSlice.actions;
+export const { 
+  setUser, 
+  setUserProfile, 
+  logoutUser, 
+  setUserAndProfile,
+  updateProfileImage 
+} = authSlice.actions;
 
-// Export reducer
 export default authSlice.reducer;
 
-// Selector to get user profile from state
 export const selectUserProfile = (state: { auth: AuthState }) =>
   state.auth.userProfile;
 
-// Selector to get token
 export const selectAuthToken = (state: { auth: AuthState }) =>
   state.auth.token;
 
-// Selector to get empId
 export const selectEmpId = (state: { auth: AuthState }) => state.auth.empId;

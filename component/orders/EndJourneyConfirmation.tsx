@@ -28,30 +28,40 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
   navigation,
   route,
 }) => {
-  const { processOrderIds = [] } = route.params;
+  const {
+    processOrderIds = [],
+    allProcessOrderIds = [],
+    remainingOrders = [],
+    orderData,
+    onOrderComplete,
+  } = route.params;
+
+  const currentOrderId = processOrderIds[0]; // Single order
+
   const handleHoldOrder = () => {
     navigation.navigate("HoldOrder", {
-      orderIds: processOrderIds,
+      orderIds: [currentOrderId],
+      allProcessOrderIds,
+      remainingOrders,
+      onOrderComplete,
     });
-    console.log("Hold Order pressed");
-    console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleReturnOrder = () => {
     navigation.navigate("OrderReturn", {
-      orderIds: processOrderIds,
+      orderIds: [currentOrderId],
+      allProcessOrderIds,
+      remainingOrders,
+      onOrderComplete,
     });
-    console.log("Return Order pressed");
-    console.log("Process Order IDs:", processOrderIds);
   };
 
   const handleGetSignature = () => {
-    console.log(
-      "Navigating to SignatureScreen with Process Order IDs:",
-      processOrderIds
-    );
     navigation.navigate("SignatureScreen", {
-      processOrderIds: processOrderIds,
+      processOrderIds: [currentOrderId],
+      allProcessOrderIds,
+      remainingOrders,
+      onOrderComplete,
     });
   };
 

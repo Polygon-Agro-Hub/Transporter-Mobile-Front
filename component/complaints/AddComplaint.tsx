@@ -10,15 +10,9 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
-import { Feather } from "@expo/vector-icons";
 import DropDownPicker from "react-native-dropdown-picker";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
@@ -117,7 +111,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
       // Prepare the request data
       const complaintData = {
-        complainCategory: value, // This is the category ID from backend
+        complainCategory: value,
         complain: description.trim(),
       };
 
@@ -137,7 +131,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         // Reset form
         setValue(null);
         setDescription("");
-        navigation.goBack();
+        navigation.navigate("ComplaintsList");
       } else {
         showAlert(
           "Error",

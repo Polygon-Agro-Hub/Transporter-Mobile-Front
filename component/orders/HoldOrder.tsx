@@ -41,32 +41,46 @@ interface Reason {
 }
 
 const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
-  const { orderIds } = route.params;
-  console.log("order Hold page orderid", orderIds);
+  const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } =
+    route.params;
+  console.log("Order Hold page orderIds:", orderIds);
+  console.log("All Process Order IDs:", allProcessOrderIds);
+  console.log("Remaining Orders:", remainingOrders);
 
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">(
     "En"
   );
+
+  const [languageCode, setLanguageCode] = useState<"EN" | "SI" | "TA">("EN");
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [invoiceNumbers, setInvoiceNumbers] = useState<string[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  
- 
-    const [successMessage, setSuccessMessage] = useState<
-      string | React.ReactNode
-    >("");
+
+  const [successMessage, setSuccessMessage] = useState<
+    string | React.ReactNode
+  >("");
 
   const languageMap = {
     English: { code: "En" as const, key: "rsnEnglish" as const },
     Sinhala: { code: "Si" as const, key: "rsnSinhala" as const },
     Tamil: { code: "Ta" as const, key: "rsnTamil" as const },
+  };
+
+  // Map language code to your existing selectedLanguage format
+  const mapLanguageCode = (code: "EN" | "SI" | "TA"): "En" | "Si" | "Ta" => {
+    switch (code) {
+      case "EN":
+        return "En";
+      case "SI":
+        return "Si";
+      case "TA":
+        return "Ta";
+    }
   };
 
   const languages = ["English", "Sinhala", "Tamil"];
@@ -75,7 +89,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   useEffect(() => {
     fetchReasons();
   }, []);
-
 
   const fetchReasons = async () => {
     try {
@@ -125,236 +138,179 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return reason.rsnEnglish.toLowerCase() === "other";
   };
 
-  //   const handleSubmit = async () => {
-  //   if (!selectedReason) return;
-
-  //   if (isOtherReason(selectedReason) && !otherReason.trim()) {
-  //     Alert.alert("Required", "Please provide a reason in the text field.");
-  //     return;
-  //   }
-
-  //   try {
-  //     setSubmitting(true);
-  //     const token = await AsyncStorage.getItem("token");
-  //     const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
-
-  //     const payload = {
-  //       orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
-  //       holdReasonId: selectedReason.id,
-  //       note: isOtherReason(selectedReason) ? otherReason.trim() : null,
-  //     };
-
-  //     console.log("Submitting return order:", payload);
-
-  //     const response = await axios.post(
-  //       `${environment.API_BASE_URL}api/hold/submit`,
-  //       payload,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     const result = response.data;
-  //     console.log("Return submit response:", result);
-
-  //     if (result.status === "success") {
-  //       // Get invoice numbers from the response - ensure it's an array of strings
-  //       const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-  //       console.log("Invoice numbers from response:", invoiceNumbers);
-
-  //       // Create success message with bold invoice numbers
-  //       let message: string | React.ReactNode;
-
-  //       if (invoiceNumbers.length === 0) {
-  //         message = "Order has been marked as a return order.";
-  //       } else if (invoiceNumbers.length === 1) {
-  //         message = (
-  //           <View className="items-center">
-  //             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-  //               Order:{" "}
-  //               <Text className="font-bold text-[#000000]">
-  //                 {invoiceNumbers[0]}
-  //               </Text>{" "}
-  //               has been marked as a return order.
-  //             </Text>
-  //           </View>
-  //         );
-  //       } else {
-  //         // For multiple orders
-  //         message = (
-  //           <View className="items-center">
-  //             <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
-  //             {invoiceNumbers.map((invNo: string, index: number) => (
-  //               <Text
-  //                 key={index}
-  //                 className="text-center font-bold text-[#000000] mb-1"
-  //               >
-  //                 {invNo}
-  //               </Text>
-  //             ))}
-  //             <Text className="text-center text-[#4E4E4E] mt-2">
-  //               has been put on hold for the moment.
-  //             </Text>
-  //           </View>
-  //         );
-  //       }
-
-  //       setSuccessMessage(message);
-  //       setShowSuccessModal(true);
-
-  //       // Add backup navigation timeout in case modal doesn't auto-close
-  //       setTimeout(() => {
-  //         if (showSuccessModal) {
-  //           setShowSuccessModal(false);
-  //           navigation.navigate("Home");
-  //         }
-  //       }, 4000); // 4 seconds as backup (1 second longer than modal duration)
-  //     } else {
-  //       Alert.alert("Error", result.message || "Failed to submit return order");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("Error submitting return order:", error);
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       "Failed to submit return order. Please try again.";
-  //     Alert.alert("Error", errorMessage);
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
-
   const handleSubmit = async () => {
-  if (!selectedReason) return;
+    if (!selectedReason) return;
 
-  if (isOtherReason(selectedReason) && !otherReason.trim()) {
-    Alert.alert("Required", "Please provide a reason in the text field.");
-    return;
-  }
+    if (isOtherReason(selectedReason) && !otherReason.trim()) {
+      Alert.alert("Required", "Please provide a reason in the text field.");
+      return;
+    }
 
-  try {
-    setSubmitting(true);
-    const token = await AsyncStorage.getItem("token");
-    const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
+    try {
+      setSubmitting(true);
+      const token = await AsyncStorage.getItem("token");
+      const orderIdsList = Array.isArray(orderIds) ? orderIds : [orderIds];
 
-    const payload = {
-      orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
-      holdReasonId: selectedReason.id,
-      note: isOtherReason(selectedReason) ? otherReason.trim() : null,
-    };
+      const payload = {
+        orderIds: Array.isArray(orderIds) ? orderIds : [orderIds],
+        holdReasonId: selectedReason.id,
+        note: isOtherReason(selectedReason) ? otherReason.trim() : null,
+      };
 
-    console.log("Submitting hold order:", payload);
+      console.log("Submitting hold order:", payload);
 
-    const response = await axios.post(
-      `${environment.API_BASE_URL}api/hold/submit`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/hold/submit`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = response.data;
+      console.log("Hold submit response:", result);
+
+      if (result.status === "success") {
+        // Get invoice numbers from the response
+        const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
+        console.log("Invoice numbers from response:", invoiceNumbers);
+
+        // Create success message with bold invoice numbers
+        let message: string | React.ReactNode;
+
+        if (invoiceNumbers.length === 0) {
+          message = "Order has been put on hold for the moment.";
+        } else if (invoiceNumbers.length === 1) {
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+                Order:{" "}
+                <Text className="font-bold text-[#000000]">
+                  {invoiceNumbers[0]}
+                </Text>{" "}
+                has been put on hold for the moment.
+              </Text>
+            </View>
+          );
+        } else {
+          // For multiple orders
+          message = (
+            <View className="items-center">
+              <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
+              {invoiceNumbers.map((invNo: string, index: number) => (
+                <Text
+                  key={index}
+                  className="text-center font-bold text-[#000000] mb-1"
+                >
+                  {invNo}
+                </Text>
+              ))}
+              <Text className="text-center text-[#4E4E4E] mt-2">
+                have been put on hold for the moment.
+              </Text>
+            </View>
+          );
+        }
+
+        setSuccessMessage(message);
+        setShowSuccessModal(true);
+
+        // Notify parent component about order completion
+        if (onOrderComplete && orderIds && orderIds.length > 0) {
+          onOrderComplete(orderIds[0]);
+        }
+
+        // Add backup navigation timeout in case modal doesn't auto-close
+        setTimeout(() => {
+          if (showSuccessModal) {
+            setShowSuccessModal(false);
+            handleNavigationAfterSuccess();
+          }
+        }, 4000);
+      } else {
+        Alert.alert("Error", result.message || "Failed to submit hold order");
       }
-    );
+    } catch (error: any) {
+      console.error("Error submitting hold order:", error);
 
-    const result = response.data;
-    console.log("Hold submit response:", result);
+      // Get error message from response
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to submit hold order. Please try again.";
 
-    if (result.status === "success") {
-      // Get invoice numbers from the response - ensure it's an array of strings
-      const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-      console.log("Invoice numbers from response:", invoiceNumbers);
+      // Check if it's an "already on hold" error
+      const isAlreadyOnHoldError =
+        errorMessage.toLowerCase().includes("already") &&
+        errorMessage.toLowerCase().includes("hold");
 
-      // Create success message with bold invoice numbers
-      let message: string | React.ReactNode;
-
-      if (invoiceNumbers.length === 0) {
-        message = "Order has been put on hold for the moment.";
-      } else if (invoiceNumbers.length === 1) {
-        message = (
+      if (isAlreadyOnHoldError) {
+        // Show error modal for already held orders
+        setSuccessMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
-              <Text className="font-bold text-[#000000]">
-                {invoiceNumbers[0]}
-              </Text>{" "}
-              has been put on hold for the moment.
+              {errorMessage}
             </Text>
           </View>
         );
+        setShowErrorModal(true);
       } else {
-        // For multiple orders
-        message = (
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
-            {invoiceNumbers.map((invNo: string, index: number) => (
-              <Text
-                key={index}
-                className="text-center font-bold text-[#000000] mb-1"
-              >
-                {invNo}
-              </Text>
-            ))}
-            <Text className="text-center text-[#4E4E4E] mt-2">
-              have been put on hold for the moment.
-            </Text>
-          </View>
-        );
+        // Show regular alert for other errors
+        Alert.alert("Error", errorMessage);
       }
-
-      setSuccessMessage(message);
-      setShowSuccessModal(true);
-
-      // Add backup navigation timeout in case modal doesn't auto-close
-      setTimeout(() => {
-        if (showSuccessModal) {
-          setShowSuccessModal(false);
-          navigation.navigate("Home");
-        }
-      }, 4000); // 4 seconds as backup (1 second longer than modal duration)
-    } else {
-      Alert.alert("Error", result.message || "Failed to submit hold order");
+    } finally {
+      setSubmitting(false);
     }
-  } catch (error: any) {
-    console.error("Error submitting hold order:", error);
-    
-    // Get error message from response
-    const errorMessage =
-      error.response?.data?.message ||
-      "Failed to submit hold order. Please try again.";
-    
-    // Check if it's an "already on hold" error
-    const isAlreadyOnHoldError = 
-      errorMessage.toLowerCase().includes("already") && 
-      errorMessage.toLowerCase().includes("hold");
-    
-    if (isAlreadyOnHoldError) {
-      // Show error modal for already held orders
-      setSuccessMessage(
-        <View className="items-center">
-          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-            {errorMessage}
-          </Text>
-        </View>
+  };
+
+  const handleNavigationAfterSuccess = () => {
+    // Check if there are remaining orders to process
+    if (remainingOrders && remainingOrders.length > 0) {
+      // There are more orders, navigate back to OrderDetails
+      console.log(
+        "Navigating to OrderDetails with remaining orders:",
+        remainingOrders
       );
-      setShowErrorModal(true);
+      navigation.navigate("OrderDetails", {
+        processOrderIds: allProcessOrderIds || remainingOrders,
+      });
     } else {
-      // Show regular alert for other errors
-      Alert.alert("Error", errorMessage);
+      // No more orders, navigate to Home
+      console.log("No more orders, navigating to Home");
+      navigation.navigate("Home");
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
-    const handleSuccessModalClose = () => {
+  const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setSelectedReason(null);
     setOtherReason("");
-    navigation.navigate("Home");
+    handleNavigationAfterSuccess();
   };
 
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+
+    // Check if there are remaining orders to process
+    if (remainingOrders && remainingOrders.length > 0) {
+      // There are more orders, navigate back to OrderDetails
+      console.log(
+        "Error modal closed, navigating to OrderDetails with remaining orders:",
+        remainingOrders
+      );
+      navigation.navigate("OrderDetails", {
+        processOrderIds: allProcessOrderIds || remainingOrders,
+      });
+    } else {
+      // No more orders, navigate to Home
+      console.log("Error modal closed, no more orders, navigating to Home");
+      navigation.navigate("Home");
+    }
+  };
 
   const getPlaceholderText = (): string => {
     if (selectedLanguage === "En") return "Please mention the reason here...";
@@ -365,28 +321,22 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="bg-white px-4 py-4 flex-row items-center justify-between ">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="w-10 h-10 items-center justify-center"
-        >
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text className="text-lg font-semibold text-gray-900">
-          {selectedLanguage === "En"
+      <CustomHeader
+        title={
+          selectedLanguage === "En"
             ? "Hold Order"
             : selectedLanguage === "Si"
             ? "ඇණවුම රඳවා ගන්න"
-            : "ஆர்டரை வைத்திருங்கள்"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setShowLanguageMenu(true)}
-          className="bg-[#F6CA20] px-3 py-1.5 rounded-md flex-row items-center"
-        >
-          <Text className="text-sm font-medium mr-1">{selectedLanguage}</Text>
-          <Ionicons name="chevron-down" size={16} color="#000" />
-        </TouchableOpacity>
-      </View>
+            : "ஆர்டரை வைத்திருங்கள்"
+        }
+        navigation={navigation}
+        showBackButton={true}
+        showLanguageSelector={true}
+        onLanguageChange={(langCode: string) => {
+          const mappedLang = mapLanguageCode(langCode as "EN" | "SI" | "TA");
+          setSelectedLanguage(mappedLang);
+        }}
+      />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -489,7 +439,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 isOtherReason(selectedReason) &&
                 !otherReason.trim())
             }
-            className={`rounded-full py-3 mr-6 ml-6 items-center mb-6 ${
+            className={`rounded-full py-3 items-center mb-6 ${
               submitting ||
               !selectedReason ||
               (selectedReason &&
@@ -531,7 +481,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         </ScrollView>
       )}
 
-  {/* Success Alert Modal */}
+      {/* Success Alert Modal */}
       <AlertModal
         visible={showSuccessModal}
         title="Successful!"
@@ -542,20 +492,16 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         duration={3000}
       />
 
+      {/* Error Alert Modal */}
       <AlertModal
-  visible={showErrorModal}
-  title="Error!"
-  message={successMessage}
-  type="error"
-  onClose={() => {
-    setShowErrorModal(false);
-    setSelectedReason(null);
-    setOtherReason("");
-    navigation.goBack();
-  }}
-  autoClose={true}
-  duration={3000}
-/>
+        visible={showErrorModal}
+        title="Error!"
+        message={successMessage}
+        type="error"
+        onClose={handleErrorModalClose}
+        autoClose={true}
+        duration={3000}
+      />
 
       {/* Language Menu Modal */}
       <Modal visible={showLanguageMenu} transparent animationType="fade">

@@ -37,15 +37,15 @@ import AssignOrderQR from "@/component/qr/AssignOrderQR";
 import Jobs from "@/component/orders/Jobs";
 import OrderDetails from "@/component/orders/OrderDetails";
 import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
-import MyJourney from "@/component/orders/MyJourney";
 import SignatureScreen from "@/component/orders/SignatureScreen";
 import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
-import OrderDetailsAfterJourney from "@/component/orders/OrderDetailsAfterJourney";
 import { RootStackParamList } from "@/component/types";
 import VerifyOrderQR from "@/component/qr/VerifyOrderQR";
 import OrderReturn from "@/component/orders/OrderReturn";
 import HoldOrder from "@/component/orders/HoldOrder";
 import ReturnOrderQR from "@/component/qr/ReturnOrderQR";
+import ReceivedCash from "@/component/orders/ReceivedCash";
+import ReceivedCashQR from "@/component/qr/ReceivedCashQR";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -160,16 +160,16 @@ function AppContent() {
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
             <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR}  />
+            <Stack.Screen name="ReceivedCashQR" component={ReceivedCashQR}  />
             <Stack.Screen name="VerifyOrderQR" component={VerifyOrderQR}  />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
-            <Stack.Screen name="OrderDetailsAfterJourney" component={OrderDetailsAfterJourney} />
             <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation } />
-            <Stack.Screen name="MyJourney" component={MyJourney} />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
             <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
             <Stack.Screen name="OrderReturn" component={OrderReturn} />
             <Stack.Screen name="HoldOrder" component={HoldOrder} />
+            <Stack.Screen name="ReceivedCash" component={ReceivedCash} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

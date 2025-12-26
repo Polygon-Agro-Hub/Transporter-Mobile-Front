@@ -8,6 +8,7 @@ import {
   PermissionsAndroid,
   StatusBar,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -19,17 +20,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
+import { RouteProp } from "@react-navigation/native";
 
-type ReturnOrderQRNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  "ReturnOrderQR"
->;
+type ReceivedCashQRNavigationProp = StackNavigationProp<RootStackParamList, "ReceivedCashQR">;
 
-interface ReturnOrderQRProps {
-  navigation: ReturnOrderQRNavigationProp;
+type OrderReturnRouteProp = RouteProp<RootStackParamList, "ReceivedCashQR">;
+
+interface ReceivedCashQRProps {
+  navigation: ReceivedCashQRNavigationProp;
+  route: OrderReturnRouteProp;
 }
 
-const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
+const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) => {
+    const { amount,selectedCount } = route.params;
+    console.log("amount 000000000000",amount ,selectedCount)
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -48,14 +52,6 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     ""
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
-
-  // Store scanned invoice numbers
-  const [scannedInvoices, setScannedInvoices] = useState<string[]>([]);
-  const [batchUpdateData, setBatchUpdateData] = useState<{
-    invoiceNumbers: string[];
-    successCount: number;
-    failedInvoices: Array<{ invoice: string; error: string }>;
-  } | null>(null);
 
   useEffect(() => {
     checkCameraPermission();
@@ -142,72 +138,91 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     ).start();
   };
 
-  // Extract invoice number from QR data
-  const extractInvoiceNumber = (qrData: string): string | null => {
+  // Validate if officer ID starts with DCM or DCH
+  const validateOfficerType = (officerId: string): boolean => {
+    const upperOfficerId = officerId.toUpperCase();
+    return upperOfficerId.startsWith("DCM") || upperOfficerId.startsWith("DCH");
+  };
+
+  // Extract officer ID from QR data
+  const extractOfficerId = (qrData: string): string | null => {
     try {
       console.log("Raw QR Data:", qrData);
 
-      // Method 1: Check if QR contains invoice pattern (INV followed by numbers)
-      const invoicePattern = /INV[0-9]+/gi;
-      const match = qrData.match(invoicePattern);
-      if (match) {
-        console.log("Found invoice pattern:", match[0]);
-        return match[0];
-      }
-
-      // Method 2: Check if QR is JSON containing invoice
-      if (qrData.startsWith("{") && qrData.endsWith("}")) {
+      // Method 1: Check if QR is JSON containing officer ID
+      if (qrData.trim().startsWith("{") && qrData.trim().endsWith("}")) {
         try {
           const parsed = JSON.parse(qrData);
           console.log("Parsed JSON:", parsed);
-          if (
-            parsed.invoiceNo ||
-            parsed.invNo ||
-            parsed.invoiceNumber ||
-            parsed.invoice
-          ) {
-            const invoice =
-              parsed.invoiceNo ||
-              parsed.invNo ||
-              parsed.invoiceNumber ||
-              parsed.invoice;
-            console.log("Found invoice in JSON:", invoice);
-            return invoice;
+          
+          // Check for various possible field names and get their VALUES
+          const possibleFields = [
+            'empId',
+            'officerId',
+            'officer_id',
+            'officerID',
+            'id',
+            'userId',
+            'user_id',
+            'employeeId',
+            'employee_id'
+          ];
+          
+          for (const field of possibleFields) {
+            if (parsed[field]) {
+              const officerId = String(parsed[field]);
+              console.log(`Found officer ID in field '${field}':`, officerId);
+              return officerId;
+            }
           }
+          
+          console.log("No recognized field found in JSON");
         } catch (e) {
-          console.log("Not valid JSON");
+          console.log("Not valid JSON:", e);
         }
       }
 
-      // Method 3: Check if it's just the invoice number (alphanumeric, 6-20 chars)
-      const simplePattern = /^[A-Z0-9]{6,20}$/;
-      if (simplePattern.test(qrData)) {
-        console.log("Simple pattern matched:", qrData);
-        return qrData;
+      // Method 2: Check if it's just the officer ID (alphanumeric, 3-20 chars)
+      const simplePattern = /^[A-Z0-9]{3,20}$/i;
+      if (simplePattern.test(qrData.trim())) {
+        console.log("Simple pattern matched:", qrData.trim());
+        return qrData.trim();
       }
 
-      // Method 4: Try to extract any alphanumeric code (6+ characters)
-      const alphanumericPattern = /[A-Z0-9]{6,}/gi;
+      // Method 3: Check for officer ID pattern (OFC, OFF, DBM, or just numbers)
+      const officerPattern = /(OFC|OFF|OFFICER|DBM|EMP)?[_-]?([A-Z0-9]{3,20})/i;
+      const match = qrData.match(officerPattern);
+      if (match) {
+        const officerId = match[2] || match[0];
+        console.log("Found officer pattern:", officerId);
+        return officerId;
+      }
+
+      // Method 4: Try to extract any alphanumeric code (3+ characters)
+      const alphanumericPattern = /[A-Z0-9]{3,}/gi;
       const alphanumericMatches = qrData.match(alphanumericPattern);
       if (alphanumericMatches && alphanumericMatches.length > 0) {
         console.log("Alphanumeric matches:", alphanumericMatches);
-        // Return the longest match (likely to be the invoice)
-        const longestMatch = alphanumericMatches.reduce((a, b) =>
-          a.length > b.length ? a : b
+        // Filter out common keywords that aren't officer IDs
+        const filtered = alphanumericMatches.filter(
+          match => !['empId', 'officerId', 'userId', 'employeeId'].includes(match)
         );
-        return longestMatch;
+        if (filtered.length > 0) {
+          return filtered[0];
+        }
+        return alphanumericMatches[0];
       }
 
-      console.log("No invoice number found in QR data");
+      console.log("No officer ID found in QR data");
       return null;
     } catch (error) {
-      console.error("Error extracting invoice:", error);
+      console.error("Error extracting officer ID:", error);
       return null;
     }
   };
 
-  // API call to update return order to "Return Received"
-  const updateReturnOrder = async (invoiceNumbers: string[]) => {
+  // API call to assign order
+  const assignOrderToDriver = async (officerId: string) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
@@ -217,15 +232,15 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       }
 
       // Construct the full API URL using environment
-      const apiUrl = `${environment.API_BASE_URL}api/return/update-return-received`;
+      const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
       console.log("Making API call to:", apiUrl);
-      console.log("Invoice Numbers:", invoiceNumbers);
+      console.log("Officer ID:", officerId);
       console.log("Token:", token.substring(0, 20) + "...");
 
       const response = await axios.post(
         apiUrl,
         {
-          invoiceNumbers: invoiceNumbers,
+          officerId: officerId,
         },
         {
           headers: {
@@ -250,8 +265,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         if (error.response) {
           // Server responded with error
           throw {
-            message:
-              error.response.data?.message || "Failed to update return order",
+            message: error.response.data?.message || "Failed to assign order",
             status: error.response.status,
             data: error.response.data,
           };
@@ -260,7 +274,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
           throw new Error("Network error. Please check your connection.");
         } else {
           // Other errors
-          throw new Error(error.message || "Failed to update return order");
+          throw new Error(error.message || "Failed to assign order");
         }
       } else {
         throw new Error("An unexpected error occurred");
@@ -287,100 +301,110 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     }
 
     try {
-      // Extract invoice number from QR
-      const invoiceNo = extractInvoiceNumber(data);
+      // Extract officer ID from QR
+      const officerId = extractOfficerId(data);
 
-      if (!invoiceNo) {
+      if (!officerId) {
         setModalTitle("Invalid QR Code");
         setModalMessage(
-          "The scanned QR code does not contain a valid invoice number."
+          "The scanned QR code does not contain a valid officer ID."
         );
         setModalType("error");
         setShowErrorModal(true);
         return;
       }
 
-      console.log("Extracted invoice:", invoiceNo);
+      console.log("Extracted officer ID:", officerId);
 
-      // Add to scanned invoices list
-      const updatedInvoices = [...scannedInvoices, invoiceNo];
-      setScannedInvoices(updatedInvoices);
-
-      // Call API to update return order
-      const result = await updateReturnOrder([invoiceNo]);
-
-      if (result.status === "success") {
-        const updatedCount = result.data.driverOrdersUpdated || 0;
-
-        setModalTitle("Success!");
+      // Validate if officer is DCM or DCH
+      if (!validateOfficerType(officerId)) {
+        setModalTitle("Unauthorized Officer");
         setModalMessage(
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Invoice:{" "}
-              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
-              been successfully returned to the centre.
-            </Text>
-          </View>
+          "Only Distribution Centre Manager and Distribution Centre Head officers are authorized to receive cash. Please scan a valid officer QR code."
+        );
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
+      }
+
+      // Show loading while making API call
+      setLoading(true);
+
+      // Get selected items from storage
+      const storedItems = await AsyncStorage.getItem('selectedCashItems');
+      if (!storedItems) {
+        throw new Error("No items selected");
+      }
+
+      const selectedItems = JSON.parse(storedItems);
+      const totalAmount = selectedItems.reduce(
+        (sum: number, item: any) => sum + (item.amount || 0),
+        0
+      );
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const orderIds = selectedItems.map((item: any) => item.id);
+
+      // Make API call to hand over cash
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/home/hand-over-cash`,
+        { 
+          orderIds, 
+          totalAmount,
+          officerId // This will be treated as empId in backend
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log("Hand over response:", response.data);
+
+      // Check if API call was successful
+      if (response.data.status === "success") {
+        // Clear stored items
+        await AsyncStorage.removeItem('selectedCashItems');
+
+        // Show success modal with data from backend
+        const responseData = response.data.data;
+        setModalTitle("Officer Verified!");
+        setModalMessage(
+          `Rs. ${responseData.totalAmount.toFixed(2)} has been successfully handed over to ${responseData.empId}.`
         );
         setModalType("success");
         setShowSuccessModal(true);
+
+        // Navigate to ReceivedCash screen after delay
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigation.navigate("ReceivedCash");
+        }, 3000);
+
       } else {
-        // Set modal title based on the specific error message from backend
-        let title = "Error";
-        const message = result.message || "Failed to update return order";
-
-        if (message.includes("No return orders found")) {
-          title = "Order Not Found";
-        } else if (message.includes("does not have permission")) {
-          title = "Permission Denied";
-        } else if (message.includes("already marked as Return Received")) {
-          title = "Already Updated";
-        }
-
-        setModalTitle(title);
-        setModalMessage(message);
-        setModalType("error");
-        setShowErrorModal(true);
+        throw new Error(response.data.message || "Failed to hand over cash");
       }
+
     } catch (error: any) {
       console.error("Error processing QR scan:", error);
 
-      // Handle specific error cases
-      let title = "Error";
-      let message = error.message || "Failed to process QR code";
-      let type: "error" | "success" = "error";
-
-      // Set modal title based on the specific error message from backend
-      if (message.includes("No return orders found")) {
-        title = "Order Not Found";
-        message = "This order is not in 'Return' status or doesn't exist.";
-      } else if (message.includes("does not have permission")) {
-        title = "Permission Denied";
-        message = "You don't have permission to update this order.";
-      } else if (message.includes("already marked as Return Received")) {
-        title = "Already Updated";
-        message = "This order is already marked as 'Return Received'.";
-      } else if (message.includes("Network error")) {
-        title = "Network Error";
-        message = "Please check your internet connection and try again.";
-      } else if (message.includes("Unauthorized")) {
-        title = "Session Expired";
-        message = "Please login again to continue.";
-      } else if (error.status === 404) {
-        title = "Endpoint Not Found";
-        message = "The server endpoint was not found. Please contact support.";
-      } else if (error.status === 500) {
-        title = "Server Error";
-        message = "Internal server error. Please try again later.";
-      } else if (error.status === 400) {
-        title = "Validation Error";
-        message = error.data?.message || "Invalid invoice number format.";
-      }
-
-      setModalTitle(title);
-      setModalMessage(message);
-      setModalType(type);
+      setModalTitle("Error");
+      setModalMessage(
+        error.response?.data?.message || 
+        error.message || 
+        "Failed to hand over cash. Please try again."
+      );
+      setModalType("error");
       setShowErrorModal(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -392,7 +416,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setScanned(false);
-    navigation.navigate("ReturnOrders");
+    navigation.goBack();
   };
 
   const handleTimeoutModalClose = () => {
@@ -459,13 +483,13 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Updating Return Order...
+              Verifying Officer...
             </Text>
           </View>
         </View>
       )}
 
-      {/* Timeout Modal */}
+      {/* Timeout Modal - Shows after 4 seconds if no scan (with Re-Scan button) */}
       <AlertModal
         visible={showTimeoutModal}
         title="Scan Timeout"
@@ -478,7 +502,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         autoClose={true}
       />
 
-      {/* Error Modal */}
+      {/* Error Modal - For API errors (without Re-Scan button) */}
       <AlertModal
         visible={showErrorModal}
         title={modalTitle}
@@ -505,26 +529,24 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       <View className="flex-1">
         {/* Semi-transparent overlay */}
         <View className="flex-1 bg-black/50">
-          {/* Header with back button and scanned count */}
+          {/* Back Button */}
           <View className="flex-row items-center justify-between px-4 py-3 relative">
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                className="items-start mr-3"
-                disabled={loading}
-              >
-                <Entypo
-                  name="chevron-left"
-                  size={25}
-                  color="black"
-                  style={{
-                    backgroundColor: loading ? "#666" : "#F7FAFF",
-                    borderRadius: 50,
-                    padding: wp(2.5),
-                  }}
-                />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="items-start"
+              disabled={loading}
+            >
+              <Entypo
+                name="chevron-left"
+                size={25}
+                color="black"
+                style={{
+                  backgroundColor: loading ? "#666" : "#F7FAFF",
+                  borderRadius: 50,
+                  padding: wp(2.5),
+                }}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Scan Frame Container */}
@@ -699,4 +721,4 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
   );
 };
 
-export default ReturnOrderQR;
+export default ReceivedCashQR;
