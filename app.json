@@ -8,13 +8,13 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/app-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F7CA21"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splash-icon.png",
+        "foregroundImage": "./assets/images/splash.png",
         "backgroundColor": "#ffffff",
         "softwareKeyboardLayoutMode": "pan"
       },
@@ -75,7 +75,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "e256c616-92fa-4624-be35-f61a49b330f4"
+        "projectId": "8fd4e6b6-0422-41ab-9c90-f8f01509e189"
       }
     }
   }

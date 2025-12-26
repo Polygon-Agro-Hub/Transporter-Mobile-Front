@@ -225,33 +225,41 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         navigation={navigation}
       />
 
-      <ScrollView
-        className="flex-1 px-4 pt-4"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#F7CA21"]}
-            tintColor="#F7CA21"
-          />
-        }
-      >
-        {/* Orders List */}
-        <View className="mb-20">
-          {returnOrders.length === 0 ? (
-            <View className="flex-1 justify-center items-center py-10">
-              <Text className="text-gray-500 text-lg mt-4 text-center">
-                No return orders found
-              </Text>
-            </View>
-          ) : (
-            returnOrders.map((order, index) => (
+      {returnOrders.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-[#495D86] text-base">
+            -- No return orders found --
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          className="flex-1 px-4 pt-4"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
+          {/* Orders List */}
+          <View>
+            {returnOrders.map((order, index) => (
               <TouchableOpacity
                 key={`${order.driverOrderId}-${index}`}
-                className="bg-white rounded-xl p-4 mb-4 border border-[#A4AAB7]"
+                className="bg-white rounded-xl p-4 mb-4 border border-[#A4AAB7]
+                "
                 activeOpacity={0.7}
                 onPress={() => handleCardPress(order)}
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
               >
                 {/* Order Header */}
                 <View className="flex-row justify-between items-start mb-1">
@@ -310,22 +318,10 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   )}
                 </View>
               </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Floating Action Button - Keep the same */}
-      <TouchableOpacity
-        className="absolute bottom-4 right-4 bg-[#F7CA21] w-16 h-16 rounded-full items-center justify-center shadow-lg"
-        onPress={() => navigation.navigate("AssignOrderQR")}
-      >
-        <Image
-          source={require("@/assets/images/ReturnOrders/qr.webp")}
-          className="w-auto h-[65%]"
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 };

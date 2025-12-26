@@ -8,7 +8,6 @@ import {
   PermissionsAndroid,
   StatusBar,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -21,7 +20,10 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 
-type ReturnOrderQRNavigationProp = StackNavigationProp<RootStackParamList, "ReturnOrderQR">;
+type ReturnOrderQRNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "ReturnOrderQR"
+>;
 
 interface ReturnOrderQRProps {
   navigation: ReturnOrderQRNavigationProp;
@@ -46,6 +48,14 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     ""
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
+
+  // Store scanned invoice numbers
+  const [scannedInvoices, setScannedInvoices] = useState<string[]>([]);
+  const [batchUpdateData, setBatchUpdateData] = useState<{
+    invoiceNumbers: string[];
+    successCount: number;
+    failedInvoices: Array<{ invoice: string; error: string }>;
+  } | null>(null);
 
   useEffect(() => {
     checkCameraPermission();
@@ -196,8 +206,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     }
   };
 
-  // API call to assign order
-  const assignOrderToDriver = async (invoiceNo: string) => {
+  // API call to update return order to "Return Received"
+  const updateReturnOrder = async (invoiceNumbers: string[]) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
@@ -207,15 +217,15 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       }
 
       // Construct the full API URL using environment
-      const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
+      const apiUrl = `${environment.API_BASE_URL}api/return/update-return-received`;
       console.log("Making API call to:", apiUrl);
-      console.log("Invoice:", invoiceNo);
+      console.log("Invoice Numbers:", invoiceNumbers);
       console.log("Token:", token.substring(0, 20) + "...");
 
       const response = await axios.post(
         apiUrl,
         {
-          invNo: invoiceNo,
+          invoiceNumbers: invoiceNumbers,
         },
         {
           headers: {
@@ -240,7 +250,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         if (error.response) {
           // Server responded with error
           throw {
-            message: error.response.data?.message || "Failed to assign order",
+            message:
+              error.response.data?.message || "Failed to update return order",
             status: error.response.status,
             data: error.response.data,
           };
@@ -249,7 +260,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
           throw new Error("Network error. Please check your connection.");
         } else {
           // Other errors
-          throw new Error(error.message || "Failed to assign order");
+          throw new Error(error.message || "Failed to update return order");
         }
       } else {
         throw new Error("An unexpected error occurred");
@@ -291,18 +302,23 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
 
       console.log("Extracted invoice:", invoiceNo);
 
-      // Call API to assign order
-      const result = await assignOrderToDriver(invoiceNo);
+      // Add to scanned invoices list
+      const updatedInvoices = [...scannedInvoices, invoiceNo];
+      setScannedInvoices(updatedInvoices);
+
+      // Call API to update return order
+      const result = await updateReturnOrder([invoiceNo]);
 
       if (result.status === "success") {
-        setModalTitle("Successful!");
-        // Create rich text with bold invoice number
+        const updatedCount = result.data.driverOrdersUpdated || 0;
+
+        setModalTitle("Success!");
         setModalMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
+              Invoice:{" "}
               <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
-              been successfully assigned to you.
+              been successfully returned to the centre.
             </Text>
           </View>
         );
@@ -311,14 +327,14 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       } else {
         // Set modal title based on the specific error message from backend
         let title = "Error";
-        const message = result.message || "Failed to assign order";
+        const message = result.message || "Failed to update return order";
 
-        if (message.includes("already in your target list")) {
-          title = "Already got this!";
-        } else if (
-          message.includes("already been assigned to another driver")
-        ) {
-          title = "Order Unavailable!";
+        if (message.includes("No return orders found")) {
+          title = "Order Not Found";
+        } else if (message.includes("does not have permission")) {
+          title = "Permission Denied";
+        } else if (message.includes("already marked as Return Received")) {
+          title = "Already Updated";
         }
 
         setModalTitle(title);
@@ -335,16 +351,15 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       let type: "error" | "success" = "error";
 
       // Set modal title based on the specific error message from backend
-      if (message.includes("already in your target list")) {
-        title = "Already got this!";
-      } else if (message.includes("already been assigned to another driver")) {
-        title = "Order Unavailable!";
-      } else if (
-        message.includes("not found") ||
-        message.includes("Invoice number not found")
-      ) {
-        title = "Invoice Not Found";
-        message = "The invoice number was not found in the system.";
+      if (message.includes("No return orders found")) {
+        title = "Order Not Found";
+        message = "This order is not in 'Return' status or doesn't exist.";
+      } else if (message.includes("does not have permission")) {
+        title = "Permission Denied";
+        message = "You don't have permission to update this order.";
+      } else if (message.includes("already marked as Return Received")) {
+        title = "Already Updated";
+        message = "This order is already marked as 'Return Received'.";
       } else if (message.includes("Network error")) {
         title = "Network Error";
         message = "Please check your internet connection and try again.";
@@ -352,11 +367,14 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         title = "Session Expired";
         message = "Please login again to continue.";
       } else if (error.status === 404) {
-        title = "Server Error";
+        title = "Endpoint Not Found";
         message = "The server endpoint was not found. Please contact support.";
       } else if (error.status === 500) {
         title = "Server Error";
         message = "Internal server error. Please try again later.";
+      } else if (error.status === 400) {
+        title = "Validation Error";
+        message = error.data?.message || "Invalid invoice number format.";
       }
 
       setModalTitle(title);
@@ -374,7 +392,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setScanned(false);
-    navigation.goBack();
+    navigation.navigate("ReturnOrders");
   };
 
   const handleTimeoutModalClose = () => {
@@ -441,13 +459,13 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Assigning Order...
+              Updating Return Order...
             </Text>
           </View>
         </View>
       )}
 
-      {/* Timeout Modal - Shows after 4 seconds if no scan (with Re-Scan button) */}
+      {/* Timeout Modal */}
       <AlertModal
         visible={showTimeoutModal}
         title="Scan Timeout"
@@ -460,7 +478,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         autoClose={true}
       />
 
-      {/* Error Modal - For API errors (without Re-Scan button) */}
+      {/* Error Modal */}
       <AlertModal
         visible={showErrorModal}
         title={modalTitle}
@@ -487,24 +505,26 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       <View className="flex-1">
         {/* Semi-transparent overlay */}
         <View className="flex-1 bg-black/50">
-          {/* Back Button */}
+          {/* Header with back button and scanned count */}
           <View className="flex-row items-center justify-between px-4 py-3 relative">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="items-start"
-              disabled={loading}
-            >
-              <Entypo
-                name="chevron-left"
-                size={25}
-                color="black"
-                style={{
-                  backgroundColor: loading ? "#666" : "#F7FAFF",
-                  borderRadius: 50,
-                  padding: wp(2.5),
-                }}
-              />
-            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                className="items-start mr-3"
+                disabled={loading}
+              >
+                <Entypo
+                  name="chevron-left"
+                  size={25}
+                  color="black"
+                  style={{
+                    backgroundColor: loading ? "#666" : "#F7FAFF",
+                    borderRadius: 50,
+                    padding: wp(2.5),
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Scan Frame Container */}

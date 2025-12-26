@@ -138,17 +138,23 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     return cash;
   };
 
+  const getPacksCount = () => {
+    const todoOrders = amountData?.todoOrders || 0;
+    const holdOrders = amountData?.holdOrders || 0;
+    return todoOrders + holdOrders;
+  };
+
   // Check if should show End My Shift button
   const shouldShowEndShiftButton = () => {
-    const totalOrders = amountData?.totalOrders || 0;
+    const packsCount = getPacksCount();
     const cashAmount = getCashAmount();
     const returnOrders = amountData?.returnOrders || 0;
 
     // Show End My Shift if:
-    // 1. No packs (totalOrders === 0) AND cash > 0
+    // 1. No packs (packsCount === 0) AND cash > 0
     // OR
-    // 2. No packs (totalOrders === 0) AND return orders > 0
-    return totalOrders === 0 && (cashAmount > 0 || returnOrders > 0);
+    // 2. No packs (packsCount === 0) AND return orders > 0
+    return packsCount === 0 && (cashAmount > 0 || returnOrders > 0);
   };
 
   // Handle End My Shift button press
@@ -174,7 +180,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     const total = amountData?.totalOrders || 0;
     const completed = amountData?.completedOrders || 0;
-    const todo = amountData?.todoOrders || 0;
+    const packsCount = getPacksCount(); // Use packsCount here
 
     const completionRate =
       total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -192,7 +198,8 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     }
 
     // If there are orders but all completed
-    if (total > 0 && todo === 0) {
+    if (total > 0 && packsCount === 0) {
+      // Changed from todo === 0 to packsCount === 0
       return {
         title: "Great Work!",
         subtitle: "Click on Close button to end the shift.",
@@ -206,7 +213,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
     return {
       title: "Way more to go!",
-      subtitle: `${todo} Location${todo > 1 ? "s" : ""} to go..`,
+      subtitle: `${packsCount} Location${packsCount > 1 ? "s" : ""} to go..`, // Use packsCount
       bgColor: "#F7CA21", // Bright yellow like in the image
       showPercentage: true,
       percentage: completionRate,
@@ -215,12 +222,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   };
 
   const motivationalMsg = getMotivationalMessage();
-
-  const getPacksCount = () => {
-    const todoOrders = amountData?.todoOrders || 0;
-    const holdOrders = amountData?.holdOrders || 0;
-    return todoOrders + holdOrders;
-  };
 
   // Build quick actions dynamically
   const buildQuickActions = () => {
@@ -234,7 +235,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       },
       {
         image: packsImage,
-        label: `${packsCount} Packs`, // Changed to use packsCount
+        label: `${packsCount} Packs`,
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
       },
@@ -371,16 +372,32 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       {showEndShiftButton ? (
         // END MY SHIFT BUTTON SECTION
         <TouchableOpacity
-          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center justify-center"
-          style={{ backgroundColor: "#FF0000" }} // Red background
+          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-col items-center justify-center border"
+          style={{
+            backgroundColor: "#FFFBEA", 
+            borderColor: "#F7CA21", 
+          }}
           onPress={handleEndShiftPress}
           activeOpacity={0.7}
         >
-          <View className="flex-row items-center">
-            <Feather name="log-out" size={24} color="white" />
-            <Text className="text-lg font-bold text-white ml-3">
-              END MY SHIFT
+          <View className="flex">
+            <Text className="text-lg font-bold text-black text-center">
+              Great Work!
             </Text>
+            <Text className="text-black mt-1 text-center">
+              Click on Close button to end the shift.
+            </Text>
+          </View>
+          <View className="ml-4">
+            <TouchableOpacity
+              className="bg-[#F7CA21] px-14 py-3 rounded-full mt-2"
+              onPress={handleEndShiftPress}
+              activeOpacity={0.7}
+            >
+              <View className="flex-row items-center">
+                <Text className="font-bold text-black">End My Shift</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       ) : (

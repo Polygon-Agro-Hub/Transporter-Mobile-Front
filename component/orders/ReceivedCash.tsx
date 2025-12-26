@@ -7,7 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  Image
+  Image,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
@@ -56,7 +56,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
   const fetchReceivedCash = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      
+
       if (!token) {
         Alert.alert("Error", "Please login again");
         setLoading(false);
@@ -78,8 +78,13 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
         // Filter and format items
         const validItems = (response.data.data || [])
           .filter((item: any) => {
-            const hasValidAmount = item.amount != null && !isNaN(parseFloat(item.amount)) && parseFloat(item.amount) > 0;
-            console.log(`Item ${item.id}: amount=${item.amount}, valid=${hasValidAmount}`);
+            const hasValidAmount =
+              item.amount != null &&
+              !isNaN(parseFloat(item.amount)) &&
+              parseFloat(item.amount) > 0;
+            console.log(
+              `Item ${item.id}: amount=${item.amount}, valid=${hasValidAmount}`
+            );
             return hasValidAmount;
           })
           .map((item: any) => ({
@@ -88,9 +93,9 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             invoNo: item.invoNo || `#${item.orderId}`,
             amount: parseFloat(item.amount),
             selected: false,
-            createdAt: item.createdAt
+            createdAt: item.createdAt,
           }));
-        
+
         console.log("Valid items:", validItems);
         setCashItems(validItems);
       } else {
@@ -131,7 +136,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
   // Navigate to QR scanner when Hand Over is clicked
   const handleHandOverClick = () => {
     const selectedItems = cashItems.filter((item) => item.selected);
-    
+
     if (selectedItems.length === 0) {
       Alert.alert("Error", "Please select at least one order");
       return;
@@ -144,8 +149,8 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
     );
 
     // Store selected items in AsyncStorage
-    AsyncStorage.setItem('selectedCashItems', JSON.stringify(selectedItems));
-    
+    AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
+
     // Navigate to QR scanner
     navigation.navigate("ReceivedCashQR", {
       amount: totalAmount,
@@ -153,7 +158,8 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
     });
   };
 
-  const allSelected = cashItems.length > 0 && cashItems.every((item) => item.selected);
+  const allSelected =
+    cashItems.length > 0 && cashItems.every((item) => item.selected);
   const anySelected = cashItems.some((item) => item.selected);
 
   if (loading && !refreshing) {
@@ -167,9 +173,13 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <CustomHeader title="Received Cash" navigation={navigation} />
+      <CustomHeader
+        title="Received Cash"
+        navigation={navigation}
+        onBackPress={() => navigation.navigate("Home")}
+      />
 
-      <ScrollView 
+      <ScrollView
         className="flex-1"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -177,7 +187,9 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       >
         {cashItems.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-gray-500 text-base">No received cash found</Text>
+            <Text className="text-gray-500 text-base">
+              No received cash found
+            </Text>
           </View>
         ) : (
           <>
@@ -200,7 +212,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
               <Text className="text-sm font-medium text-black">Select All</Text>
             </TouchableOpacity> */}
             {/* Select All / Deselect All */}
-   {/* Select All / Deselect All */}
+            {/* Select All / Deselect All */}
             <TouchableOpacity
               onPress={toggleSelectAll}
               className="flex-row items-center px-4 py-4 "
@@ -233,18 +245,18 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                 //   activeOpacity={0.7}
                 // >
                 <TouchableOpacity
-  key={item.id}
-  onPress={() => toggleItem(item.id)}
-  className="flex-row items-center px-4 py-4 bg-white border border-[#A4AAB7] rounded-lg mb-3"
-  activeOpacity={0.7}
-  style={{
-    shadowColor: '#0000001A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3, // For Android
-  }}
->
+                  key={item.id}
+                  onPress={() => toggleItem(item.id)}
+                  className="flex-row items-center px-4 py-4 bg-white border border-[#A4AAB7] rounded-lg mb-3"
+                  activeOpacity={0.7}
+                  style={{
+                    shadowColor: "#0000001A",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                    elevation: 3, // For Android
+                  }}
+                >
                   <View
                     className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 ${
                       item.selected
