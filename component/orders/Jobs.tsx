@@ -230,6 +230,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         navigation={navigation}
         showBackButton={true}
         showLanguageSelector={false}
+        onBackPress={() => navigation.navigate("Home")}
       />
 
       {error && (
@@ -399,9 +400,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         )}
 
         {activeTab === "completed" && dataToShow.length === 0 && !loading && (
-          <Text className="text-center text-gray-500 mt-10">
-            No completed jobs
-          </Text>
+          <View className="mt-10 items-center">
+            <Ionicons name="document-text-outline" size={60} color="#D1D5DB" />
+            <Text className="text-gray-500 text-lg mt-4">No completed jobs</Text>
+          </View>
         )}
       </ScrollView>
     </View>

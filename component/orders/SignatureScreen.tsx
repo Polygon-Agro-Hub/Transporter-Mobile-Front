@@ -294,7 +294,8 @@ export default function SignatureScreen({
         }
 
         // Get invoice numbers from the response
-        const invoiceNumbers: string[] = response.data.data?.invoiceNumbers || [];
+        const invoiceNumbers: string[] =
+          response.data.data?.invoiceNumbers || [];
         console.log("Invoice numbers from response:", invoiceNumbers);
 
         // Create success message with bold invoice numbers
@@ -372,27 +373,23 @@ export default function SignatureScreen({
     console.log("Current order completed:", processOrderIds[0]);
     console.log("All process order IDs:", allProcessOrderIds);
     console.log("Remaining orders from params:", remainingOrders);
-    
+
     // Filter out the current completed order from remaining orders
-    const actualRemainingOrders = remainingOrders?.filter(
-      (orderId) => orderId !== processOrderIds[0]
-    ) || [];
-    
-    console.log("Actual remaining orders after filtering:", actualRemainingOrders);
+    const actualRemainingOrders =
+      remainingOrders?.filter((orderId) => orderId !== processOrderIds[0]) ||
+      [];
+
+    console.log(
+      "Actual remaining orders after filtering:",
+      actualRemainingOrders
+    );
     console.log("Remaining count:", actualRemainingOrders.length);
-    
-    // Check if there are still orders to process
-    if (actualRemainingOrders.length > 0) {
-      // There are more orders, navigate back to OrderDetails
-      console.log("✓ More orders exist - Navigating to OrderDetails");
-      navigation.navigate("OrderDetails", {
-        processOrderIds: allProcessOrderIds,
-      });
-    } else {
-      // No more orders, navigate to Home
-      console.log("✓ No more orders - Navigating to Home");
-      navigation.navigate("Home");
-    }
+
+    // ALWAYS navigate back to OrderDetails, never to Home
+    console.log("✓ Navigating back to OrderDetails");
+    navigation.navigate("OrderDetails", {
+      processOrderIds: allProcessOrderIds,
+    });
   };
 
   const handleSuccessModalClose = () => {
@@ -489,22 +486,6 @@ export default function SignatureScreen({
         showLanguageSelector={false}
         navigation={navigation}
       />
-
-      {/* Order Info */}
-      <View className="px-4 py-2 bg-blue-50 mx-4 mt-2 rounded-lg">
-        <Text className="text-center text-sm text-gray-700">
-          Signature for {processOrderIds.length} order
-          {processOrderIds.length !== 1 ? "s" : ""}
-          {processOrderIds.length > 0 &&
-            ` (ID: ${processOrderIds.join(", ")})`}
-        </Text>
-        
-        {remainingCount > 0 && (
-          <Text className="text-center text-xs text-blue-700 mt-1">
-            {remainingCount} more order{remainingCount !== 1 ? "s" : ""} remaining
-          </Text>
-        )}
-      </View>
 
       {/* SIGNATURE AREA */}
       <View className="flex-1 mx-4 mb-4 mt-2">

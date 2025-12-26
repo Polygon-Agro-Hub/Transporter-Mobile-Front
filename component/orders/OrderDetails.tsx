@@ -8,6 +8,7 @@ import {
   Linking,
   RefreshControl,
   Alert,
+  Platform,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import {
@@ -228,7 +229,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   const handleOpenLocation = (
     latitude: string | null,
-    longitude: string | null
+    longitude: string | null,
+    address?: string
   ) => {
     if (!latitude || !longitude) {
       Alert.alert(
@@ -245,6 +247,45 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         "Could not open Google Maps. Please make sure it is installed."
       );
     });
+  };
+
+  // NEW FUNCTION: Open Google Maps Navigation
+  const openGoogleMapsNavigation = (
+    latitude: string | null,
+    longitude: string | null,
+    address?: string
+  ) => {
+    if (!latitude || !longitude) {
+      Alert.alert(
+        "Location Not Available",
+        "Location coordinates are not available for navigation."
+      );
+      return;
+    }
+
+    // Construct the Google Maps navigation URL
+    // Using "daddr" for destination address
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving&dir_action=navigate`;
+
+    // Alternative URL format that directly opens in Google Maps app
+    const urlAlt = `https://maps.google.com/?q=${latitude},${longitude}`;
+
+    // Check if we can open Google Maps
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(url);
+        } else {
+          // Try alternative URL
+          return Linking.openURL(urlAlt);
+        }
+      })
+      .catch(() => {
+        Alert.alert(
+          "Error",
+          "Could not open Google Maps. Please make sure Google Maps is installed on your device."
+        );
+      });
   };
 
   const formatCurrency = (amount: string) => {
@@ -316,7 +357,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     );
 
     // If status is "Todo", use white background
-    if (normalizedStatus === "todo") {
+    if (normalizedStatus === "todo" || normalizedStatus === "completed") {
       console.log("Card style: White background");
       return {
         backgroundColor: "#FFFFFF",
@@ -366,10 +407,21 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
       const processOrderId = currentOrder.processOrder.id;
       const currentStatus = currentOrder.processOrder.status.toLowerCase();
+      const latitude = currentOrder.latitude;
+      const longitude = currentOrder.longitude;
+      const address = currentOrder.address;
 
       console.log(
         `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
       );
+
+      // OPEN GOOGLE MAPS FOR BOTH "Start Journey" AND "Continue"
+      if (latitude && longitude) {
+        console.log("Opening Google Maps navigation to destination");
+        setTimeout(() => {
+          openGoogleMapsNavigation(latitude, longitude, address);
+        }, 300);
+      }
 
       // If status is already "On the way" or "Hold", navigate directly to EndJourneyConfirmation
       if (currentStatus === "on the way" || currentStatus === "hold") {
@@ -380,19 +432,22 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
 
-        navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: [processOrderId],
-          allProcessOrderIds: processOrderIds,
-          remainingOrders: remainingOrders,
-          orderData: currentOrder,
-          onOrderComplete: (completedId: number) => {
-            handleOrderComplete(completedId);
-          },
-        });
+        // Add a small delay to ensure maps opens before navigation
+        setTimeout(() => {
+          navigation.navigate("EndJourneyConfirmation", {
+            processOrderIds: [processOrderId],
+            allProcessOrderIds: processOrderIds,
+            remainingOrders: remainingOrders,
+            orderData: currentOrder,
+            onOrderComplete: (completedId: number) => {
+              handleOrderComplete(completedId);
+            },
+          });
+        }, 500);
         return;
       }
 
-      // Only start journey for "Todo" status
+      // Only start journey for "Todo" status (API call)
       console.log("Starting journey for process order:", processOrderId);
 
       const payload = {
@@ -435,15 +490,18 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
 
-        navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: [processOrderId],
-          allProcessOrderIds: processOrderIds,
-          remainingOrders: remainingOrders,
-          orderData: currentOrder,
-          onOrderComplete: (completedId: number) => {
-            handleOrderComplete(completedId);
-          },
-        });
+        // Navigate after a delay to ensure maps opens
+        setTimeout(() => {
+          navigation.navigate("EndJourneyConfirmation", {
+            processOrderIds: [processOrderId],
+            allProcessOrderIds: processOrderIds,
+            remainingOrders: remainingOrders,
+            orderData: currentOrder,
+            onOrderComplete: (completedId: number) => {
+              handleOrderComplete(completedId);
+            },
+          });
+        }, 500);
       } else {
         throw new Error(response.data.message || "Failed to start journey");
       }
@@ -497,12 +555,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
       console.log(`All orders completed: ${allCompleted}`);
 
+      // Even if all orders are completed, DO NOT navigate to Home
+      // Stay on OrderDetails screen
       if (allCompleted) {
-        // Auto-navigate to Home after a short delay
-        setTimeout(() => {
-          console.log("All orders completed, navigating to Home");
-          navigation.navigate("Home");
-        }, 500);
+        console.log("✓ All orders completed - Staying on OrderDetails screen");
       } else {
         setShowContinueButton(true);
       }
@@ -520,17 +576,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: processOrderIds,
     });
-  };
-
-  const getProgressPercentage = () => {
-    if (orders.length === 0) return 0;
-    const percentage = Math.round(
-      (completedOrders.length / orders.length) * 100
-    );
-    console.log(
-      `getProgressPercentage: completed=${completedOrders.length}, total=${orders.length}, percentage=${percentage}%`
-    );
-    return percentage;
   };
 
   if (loading) {
@@ -614,26 +659,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           />
         }
       >
-        {/* Progress Bar for multiple orders */}
-        {orders.length > 1 && (
-          <View className="mt-4 mb-2">
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-sm font-medium text-gray-600">
-                Progress: {completedOrders.length} of {orders.length} orders
-              </Text>
-              <Text className="text-sm font-medium text-gray-600">
-                {getProgressPercentage()}%
-              </Text>
-            </View>
-            <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <View
-                className="h-full bg-[#F7CA21] rounded-full transition-all duration-300"
-                style={{ width: `${getProgressPercentage()}%` }}
-              />
-            </View>
-          </View>
-        )}
-
         {/* Avatar and User Details */}
         <View className="items-center mt-4">
           {userDetails.image ? (
@@ -709,31 +734,20 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                 className="rounded-xl p-4"
               >
                 {/* Header with Invoice, Name and Status */}
-                <View className="flex-row justify-between items-start mb-3">
+                <View className="flex-row justify-between items-start mb-2">
                   <View className="flex-1">
                     <Text className="font-bold text-sm text-black">
                       #{order.processOrder.invNo || "N/A"}
                     </Text>
-                    <Text className="font-bold text-base">
+                    <Text className="font-bold text-base mt-2">
                       {order.fullName || "Customer"}
                     </Text>
-                    <Text className="text-xs text-gray-500 mt-1">
-                      Status: {status}
-                    </Text>
                   </View>
-
-                  {isCompleted && (
-                    <View className="bg-green-100 px-3 py-1 rounded-full">
-                      <Text className="text-green-800 text-xs font-semibold">
-                        Completed
-                      </Text>
-                    </View>
-                  )}
                 </View>
 
                 {/* Schedule Time */}
                 <View className="flex-row justify-between">
-                  <View className="flex-row items-center mb-3">
+                  <View className="flex-row items-center mb-2">
                     <Ionicons name="time" size={16} color="#000" />
                     <Text className="ml-2 text-sm text-black">
                       {order.sheduleTime || "Not Scheduled"}
@@ -776,12 +790,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     }
                     disabled={isCompleted}
                   >
-                    <View
-                      className="w-12 h-12 rounded-full items-center justify-center"
-                      style={{
-                        backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
-                      }}
-                    >
+                    <View className="w-12 h-12 rounded-full items-center justify-center bg-[#F7CA21]">
                       <Ionicons name="call" size={24} color="black" />
                     </View>
                     <Text className="mt-2 font-semibold">Num 1</Text>
@@ -797,19 +806,14 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       }
                       disabled={isCompleted}
                     >
-                      <View
-                        className="w-12 h-12 rounded-full items-center justify-center"
-                        style={{
-                          backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
-                        }}
-                      >
+                      <View className="w-12 h-12 rounded-full items-center justify-center bg-[#F7CA21]">
                         <Ionicons name="call" size={24} color="black" />
                       </View>
                       <Text className="mt-2 font-semibold">Num 2</Text>
                     </TouchableOpacity>
                   )}
 
-                  {/* Location Button */}
+                  {/* Location Button - Updated to open menu */}
                   <TouchableOpacity
                     className="items-center"
                     onPress={() =>
@@ -817,12 +821,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     }
                     disabled={isCompleted}
                   >
-                    <View
-                      className="w-12 h-12 rounded-full items-center justify-center relative"
-                      style={{
-                        backgroundColor: isCompleted ? "#D1D5DB" : "#F7CA21",
-                      }}
-                    >
+                    <View className="w-12 h-12 rounded-full items-center justify-center relative bg-[#F7CA21]">
                       <Ionicons name="location-sharp" size={24} color="black" />
                     </View>
                     <Text className="mt-2 font-semibold">Location</Text>
@@ -830,7 +829,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                 </View>
 
                 {/* Journey Button - Only show if there's a button text */}
-
                 <TouchableOpacity
                   className={`rounded-full py-3 items-center ${
                     isButtonActive ? "bg-[#F7CA21]" : "bg-[#D1D5DB]"

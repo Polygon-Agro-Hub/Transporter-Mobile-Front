@@ -176,7 +176,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-1 bg-white">
         <CustomHeader
           title="Return Orders"
           showBackButton={true}
@@ -187,13 +187,13 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
           <ActivityIndicator size="large" color="#F7CA21" />
           <Text className="mt-4 text-gray-600">Loading return orders...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-1 bg-white">
         <CustomHeader
           title="Return Orders"
           showBackButton={true}
@@ -212,7 +212,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
             <Text className="text-black font-bold">Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
