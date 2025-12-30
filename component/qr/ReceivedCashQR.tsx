@@ -22,7 +22,10 @@ import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 import { RouteProp } from "@react-navigation/native";
 
-type ReceivedCashQRNavigationProp = StackNavigationProp<RootStackParamList, "ReceivedCashQR">;
+type ReceivedCashQRNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "ReceivedCashQR"
+>;
 
 type OrderReturnRouteProp = RouteProp<RootStackParamList, "ReceivedCashQR">;
 
@@ -31,16 +34,18 @@ interface ReceivedCashQRProps {
   route: OrderReturnRouteProp;
 }
 
-const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) => {
-    const { amount,selectedCount } = route.params;
-    console.log("amount 000000000000",amount ,selectedCount)
+const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
+  navigation,
+  route,
+}) => {
+  const { amount, selectedCount } = route.params;
+  console.log("amount 000000000000", amount, selectedCount);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
 
-  // Timer states for 4-second timeout
+  // Timer states for timeout
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,26 +59,41 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
   useEffect(() => {
-    checkCameraPermission();
+    // Request permission only if not granted
+    if (permission && !permission.granted && permission.canAskAgain) {
+      requestPermission();
+    }
+
     startScanAnimation();
-    startTimeoutTimer();
 
     return () => {
-      // Clean up timer on unmount
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
     };
   }, []);
 
-  // Start 4-second timeout timer
+  useEffect(() => {
+    // Start timer ONLY when camera permission is granted
+    if (permission?.granted && !scanned && !loading) {
+      startTimeoutTimer();
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [permission?.granted, scanned, loading]);
+
+  // Start timeout timer
   const startTimeoutTimer = () => {
     // Clear existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
-    // Set new timer for 4 seconds
+    // Set new timer for 15 seconds
     timerRef.current = setTimeout(() => {
       if (!scanned && !loading) {
         setModalTitle("Scan Timeout");
@@ -83,7 +103,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         setModalType("error");
         setShowTimeoutModal(true);
       }
-    }, 4000);
+    }, 15000);
   };
 
   // Reset timer and scanning
@@ -101,24 +121,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
 
     // Restart timer
     startTimeoutTimer();
-  };
-
-  const checkCameraPermission = async () => {
-    if (Platform.OS === "android") {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.CAMERA
-        );
-        setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
-      } catch (err) {
-        setHasPermission(false);
-      }
-    } else {
-      if (!permission) {
-        requestPermission();
-      }
-      setHasPermission(permission?.granted || false);
-    }
   };
 
   const startScanAnimation = () => {
@@ -154,20 +156,20 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         try {
           const parsed = JSON.parse(qrData);
           console.log("Parsed JSON:", parsed);
-          
+
           // Check for various possible field names and get their VALUES
           const possibleFields = [
-            'empId',
-            'officerId',
-            'officer_id',
-            'officerID',
-            'id',
-            'userId',
-            'user_id',
-            'employeeId',
-            'employee_id'
+            "empId",
+            "officerId",
+            "officer_id",
+            "officerID",
+            "id",
+            "userId",
+            "user_id",
+            "employeeId",
+            "employee_id",
           ];
-          
+
           for (const field of possibleFields) {
             if (parsed[field]) {
               const officerId = String(parsed[field]);
@@ -175,7 +177,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
               return officerId;
             }
           }
-          
+
           console.log("No recognized field found in JSON");
         } catch (e) {
           console.log("Not valid JSON:", e);
@@ -205,7 +207,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         console.log("Alphanumeric matches:", alphanumericMatches);
         // Filter out common keywords that aren't officer IDs
         const filtered = alphanumericMatches.filter(
-          match => !['empId', 'officerId', 'userId', 'employeeId'].includes(match)
+          (match) =>
+            !["empId", "officerId", "userId", "employeeId"].includes(match)
         );
         if (filtered.length > 0) {
           return filtered[0];
@@ -221,69 +224,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
     }
   };
 
-  // API call to assign order
-  const assignOrderToDriver = async (officerId: string) => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Authentication token not found");
-      }
-
-      // Construct the full API URL using environment
-      const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
-      console.log("Making API call to:", apiUrl);
-      console.log("Officer ID:", officerId);
-      console.log("Token:", token.substring(0, 20) + "...");
-
-      const response = await axios.post(
-        apiUrl,
-        {
-          officerId: officerId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
-
-      console.log("API Response:", response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
-
-      if (axios.isAxiosError(error)) {
-        if (error.response) {
-          // Server responded with error
-          throw {
-            message: error.response.data?.message || "Failed to assign order",
-            status: error.response.status,
-            data: error.response.data,
-          };
-        } else if (error.request) {
-          // Request made but no response
-          throw new Error("Network error. Please check your connection.");
-        } else {
-          // Other errors
-          throw new Error(error.message || "Failed to assign order");
-        }
-      } else {
-        throw new Error("An unexpected error occurred");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleBarCodeScanned = async ({
     type,
     data,
@@ -295,7 +235,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
 
     setScanned(true);
 
-    // Clear the 4-second timer when scan is detected
+    // Clear the timeout timer when scan is detected
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
@@ -331,7 +271,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
       setLoading(true);
 
       // Get selected items from storage
-      const storedItems = await AsyncStorage.getItem('selectedCashItems');
+      const storedItems = await AsyncStorage.getItem("selectedCashItems");
       if (!storedItems) {
         throw new Error("No items selected");
       }
@@ -352,10 +292,10 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
       // Make API call to hand over cash
       const response = await axios.post(
         `${environment.API_BASE_URL}api/home/hand-over-cash`,
-        { 
-          orderIds, 
+        {
+          orderIds,
           totalAmount,
-          officerId // This will be treated as empId in backend
+          officerId, // This will be treated as empId in backend
         },
         {
           headers: {
@@ -371,13 +311,15 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
       // Check if API call was successful
       if (response.data.status === "success") {
         // Clear stored items
-        await AsyncStorage.removeItem('selectedCashItems');
+        await AsyncStorage.removeItem("selectedCashItems");
 
         // Show success modal with data from backend
         const responseData = response.data.data;
         setModalTitle("Officer Verified!");
         setModalMessage(
-          `Rs. ${responseData.totalAmount.toFixed(2)} has been successfully handed over to ${responseData.empId}.`
+          `Rs. ${responseData.totalAmount.toFixed(
+            2
+          )} has been successfully handed over to ${responseData.empId}.`
         );
         setModalType("success");
         setShowSuccessModal(true);
@@ -387,19 +329,17 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
           setShowSuccessModal(false);
           navigation.navigate("ReceivedCash");
         }, 3000);
-
       } else {
         throw new Error(response.data.message || "Failed to hand over cash");
       }
-
     } catch (error: any) {
       console.error("Error processing QR scan:", error);
 
       setModalTitle("Error");
       setModalMessage(
-        error.response?.data?.message || 
-        error.message || 
-        "Failed to hand over cash. Please try again."
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to hand over cash. Please try again."
       );
       setModalType("error");
       setShowErrorModal(true);
@@ -429,21 +369,21 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
     resetScanning();
   };
 
-  if (hasPermission === null) {
+  // Show loading while permission is being checked
+  if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
         <StatusBar barStyle="light-content" />
         <View className="bg-black/50 p-8 rounded-full">
-          <Ionicons name="camera" size={wp(20)} color="#F7CA21" />
+          <ActivityIndicator size="large" color="#F7CA21" />
         </View>
-        <Text className="text-white text-lg mt-4">
-          Requesting camera permission...
-        </Text>
+        <Text className="text-white text-lg mt-4">Loading camera...</Text>
       </SafeAreaView>
     );
   }
 
-  if (hasPermission === false) {
+  // Show permission denied screen
+  if (!permission.granted) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
         <StatusBar barStyle="light-content" />
@@ -458,7 +398,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         </Text>
         <TouchableOpacity
           className="bg-[#F7CA21] py-4 px-12 rounded-xl"
-          onPress={checkCameraPermission}
+          onPress={requestPermission}
         >
           <Text className="text-black font-bold text-base">
             Grant Permission
@@ -489,7 +429,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         </View>
       )}
 
-      {/* Timeout Modal - Shows after 4 seconds if no scan (with Re-Scan button) */}
+      {/* Timeout Modal */}
       <AlertModal
         visible={showTimeoutModal}
         title="Scan Timeout"
@@ -502,7 +442,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({ navigation ,route }) =>
         autoClose={true}
       />
 
-      {/* Error Modal - For API errors (without Re-Scan button) */}
+      {/* Error Modal */}
       <AlertModal
         visible={showErrorModal}
         title={modalTitle}

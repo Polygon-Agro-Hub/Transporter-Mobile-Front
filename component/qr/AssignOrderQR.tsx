@@ -21,7 +21,10 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 
-type AssignOrderQRNavigationProp = StackNavigationProp<RootStackParamList, "AssignOrderQR">;
+type AssignOrderQRNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "AssignOrderQR"
+>;
 
 interface AssignOrderQRProps {
   navigation: AssignOrderQRNavigationProp;
@@ -30,11 +33,10 @@ interface AssignOrderQRProps {
 const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
 
-  // Timer states for 4-second timeout
+  // Timer states for timeout
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,42 +44,59 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
+  const [showRescanButton, setShowRescanButton] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | React.ReactElement>(
     ""
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
   useEffect(() => {
-    checkCameraPermission();
+    // Request permission only if not granted
+    if (permission && !permission.granted && permission.canAskAgain) {
+      requestPermission();
+    }
+
     startScanAnimation();
-    startTimeoutTimer();
 
     return () => {
-      // Clean up timer on unmount
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
     };
   }, []);
 
-  // Start 4-second timeout timer
+  useEffect(() => {
+    // Start timer ONLY when camera permission is granted
+    if (permission?.granted && !scanned && !loading) {
+      startTimeoutTimer();
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [permission?.granted, scanned, loading]);
+
+  // Start timeout timer
   const startTimeoutTimer = () => {
     // Clear existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
-    // Set new timer for 4 seconds
+    // Set new timer for 15 seconds
     timerRef.current = setTimeout(() => {
       if (!scanned && !loading) {
         setModalTitle("Scan Timeout");
         setModalMessage(
           "The QR code is not identified. Please check and try again."
         );
+        setShowRescanButton(true);
         setModalType("error");
         setShowTimeoutModal(true);
       }
-    }, 4000);
+    }, 15000);
   };
 
   // Reset timer and scanning
@@ -95,24 +114,6 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
     // Restart timer
     startTimeoutTimer();
-  };
-
-  const checkCameraPermission = async () => {
-    if (Platform.OS === "android") {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.CAMERA
-        );
-        setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
-      } catch (err) {
-        setHasPermission(false);
-      }
-    } else {
-      if (!permission) {
-        requestPermission();
-      }
-      setHasPermission(permission?.granted || false);
-    }
   };
 
   const startScanAnimation = () => {
@@ -270,7 +271,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
     setScanned(true);
 
-    // Clear the 4-second timer when scan is detected
+    // Clear the timeout timer when scan is detected
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
@@ -280,10 +281,11 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const invoiceNo = extractInvoiceNumber(data);
 
       if (!invoiceNo) {
-        setModalTitle("Invalid QR Code");
+        setModalTitle("Error!");
         setModalMessage(
-          "The scanned QR code does not contain a valid invoice number."
+          "The QR code is not identified.\nPlease check and try again."
         );
+        setShowRescanButton(true);
         setModalType("error");
         setShowErrorModal(true);
         return;
@@ -319,6 +321,11 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           message.includes("already been assigned to another driver")
         ) {
           title = "Order Unavailable!";
+        } else if (
+          message.includes("Still processing this order") ||
+          message.includes("Scanning will be available")
+        ) {
+          title = "Order Not Ready!";
         }
 
         setModalTitle(title);
@@ -340,23 +347,52 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       } else if (message.includes("already been assigned to another driver")) {
         title = "Order Unavailable!";
       } else if (
+        message.includes("Still processing this order") ||
+        message.includes("Scanning will be available") ||
+        (error.response?.data?.message &&
+          error.response.data.message.includes("Still processing"))
+      ) {
+        title = "Order Not Ready!";
+        message =
+          "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
+      } else if (
         message.includes("not found") ||
         message.includes("Invoice number not found")
       ) {
-        title = "Invoice Not Found";
-        message = "The invoice number was not found in the system.";
-      } else if (message.includes("Network error")) {
+        title = "Invalid Invoice!";
+        message = "The invoice number was not found. Please check the QR code.";
+      } else if (
+        message.includes("Network error") ||
+        error.message?.includes("Network Error")
+      ) {
         title = "Network Error";
         message = "Please check your internet connection and try again.";
       } else if (message.includes("Unauthorized")) {
         title = "Session Expired";
         message = "Please login again to continue.";
-      } else if (error.status === 404) {
+      } else if (error.status === 404 || error.response?.status === 404) {
         title = "Server Error";
         message = "The server endpoint was not found. Please contact support.";
-      } else if (error.status === 500) {
+      } else if (error.status === 500 || error.response?.status === 500) {
         title = "Server Error";
         message = "Internal server error. Please try again later.";
+      } else if (error.response?.status === 400) {
+        // Handle 400 errors which might include the "Still processing" message
+        if (
+          error.response?.data?.message &&
+          error.response.data.message.includes("Still processing")
+        ) {
+          title = "Order Not Ready!";
+          message = error.response.data.message;
+        } else {
+          title = "Invalid Request";
+          message =
+            error.response?.data?.message ||
+            "Invalid request. Please try again.";
+        }
+      } else if (error.status === 400) {
+        title = "Invalid Request";
+        message = error.message || "Invalid request. Please try again.";
       }
 
       setModalTitle(title);
@@ -374,7 +410,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setScanned(false);
-    navigation.navigate("Home")
+    navigation.navigate("Home");
   };
 
   const handleTimeoutModalClose = () => {
@@ -387,21 +423,21 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
     resetScanning();
   };
 
-  if (hasPermission === null) {
+  // Show loading while permission is being checked
+  if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
         <StatusBar barStyle="light-content" />
         <View className="bg-black/50 p-8 rounded-full">
-          <Ionicons name="camera" size={wp(20)} color="#F7CA21" />
+          <ActivityIndicator size="large" color="#F7CA21" />
         </View>
-        <Text className="text-white text-lg mt-4">
-          Requesting camera permission...
-        </Text>
+        <Text className="text-white text-lg mt-4">Loading camera...</Text>
       </SafeAreaView>
     );
   }
 
-  if (hasPermission === false) {
+  // Show permission denied screen
+  if (!permission.granted) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
         <StatusBar barStyle="light-content" />
@@ -416,7 +452,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         </Text>
         <TouchableOpacity
           className="bg-[#F7CA21] py-4 px-12 rounded-xl"
-          onPress={checkCameraPermission}
+          onPress={requestPermission}
         >
           <Text className="text-black font-bold text-base">
             Grant Permission
@@ -447,11 +483,11 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         </View>
       )}
 
-      {/* Timeout Modal - Shows after 4 seconds if no scan (with Re-Scan button) */}
+      {/* Timeout Modal - Shows after 15 seconds if no scan (with Re-Scan button) */}
       <AlertModal
         visible={showTimeoutModal}
         title="Scan Timeout"
-        message="The QR code is not identified. Please check and try again."
+        message="The QR code could not be detected within the time limit.Please check and try again."
         type="error"
         onClose={handleTimeoutModalClose}
         showRescanButton={true}
@@ -467,7 +503,8 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         message={modalMessage}
         type={modalType}
         onClose={handleErrorModalClose}
-        showRescanButton={false}
+        showRescanButton={showRescanButton}
+        onRescan={resetScanning}
         duration={4000}
         autoClose={true}
       />

@@ -25,6 +25,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
+import { formatScheduleTime } from "@/utils/formatScheduleTime";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -692,7 +693,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         <View className="flex-row justify-between mt-6">
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
-            <Text className="mt-2 text-lg font-semibold">
+            <Text className="mt-2 text-md font-semibold">
               {getTotalPackCount()}{" "}
               {getTotalPackCount() === 1 ? "Pack" : "Packs"}
             </Text>
@@ -700,8 +701,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
             <Ionicons name="time" size={30} color="black" />
-            <Text className="mt-2 text-lg font-semibold">
-              {getScheduleTimeDisplay()}
+            <Text className="mt-2 text-md font-semibold">
+              {formatScheduleTime(getScheduleTimeDisplay())}
             </Text>
           </View>
         </View>
@@ -750,7 +751,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <View className="flex-row items-center mb-2">
                     <Ionicons name="time" size={16} color="#000" />
                     <Text className="ml-2 text-sm text-black">
-                      {order.sheduleTime || "Not Scheduled"}
+                      {formatScheduleTime(order.sheduleTime)}
                     </Text>
                   </View>
 

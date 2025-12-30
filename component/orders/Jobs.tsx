@@ -14,6 +14,7 @@ import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
+import { formatScheduleTime } from "@/utils/formatScheduleTime";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
 
@@ -27,6 +28,7 @@ interface DriverOrder {
   marketOrderId: number;
   drvStatus: string;
   isHandOver: boolean;
+  title: string;
   fullName: string;
   sheduleTime: string;
   jobCount: number;
@@ -141,11 +143,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     return allOrders.map((order, index) => ({
       id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
+      title: order.title || "",
       name: order.fullName || "Customer",
-      time:
+      time: formatScheduleTime(
         order.primaryScheduleTime ||
-        order.allScheduleTimes[0] ||
-        "Not Scheduled",
+          order.allScheduleTimes[0] ||
+          "Not Scheduled"
+      ),
       count: order.jobCount || 1,
       status: order.drvStatus,
       orderData: order,
@@ -156,11 +160,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const getCompletedDisplayOrders = () => {
     return completedOrders.map((order, index) => ({
       id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
+      title: order.title || "",
       name: order.fullName || "Customer",
-      time:
+      time: formatScheduleTime(
         order.primaryScheduleTime ||
-        order.allScheduleTimes[0] ||
-        "Not Scheduled",
+          order.allScheduleTimes[0] ||
+          "Not Scheduled"
+      ),
       count: order.jobCount || 1,
       status: "Completed",
       orderData: order,
@@ -350,7 +356,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                   )}
                 </View>
 
-                <Text className="text-base font-bold mt-1">{item.name}</Text>
+                <Text className="text-base font-bold mt-1">
+                  {item.title}. {item.name}
+                </Text>
                 <Text className="text-sm mt-1">{item.time}</Text>
                 {isOnHold && (
                   <View className="flex flex-row items-center gap-2 mt-0.5">
@@ -402,7 +410,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         {activeTab === "completed" && dataToShow.length === 0 && !loading && (
           <View className="mt-10 items-center">
             <Ionicons name="document-text-outline" size={60} color="#D1D5DB" />
-            <Text className="text-gray-500 text-lg mt-4">No completed jobs</Text>
+            <Text className="text-gray-500 text-lg mt-4">
+              No completed jobs
+            </Text>
           </View>
         )}
       </ScrollView>
