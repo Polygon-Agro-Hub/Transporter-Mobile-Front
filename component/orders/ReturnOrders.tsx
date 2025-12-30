@@ -20,6 +20,7 @@ import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
+import LottieView from "lottie-react-native";
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -140,9 +141,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     if (!isPaid && paymentMethod === "Cash") {
       return <FontAwesome6 name="coins" size={wp(4.5)} color="#F7CA21" />;
     } else if (isPaid) {
-      return (
-        <FontAwesome5 name="check-circle" size={wp(4.5)} color="#F7CA21" />
-      );
+      return <FontAwesome name="check-circle" size={wp(4.5)} color="#F7CA21" />;
     }
     return null;
   };
@@ -223,10 +222,17 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
+        onBackPress={() => navigation.navigate("Home")}
       />
 
       {returnOrders.length === 0 ? (
         <View className="flex-1 justify-center items-center">
+          <LottieView
+            source={require("@/assets/json/no-data.json")}
+            autoPlay
+            loop
+            style={{ width: 200, height: 200 }}
+          />
           <Text className="text-[#495D86] text-base">
             -- No return orders found --
           </Text>
@@ -302,7 +308,8 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                       {/* Always show "Already Paid!" if isPaid is true */}
                       {order.isPaid
                         ? "Already Paid!"
-                        : order.paymentMethod || "Cash :"}
+                        : order.paymentMethod || "Cash"}{" "}
+                      :
                     </Text>
                   </View>
 

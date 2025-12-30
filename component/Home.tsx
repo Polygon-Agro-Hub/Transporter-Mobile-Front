@@ -42,6 +42,7 @@ interface AmountData {
   returnOrders: number;
   returnReceivedOrders: number;
   cashOrders: number;
+  ongoingProcessOrderIds?: number[];
 }
 
 // Default values for amountData
@@ -55,6 +56,7 @@ const defaultAmountData: AmountData = {
   returnOrders: 0,
   returnReceivedOrders: 0,
   cashOrders: 0,
+  ongoingProcessOrderIds: [],
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -224,6 +226,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const motivationalMsg = getMotivationalMessage();
 
   // Build quick actions dynamically
+  // Build quick actions dynamically
   const buildQuickActions = () => {
     const packsCount = getPacksCount();
     const actions = [
@@ -249,11 +252,24 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     // Add Ongoing if there are "On the way" orders
     if ((amountData?.onTheWayOrders || 0) > 0) {
+      // Check if amountData has ongoingProcessOrderIds from the backend
+      const ongoingProcessOrderIds = amountData?.ongoingProcessOrderIds || [];
+
       actions.push({
         image: ongoingImage,
         label: "Ongoing",
         color: "#FFF2BF",
-        action: () => navigation.navigate("ReturnOrders"),
+        action: () => {
+          if (ongoingProcessOrderIds.length > 0) {
+            // Navigate to OrderDetails with the ongoing process order IDs
+            navigation.navigate("OrderDetails", {
+              processOrderIds: ongoingProcessOrderIds,
+            });
+          } else {
+            // Fallback: Navigate to Jobs if no process order IDs available
+            navigation.navigate("Jobs");
+          }
+        },
       });
     }
 
