@@ -16,6 +16,7 @@ import {
   MaterialIcons,
   FontAwesome5,
   FontAwesome6,
+  FontAwesome,
 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -71,6 +72,7 @@ interface OrderItem {
   orderId: number;
   sheduleTime: string;
   fullName: string;
+  title: string;
   phonecode1: string;
   phone1: string;
   phonecode2: string | null;
@@ -86,6 +88,59 @@ interface OrderDetailsResponse {
   user: UserDetails;
   orders: OrderItem[];
 }
+
+// Helper function to format address with colored labels
+const formatAddressWithLabels = (address: string) => {
+  if (!address || address === "Address not specified") {
+    return address;
+  }
+
+  // Split the address by comma
+  const parts = address.split(", ");
+
+  // Define label mappings
+  const labelMappings: { [key: string]: string } = {
+    "B.No": "B.No :",
+    "B.Name": "B.Name :",
+    "Unit.No": "F.No :", // Changed from Unit.No to F.No based on your requirement
+    "Floor.No": "Floor.No :",
+    "House.No": "House.No :",
+    Street: "Street :",
+    City: "City :",
+  };
+
+  // Process each part
+  return parts.map((part, index) => {
+    // Find the label in the part
+    for (const [key, label] of Object.entries(labelMappings)) {
+      if (part.startsWith(key)) {
+        // Extract the value after the label
+        const value = part.substring(key.length).trim();
+
+        // Check if value starts with ":" and remove it
+        const cleanValue = value.startsWith(":")
+          ? value.substring(1).trim()
+          : value;
+
+        return (
+          <Text key={index}>
+            <Text style={{ color: "#5E6982" }}>{label} </Text>
+            <Text style={{ color: "#000000" }}>{cleanValue}</Text>
+            {index < parts.length - 1 ? ", " : ""}
+          </Text>
+        );
+      }
+    }
+
+    // If no label found, return as black text
+    return (
+      <Text key={index} style={{ color: "#000000" }}>
+        {part}
+        {index < parts.length - 1 ? ", " : ""}
+      </Text>
+    );
+  });
+};
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const { processOrderIds = [] } = route.params;
@@ -294,19 +349,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) return "Rs. 0.00";
     return `Rs. ${numAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
-  };
-
-  const formatPaymentMethod = (paymentMethod: string) => {
-    switch (paymentMethod?.toLowerCase()) {
-      case "cash":
-        return "Cash";
-      case "card":
-        return "Card";
-      case "online":
-        return "Online";
-      default:
-        return paymentMethod || "Cash";
-    }
   };
 
   const getFullName = () => {
@@ -666,11 +708,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             <Image
               source={{ uri: userDetails.image }}
               className="w-20 h-20 rounded-full"
-              defaultSource={require("@/assets/ProfileCustomer.webp")}
+              defaultSource={require("@/assets/images/auth/profilecustomer.webp")}
             />
           ) : (
             <Image
-              source={require("@/assets/ProfileCustomer.webp")}
+              source={require("@/assets/images/auth/profilecustomer.webp")}
               className="w-20 h-20 rounded-full"
             />
           )}
@@ -680,18 +722,19 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
           {userDetails.address &&
             userDetails.address !== "Address not specified" && (
-              <View className="flex-row mt-1 max-w-[90%]">
-                <Ionicons name="location-sharp" size={18} color="black" />
-                <Text className="ml-1 text-base max-w-[90%]">
-                  {userDetails.address}
+              <View className="flex-row mt-1 max-w-[90%] justify-center text-center">
+                <Text className="text-base max-w-[90%] text-center">
+                  <Ionicons name="location-sharp" size={18} color="black" />
+                  {formatAddressWithLabels(userDetails.address)}
                 </Text>
+                =
               </View>
             )}
         </View>
 
         {/* Stats Cards */}
         <View className="flex-row justify-between mt-6">
-          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
             <Text className="mt-2 text-md font-semibold">
               {getTotalPackCount()}{" "}
@@ -699,7 +742,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             </Text>
           </View>
 
-          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
             <Text className="mt-2 text-md font-semibold">
               {formatScheduleTime(getScheduleTimeDisplay())}
@@ -741,7 +784,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       #{order.processOrder.invNo || "N/A"}
                     </Text>
                     <Text className="font-bold text-base mt-2">
-                      {order.fullName || "Customer"}
+                      {order.title || ""}. {order.fullName || "Customer"}
                     </Text>
                   </View>
                 </View>
@@ -758,8 +801,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   {/* Payment Info */}
                   <View className="flex-row items-center mb-4">
                     {order.processOrder.isPaid ? (
-                      <FontAwesome6
-                        name="circle-check"
+                      <FontAwesome
+                        name="check-circle"
                         size={16}
                         color="#F7CA21"
                       />
@@ -770,12 +813,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       {order.processOrder.isPaid ? (
                         <Text className="text-black">Already Paid!</Text>
                       ) : (
-                        <Text>
-                          {formatPaymentMethod(
-                            order.processOrder.paymentMethod
-                          )}{" "}
-                          : {formatCurrency(order.pricing)}
-                        </Text>
+                        <Text>{formatCurrency(order.pricing)}</Text>
                       )}
                     </Text>
                   </View>

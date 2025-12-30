@@ -214,7 +214,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
-            source={require("@/assets/changepassword.webp")}
+            source={require("@/assets/images/auth/changepassword.webp")}
             className="w-auto h-[65%]"
             resizeMode="contain"
           />

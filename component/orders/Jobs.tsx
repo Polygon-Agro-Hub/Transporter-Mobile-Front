@@ -137,48 +137,87 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     fetchDriverOrders();
   };
 
+  const getSortableTime = (time?: string) => {
+    if (!time) return Number.MAX_SAFE_INTEGER;
+
+    const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
+    if (!match) return Number.MAX_SAFE_INTEGER;
+
+    let hour = parseInt(match[1], 10);
+    const period = match[2].toUpperCase();
+
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+
+    return hour * 60; // minutes from midnight
+  };
+
   // Combine todo and hold orders for display
   const getTodoDisplayOrders = () => {
     const allOrders = [...todoOrders, ...holdOrders];
 
-    return allOrders.map((order, index) => ({
-      id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
-      title: order.title || "",
-      name: order.fullName || "Customer",
-      time: formatScheduleTime(
-        order.primaryScheduleTime ||
-          order.allScheduleTimes[0] ||
-          "Not Scheduled"
-      ),
-      count: order.jobCount || 1,
-      status: order.drvStatus,
-      orderData: order,
-    }));
+    return allOrders
+      .sort((a, b) => {
+        const timeA = getSortableTime(
+          a.primaryScheduleTime || a.allScheduleTimes?.[0]
+        );
+        const timeB = getSortableTime(
+          b.primaryScheduleTime || b.allScheduleTimes?.[0]
+        );
+        return timeA - timeB;
+      })
+      .map((order, index) => ({
+        id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
+        title: order.title || "",
+        name: order.fullName || "Customer",
+        time: formatScheduleTime(
+          order.primaryScheduleTime ||
+            order.allScheduleTimes[0] ||
+            "Not Scheduled"
+        ),
+        count: order.jobCount || 1,
+        status: order.drvStatus,
+        orderData: order,
+      }));
   };
 
   // Get completed orders for display
   const getCompletedDisplayOrders = () => {
-    return completedOrders.map((order, index) => ({
-      id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
-      title: order.title || "",
-      name: order.fullName || "Customer",
-      time: formatScheduleTime(
-        order.primaryScheduleTime ||
-          order.allScheduleTimes[0] ||
-          "Not Scheduled"
-      ),
-      count: order.jobCount || 1,
-      status: "Completed",
-      orderData: order,
-    }));
+    return [...completedOrders]
+      .sort((a, b) => {
+        const timeA = getSortableTime(
+          a.primaryScheduleTime || a.allScheduleTimes?.[0]
+        );
+        const timeB = getSortableTime(
+          b.primaryScheduleTime || b.allScheduleTimes?.[0]
+        );
+        return timeA - timeB;
+      })
+      .map((order, index) => ({
+        id: order.sequenceNumber || (index + 1).toString().padStart(2, "0"),
+        title: order.title || "",
+        name: order.fullName || "Customer",
+        time: formatScheduleTime(
+          order.primaryScheduleTime ||
+            order.allScheduleTimes[0] ||
+            "Not Scheduled"
+        ),
+        count: order.jobCount || 1,
+        status: "Completed",
+        orderData: order,
+      }));
+  };
+
+  const formatCount = (count: number) => {
+    return count === 0 ? "0" : count.toString().padStart(2, "0");
   };
 
   const getTodoTabCount = () => {
-    return todoOrders.length + holdOrders.length;
+    return formatCount(todoOrders.length + holdOrders.length);
   };
 
   const getCompletedCount = () => {
-    return completedOrders.length;
+    return formatCount(completedOrders.length);
   };
 
   const dataToShow =
@@ -230,7 +269,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   }
 
   return (
-    <View className="flex-1 bg-white ">
+    <View className="flex-1 bg-white">
       <CustomHeader
         title="Jobs"
         navigation={navigation}
@@ -252,7 +291,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       )}
 
       <View
-        className="flex-row  mt-2 bg-white "
+        className="flex-row mt-2 bg-white"
         style={{
           shadowColor: "#000",
           shadowOffset: { width: 2, height: 2 },
@@ -269,11 +308,11 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             py-3
           `}
         >
-          <View className="w-8 h-8 rounded-full bg-black justify-center items-center">
+          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
             <Text className="text-white font-bold">{getTodoTabCount()}</Text>
           </View>
           <Text
-            className={`text-lg ${
+            className={`text-md ${
               activeTab === "todo" ? "font-bold" : "font-medium"
             }`}
           >
@@ -289,11 +328,11 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             py-2
           `}
         >
-          <View className="w-8 h-8 rounded-full bg-black justify-center items-center">
+          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
             <Text className="text-white font-bold">{getCompletedCount()}</Text>
           </View>
           <Text
-            className={`text-lg ${
+            className={`text-md ${
               activeTab === "completed" ? "font-bold" : "font-medium"
             }`}
           >
@@ -302,120 +341,127 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        className="mt-6 px-5"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#F7CA21"]}
-            tintColor="#F7CA21"
-          />
-        }
-      >
-        {dataToShow.map((item, index) => {
-          const isOnHold = item.status === "Hold";
-          const isOnTheWay = item.status === "On the way";
+      {dataToShow.length > 0 ? (
+        <ScrollView
+          className="mt-6 px-5"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
+          {dataToShow.map((item, index) => {
+            const isOnHold = item.status === "Hold";
+            const isOnTheWay = item.status === "On the way";
 
-          return (
-            <TouchableOpacity
-              disabled={activeTab === "completed"}
-              style={
-                activeTab === "todo" && {
-                  shadowColor: "#000",
-                  shadowOffset: { width: 2, height: 2 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                  elevation: 2,
+            return (
+              <TouchableOpacity
+                disabled={activeTab === "completed"}
+                style={
+                  activeTab === "todo" && {
+                    shadowColor: "#000",
+                    shadowOffset: { width: 2, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 2,
+                  }
                 }
-              }
-              key={index}
-              className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
-                isOnTheWay && activeTab === "todo"
-                  ? "bg-[#FFFBEA] border-[#F7CA21]"
-                  : isOnHold
-                  ? "bg-white border-[#FF0000]"
-                  : "bg-white border-[#A4AAB7]"
-              }`}
-              onPress={() => {
-                if (activeTab === "todo") {
-                  navigateToOrderDetails(item.orderData);
-                }
-              }}
-            >
-              <View className="flex-1">
-                <View className="flex-row items-center">
-                  {isOnTheWay && activeTab === "todo" ? (
-                    <View className="bg-[#F7CA21] w-2 h-2 rounded-full mr-1" />
-                  ) : null}
-                  <Text className="text-sm font-bold">#{item.id} </Text>{" "}
+                key={index}
+                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
+                  isOnTheWay && activeTab === "todo"
+                    ? "bg-[#FFFBEA] border-[#F7CA21]"
+                    : isOnHold
+                    ? "bg-white border-[#FF0000]"
+                    : "bg-white border-[#A4AAB7]"
+                }`}
+                onPress={() => {
+                  if (activeTab === "todo") {
+                    navigateToOrderDetails(item.orderData);
+                  }
+                }}
+              >
+                <View className="flex-1">
+                  <View className="flex-row items-center">
+                    {isOnTheWay && activeTab === "todo" ? (
+                      <View className="bg-[#F7CA21] w-2 h-2 rounded-full mr-1" />
+                    ) : null}
+                    <Text className="text-sm font-bold">#{item.id} </Text>{" "}
+                    {isOnHold && (
+                      <Text className="text-[#FF0000] text-sm font-semibold mr-2">
+                        (On Hold)
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text className="text-base font-bold mt-1">
+                    {item.title}. {item.name}
+                  </Text>
+                  <Text className="text-sm mt-1">{item.time}</Text>
                   {isOnHold && (
-                    <Text className="text-[#FF0000] text-sm font-semibold mr-2">
-                      (On Hold)
-                    </Text>
+                    <View className="flex flex-row items-center gap-2 mt-0.5">
+                      <FontAwesome6
+                        name="circle-exclamation"
+                        size={18}
+                        color="#FF0000"
+                      />
+                      <Text className="text-[#647B94] text-xs mr-2">
+                        Need Add Hold Reason here
+                      </Text>
+                    </View>
                   )}
                 </View>
 
-                <Text className="text-base font-bold mt-1">
-                  {item.title}. {item.name}
-                </Text>
-                <Text className="text-sm mt-1">{item.time}</Text>
-                {isOnHold && (
-                  <View className="flex flex-row items-center gap-2 mt-0.5">
-                    <FontAwesome6
-                      name="circle-exclamation"
-                      size={18}
-                      color="#FF0000"
-                    />
-                    <Text className="text-[#647B94] text-xs mr-2">
-                      Need Add Hold Reason here
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <View className="flex-row items-center">
-                <View
-                  className={`w-7 h-7 justify-center items-center rounded-full ${
-                    isOnHold
-                      ? "bg-[#FF0000]"
-                      : activeTab === "todo"
-                      ? "bg-yellow-400"
-                      : "bg-[#F3F3F3]"
-                  }`}
-                >
-                  <Text
-                    className={`font-bold ${
-                      isOnHold ? "text-white" : "text-black"
+                <View className="flex-row items-center">
+                  <View
+                    className={`w-7 h-7 justify-center items-center rounded-full ${
+                      isOnHold
+                        ? "bg-[#FF0000]"
+                        : activeTab === "todo"
+                        ? "bg-yellow-400"
+                        : "bg-[#F3F3F3]"
                     }`}
                   >
-                    {item.count}
-                  </Text>
+                    <Text
+                      className={`font-bold ${
+                        isOnHold ? "text-white" : "text-black"
+                      }`}
+                    >
+                      {item.count}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-
-        {activeTab === "todo" && dataToShow.length === 0 && !loading && (
-          <View className="mt-10 items-center">
-            <Ionicons name="document-text-outline" size={60} color="#D1D5DB" />
-            <Text className="text-gray-500 text-lg mt-4">No pending jobs</Text>
-            <Text className="text-gray-400 text-center mt-2">
-              Scan QR codes to assign jobs to your list
-            </Text>
-          </View>
-        )}
-
-        {activeTab === "completed" && dataToShow.length === 0 && !loading && (
-          <View className="mt-10 items-center">
-            <Ionicons name="document-text-outline" size={60} color="#D1D5DB" />
-            <Text className="text-gray-500 text-lg mt-4">
-              No completed jobs
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        // Center-aligned empty state
+        <View className="flex-1 justify-center items-center px-5">
+          <Ionicons name="document-text-outline" size={80} color="#D1D5DB" />
+          {activeTab === "todo" ? (
+            <>
+              <Text className="text-gray-500 text-lg mt-4 text-center">
+                No pending jobs
+              </Text>
+              <Text className="text-gray-400 text-center mt-2 px-10">
+                Scan QR codes to assign jobs to your list
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className="text-gray-500 text-lg mt-4 text-center">
+                No completed jobs
+              </Text>
+              <Text className="text-gray-400 text-center mt-2 px-10">
+                Completed jobs will appear here
+              </Text>
+            </>
+          )}
+        </View>
+      )}
     </View>
   );
 };

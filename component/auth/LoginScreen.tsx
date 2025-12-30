@@ -249,12 +249,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
-            source={require("@/assets/logo.webp")}
+            source={require("@/assets/images/auth/logo.webp")}
             className="w-auto h-[22%]"
             resizeMode="contain"
           />
           <Image
-            source={require("@/assets/truck.webp")}
+            source={require("@/assets/images/auth/truck.webp")}
             className="w-auto h-[60%]"
             resizeMode="contain"
           />

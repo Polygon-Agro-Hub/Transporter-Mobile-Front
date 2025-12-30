@@ -530,9 +530,23 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                   />
                 </View>
 
-                <Text className="text-sm font-medium text-gray-800 text-center">
-                  {action.label}
-                </Text>
+                <View className="flex-row items-center justify-center">
+                  {action.label === "Ongoing" && (
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: "#F7CA21",
+                        marginRight: 6,
+                      }}
+                    />
+                  )}
+
+                  <Text className="text-sm font-medium text-gray-800">
+                    {action.label}
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))}
 
