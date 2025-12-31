@@ -303,23 +303,28 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     }
   };
 
-  const handleNavigationAfterSuccess = () => {
-    // Check if there are remaining orders to process
-    if (remainingOrders && remainingOrders.length > 0) {
-      // There are more orders, navigate back to OrderDetails
-      console.log(
-        "Navigating to OrderDetails with remaining orders:",
-        remainingOrders
-      );
-      navigation.navigate("OrderDetails", {
-        processOrderIds: allProcessOrderIds || remainingOrders,
-      });
-    } else {
-      // No more orders, navigate to Home
-      console.log("No more orders, navigating to Home");
-      navigation.navigate("Home");
-    }
-  };
+  // const handleNavigationAfterSuccess = () => {
+  //   // Check if there are remaining orders to process
+  //   if (remainingOrders && remainingOrders.length > 0) {
+  //     // There are more orders, navigate back to OrderDetails
+  //     console.log(
+  //       "Navigating to OrderDetails with remaining orders:",
+  //       remainingOrders
+  //     );
+  //     navigation.navigate("OrderDetails", {
+  //       processOrderIds: allProcessOrderIds || remainingOrders,
+  //     });
+  //   } else {
+  //     // No more orders, navigate to Home
+  //     console.log("No more orders, navigating to Home");
+  //     navigation.navigate("Home");
+  //   }
+  // };
+    const handleNavigationAfterSuccess = () => {
+  // Always navigate to Jobs screen after successful hold
+  console.log("Navigating to Jobs screen");
+  navigation.navigate("Jobs");
+};
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
@@ -328,27 +333,36 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     handleNavigationAfterSuccess();
   };
 
-  const handleErrorModalClose = () => {
-    setShowErrorModal(false);
-    setSelectedReason(null);
-    setOtherReason("");
+  // const handleErrorModalClose = () => {
+  //   setShowErrorModal(false);
+  //   setSelectedReason(null);
+  //   setOtherReason("");
 
-    // Check if there are remaining orders to process
-    if (remainingOrders && remainingOrders.length > 0) {
-      // There are more orders, navigate back to OrderDetails
-      console.log(
-        "Error modal closed, navigating to OrderDetails with remaining orders:",
-        remainingOrders
-      );
-      navigation.navigate("OrderDetails", {
-        processOrderIds: allProcessOrderIds || remainingOrders,
-      });
-    } else {
-      // No more orders, navigate to Home
-      console.log("Error modal closed, no more orders, navigating to Home");
-      navigation.navigate("Home");
-    }
-  };
+  //   // Check if there are remaining orders to process
+  //   if (remainingOrders && remainingOrders.length > 0) {
+  //     // There are more orders, navigate back to OrderDetails
+  //     console.log(
+  //       "Error modal closed, navigating to OrderDetails with remaining orders:",
+  //       remainingOrders
+  //     );
+  //     navigation.navigate("OrderDetails", {
+  //       processOrderIds: allProcessOrderIds || remainingOrders,
+  //     });
+  //   } else {
+  //     // No more orders, navigate to Home
+  //     console.log("Error modal closed, no more orders, navigating to Home");
+  //     navigation.navigate("Home");
+  //   }
+  // };
+    const handleErrorModalClose = () => {
+  setShowErrorModal(false);
+  setSelectedReason(null);
+  setOtherReason("");
+  
+  // Always navigate to Jobs screen
+  console.log("Error modal closed, navigating to Jobs");
+  navigation.navigate("Jobs");
+};
 
   const getPlaceholderText = (): string => {
     if (selectedLanguage === "En") return "Please mention the reason here...";
