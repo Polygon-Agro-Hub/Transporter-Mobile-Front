@@ -15,11 +15,11 @@ interface CustomHeaderProps {
   title: string;
   showBackButton?: boolean;
   showLanguageSelector?: boolean;
-  showLogoutButton?: boolean; // New prop for logout button
+  showLogoutButton?: boolean;
   navigation?: StackNavigationProp<any>;
   onBackPress?: () => void;
   onLanguageChange?: (language: string) => void;
-  onLogoutPress?: () => void; // New prop for logout handler
+  onLogoutPress?: () => void;
   dark?: boolean;
 }
 
@@ -27,7 +27,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
   title,
   showBackButton = true,
   showLanguageSelector = false,
-  showLogoutButton = false, // Default to false
+  showLogoutButton = false,
   navigation,
   onBackPress,
   onLanguageChange,
@@ -42,6 +42,20 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
     { code: "SI", name: "සිංහල" },
     { code: "TA", name: "தமிழ்" },
   ];
+
+  // Add this function to get display text for language button
+  const getLanguageButtonText = (langCode: string): string => {
+    switch (langCode) {
+      case "EN":
+        return "En";
+      case "SI":
+        return "සිං";
+      case "TA":
+        return "தமி";
+      default:
+        return "En";
+    }
+  };
 
   const handleLanguageSelect = (languageCode: string) => {
     setSelectedLanguage(languageCode);
@@ -108,7 +122,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
                   dark ? "text-white" : "text-black"
                 }`}
               >
-                {selectedLanguage}
+                {getLanguageButtonText(selectedLanguage)}
               </Text>
               <AntDesign
                 name={dropdownVisible ? "up" : "down"}
@@ -158,14 +172,8 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
         {/* LOGOUT BUTTON */}
         {showLogoutButton && (
-          <TouchableOpacity
-            onPress={handleLogoutPress}
-          >
-            <MaterialIcons
-              name="logout"
-              size={24}
-              color="#FF0000"
-            />
+          <TouchableOpacity onPress={handleLogoutPress}>
+            <MaterialIcons name="logout" size={24} color="#FF0000" />
           </TouchableOpacity>
         )}
       </View>

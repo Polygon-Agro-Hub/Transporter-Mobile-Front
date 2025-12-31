@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -61,6 +64,10 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const [successMessage, setSuccessMessage] = useState<
     string | React.ReactNode
   >("");
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const textInputRef = useRef<TextInput>(null);
 
   const languageMap = {
     English: { code: "En" as const, key: "rsnEnglish" as const },
@@ -84,6 +91,25 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchReasons();
+    
+    // Keyboard event listeners
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   const fetchReasons = async () => {
@@ -103,9 +129,18 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       const result = response.data;
 
       if (result.status === "success" && result.data) {
-        const sortedReasons = result.data.sort(
-          (a: Reason, b: Reason) => a.indexNo - b.indexNo
-        );
+        // Sort reasons by indexNo, but always put "Other" at the end
+        const sortedReasons = result.data.sort((a: Reason, b: Reason) => {
+          const aIsOther = a.rsnEnglish.toLowerCase() === "other";
+          const bIsOther = b.rsnEnglish.toLowerCase() === "other";
+          
+          // If a is "Other", it should come after b
+          if (aIsOther && !bIsOther) return 1;
+          // If b is "Other", it should come after a
+          if (!aIsOther && bIsOther) return -1;
+          // If neither or both are "Other", sort by indexNo
+          return a.indexNo - b.indexNo;
+        });
         setReasons(sortedReasons);
       } else {
         Alert.alert("Error", "Failed to fetch reasons");
@@ -321,8 +356,19 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return "காரணத்தை இங்கே குறிப்பிடவும்...";
   };
 
+  const handleTextInputFocus = () => {
+    // Scroll to bottom when text input is focused with more delay to ensure keyboard is shown
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 300);
+  };
+
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView 
+      className="flex-1 bg-white"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
       {/* Header - Using CustomHeader like in HoldOrder */}
       <CustomHeader
         title={
@@ -349,9 +395,15 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         </View>
       ) : (
         <ScrollView
+          ref={scrollViewRef}
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 24 }}
+          contentContainerStyle={{ 
+            paddingHorizontal: 20, 
+            paddingVertical: 24,
+            paddingBottom: keyboardVisible ? 400 : 24 
+          }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Illustration */}
           <View className="items-center mb-6">
@@ -418,18 +470,32 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           {selectedReason && isOtherReason(selectedReason) && (
             <View className="mb-6">
               <TextInput
+                ref={textInputRef}
                 value={otherReason}
-                onChangeText={setOtherReason}
+                onChangeText={(text) => {
+                  setOtherReason(text);
+                  // Keep text input visible while typing
+                  if (keyboardVisible) {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 100);
+                  }
+                }}
+                onFocus={handleTextInputFocus}
                 placeholder={getPlaceholderText()}
                 placeholderTextColor="#767F94"
                 multiline
                 numberOfLines={4}
+                maxLength={250}
                 className="bg-white border border-[#A4AAB7] rounded-xl p-4 text-sm text-gray-900"
                 style={{
                   textAlignVertical: "top",
                   minHeight: 100,
                 }}
               />
+              <Text className="text-xs text-gray-500 mt-2 text-right">
+                {otherReason.length}/250
+              </Text>
             </View>
           )}
 
@@ -545,7 +611,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
