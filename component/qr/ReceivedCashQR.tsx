@@ -20,7 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
-import { RouteProp } from "@react-navigation/native";
+import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 
 type ReceivedCashQRNavigationProp = StackNavigationProp<
@@ -59,6 +59,40 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
+  // Track if screen is focused
+  const isFocusedRef = useRef(true);
+
+  // Handle screen focus/blur
+  useFocusEffect(
+    React.useCallback(() => {
+      // Screen is focused
+      isFocusedRef.current = true;
+      
+      // Reset all states when screen comes into focus
+      setScanned(false);
+      setLoading(false);
+      setShowTimeoutModal(false);
+      setShowErrorModal(false);
+      setShowSuccessModal(false);
+      
+      // Start the timer
+      if (permission?.granted) {
+        startTimeoutTimer();
+      }
+
+      return () => {
+        // Screen is blurred (navigating away)
+        isFocusedRef.current = false;
+        
+        // Clear the timer when leaving the screen
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }, [permission?.granted])
+  );
+
   useEffect(() => {
     // Request permission only if not granted
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -75,8 +109,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   }, []);
 
   useEffect(() => {
-    // Start timer ONLY when camera permission is granted
-    if (permission?.granted && !scanned && !loading) {
+    // Start timer ONLY when camera permission is granted and screen is focused
+    if (permission?.granted && !scanned && !loading && isFocusedRef.current) {
       startTimeoutTimer();
     }
 
@@ -96,10 +130,11 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
     // Set new timer for 15 seconds
     timerRef.current = setTimeout(() => {
-      if (!scanned && !loading) {
-        setModalTitle("Scan Timeout");
+      // Only show timeout if screen is still focused
+      if (!scanned && !loading && isFocusedRef.current) {
+        setModalTitle("Error!");
         setModalMessage(
-          "The QR code is not identified. Please check and try again."
+          "The QR code is not identified.\nPlease check and try again."
         );
         setModalType("error");
         setShowTimeoutModal(true);
@@ -120,8 +155,10 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     setShowErrorModal(false);
     setShowSuccessModal(false);
 
-    // Restart timer
-    startTimeoutTimer();
+    // Restart timer only if screen is focused
+    if (isFocusedRef.current) {
+      startTimeoutTimer();
+    }
   };
 
   const startScanAnimation = () => {
@@ -232,7 +269,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     type: string;
     data: string;
   }) => {
-    if (scanned || loading) return;
+    if (scanned || loading || !isFocusedRef.current) return;
 
     setScanned(true);
 
@@ -246,9 +283,9 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       const officerId = extractOfficerId(data);
 
       if (!officerId) {
-        setModalTitle("Invalid QR Code");
+        setModalTitle("Error!");
         setModalMessage(
-          "The scanned QR code does not contain a valid officer ID."
+          "The QR code is not identified.\nPlease check and try again."
         );
         setModalType("error");
         setShowErrorModal(true);
@@ -259,9 +296,10 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
       // Validate if officer is DCM or DCH
       if (!validateOfficerType(officerId)) {
-        setModalTitle("Unauthorized Officer");
+        // UPDATED: Show specific error message when QR doesn't start with DCM/DCH
+        setModalTitle("Error!");
         setModalMessage(
-          "Only Distribution Centre Manager and Distribution Centre Head officers are authorized to receive cash. Please scan a valid officer QR code."
+          "The QR code is not identified.\nPlease check and try again."
         );
         setModalType("error");
         setShowErrorModal(true);
@@ -442,8 +480,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       {/* Timeout Modal */}
       <AlertModal
         visible={showTimeoutModal}
-        title="Scan Timeout"
-        message="The QR code is not identified. Please check and try again."
+        title="Error!"
+        message="The QR code could not be detected within the time limit.Please check and try again."
         type="error"
         onClose={handleTimeoutModalClose}
         showRescanButton={true}
@@ -455,11 +493,12 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       {/* Error Modal */}
       <AlertModal
         visible={showErrorModal}
-        title={modalTitle}
-        message={modalMessage}
-        type={modalType}
+        title="Error!"
+        message="The QR code is not identified.Please check and try again."
+        type="error"
         onClose={handleErrorModalClose}
-        showRescanButton={false}
+        onRescan={handleTimeoutRescan}
+        showRescanButton={true}
         duration={4000}
         autoClose={true}
       />

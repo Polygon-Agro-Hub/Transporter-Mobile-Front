@@ -215,7 +215,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const motivationalMsg = getMotivationalMessage();
 
   // Build quick actions dynamically
-  // Build quick actions dynamically
   const buildQuickActions = () => {
     const packsCount = getPacksCount();
     const actions = [
