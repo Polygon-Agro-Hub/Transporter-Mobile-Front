@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
+import { useFocusEffect } from "@react-navigation/native";
 
 type AssignOrderQRNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -50,6 +51,40 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
+  // Track if screen is focused
+  const isFocusedRef = useRef(true);
+
+  // Handle screen focus/blur
+  useFocusEffect(
+    React.useCallback(() => {
+      // Screen is focused
+      isFocusedRef.current = true;
+      
+      // Reset all states when screen comes into focus
+      setScanned(false);
+      setLoading(false);
+      setShowTimeoutModal(false);
+      setShowErrorModal(false);
+      setShowSuccessModal(false);
+      
+      // Start the timer
+      if (permission?.granted) {
+        startTimeoutTimer();
+      }
+
+      return () => {
+        // Screen is blurred (navigating away)
+        isFocusedRef.current = false;
+        
+        // Clear the timer when leaving the screen
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }, [permission?.granted])
+  );
+
   useEffect(() => {
     // Request permission only if not granted
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -66,8 +101,8 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    // Start timer ONLY when camera permission is granted
-    if (permission?.granted && !scanned && !loading) {
+    // Start timer ONLY when camera permission is granted and screen is focused
+    if (permission?.granted && !scanned && !loading && isFocusedRef.current) {
       startTimeoutTimer();
     }
 
@@ -87,7 +122,8 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
     // Set new timer for 15 seconds
     timerRef.current = setTimeout(() => {
-      if (!scanned && !loading) {
+      // Only show timeout if screen is still focused
+      if (!scanned && !loading && isFocusedRef.current) {
         setModalTitle("Scan Timeout");
         setModalMessage(
           "The QR code is not identified. Please check and try again."
@@ -112,8 +148,10 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
     setShowErrorModal(false);
     setShowSuccessModal(false);
 
-    // Restart timer
-    startTimeoutTimer();
+    // Restart timer only if screen is focused
+    if (isFocusedRef.current) {
+      startTimeoutTimer();
+    }
   };
 
   const startScanAnimation = () => {
@@ -267,7 +305,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
     type: string;
     data: string;
   }) => {
-    if (scanned || loading) return;
+    if (scanned || loading || !isFocusedRef.current) return;
 
     setScanned(true);
 
