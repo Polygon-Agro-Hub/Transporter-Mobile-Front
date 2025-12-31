@@ -21,6 +21,7 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
 import { RouteProp } from "@react-navigation/native";
+import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 
 type ReceivedCashQRNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -317,9 +318,18 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         const responseData = response.data.data;
         setModalTitle("Successful!");
         setModalMessage(
-          `Rs. ${responseData.totalAmount.toFixed(
-            2
-          )} has been successfully handed over to ${responseData.empId}.`
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+              <Text className="font-bold text-[#000000]">
+                Rs. {formatNumberWithCommas(responseData.totalAmount)}
+              </Text>{" "}
+              has been successfully handed over to{" "}
+              <Text className="font-bold text-[#000000]">
+                {responseData.empId}
+              </Text>
+              .
+            </Text>
+          </View>
         );
         setModalType("success");
         setShowSuccessModal(true);

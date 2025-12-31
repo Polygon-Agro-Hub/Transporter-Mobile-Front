@@ -201,19 +201,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       };
     }
 
-    // If there are orders but all completed
-    if (total > 0 && packsCount === 0) {
-      // Changed from todo === 0 to packsCount === 0
-      return {
-        title: "Great Work!",
-        subtitle: "Click on Close button to end the shift.",
-        bgColor: "#FFF8E1", // Very light yellow
-        showPercentage: false,
-        percentage: 100,
-        style: 1, // First style
-      };
-    }
-
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
     return {
       title: "Way more to go!",

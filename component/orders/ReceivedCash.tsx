@@ -18,6 +18,7 @@ import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
+import LottieView from "lottie-react-native";
 
 type ReceivedCashNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -180,20 +181,26 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
         onBackPress={() => navigation.navigate("Home")}
       />
 
-      <ScrollView
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {cashItems.length === 0 ? (
-          <View className="items-center justify-center py-20">
-            <Text className="text-gray-500 text-base">
-              No received cash found
-            </Text>
-          </View>
-        ) : (
-          <>
+      {cashItems.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <LottieView
+            source={require("@/assets/json/no-data.json")}
+            autoPlay
+            loop
+            style={{ width: 200, height: 200 }}
+          />
+          <Text className="text-[#495D86] text-base mt-4">
+            -- No received cash found --
+          </Text>
+        </View>
+      ) : (
+        <>
+          <ScrollView
+            className="flex-1"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
             {/* Select All / Deselect All */}
             <TouchableOpacity
               onPress={toggleSelectAll}
@@ -220,12 +227,6 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             {/* Cash Items */}
             <View className="px-4 pb-4 mt-2">
               {cashItems.map((item) => (
-                // <TouchableOpacity
-                //   key={item.id}
-                //   onPress={() => toggleItem(item.id)}
-                //   className="flex-row items-center px-4 py-4 bg-white border border-[#A4AAB7] rounded-lg mb-3 shadow-sm"
-                //   activeOpacity={0.7}
-                // >
                 <TouchableOpacity
                   key={item.id}
                   onPress={() => toggleItem(item.id)}
@@ -252,7 +253,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-gray-500 mb-1">
-                      Order ID : {item.invoNo}
+                      Order ID : #{item.invoNo}
                     </Text>
                     <Text className="text-base font-semibold text-black">
                       Rs. {formatNumberWithCommas(item.amount.toFixed(2))}
@@ -261,30 +262,30 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                 </TouchableOpacity>
               ))}
             </View>
-          </>
-        )}
-      </ScrollView>
+          </ScrollView>
 
-      {/* Hand Over Button */}
-      {anySelected && (
-        <View className="px-4 py-4 bg-white ">
-          <TouchableOpacity
-            onPress={handleHandOverClick}
-            className="bg-[#F7CA21] py-3 mx-5 rounded-full flex-row items-center justify-center"
-            activeOpacity={0.8}
-          >
-            <View className="w-6 h-6 items-center justify-center mr-2">
-              <Image
-                source={require("@/assets/images/home/handOver.webp")}
-                style={{ width: 20, height: 20 }}
-                resizeMode="contain"
-              />
+          {/* Hand Over Button */}
+          {anySelected && (
+            <View className="px-4 py-4 bg-white ">
+              <TouchableOpacity
+                onPress={handleHandOverClick}
+                className="bg-[#F7CA21] py-3 mx-5 rounded-full flex-row items-center justify-center"
+                activeOpacity={0.8}
+              >
+                <View className="w-6 h-6 items-center justify-center mr-2">
+                  <Image
+                    source={require("@/assets/images/home/handOver.webp")}
+                    style={{ width: 20, height: 20 }}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text className="text-base font-semibold text-black">
+                  Hand Over
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text className="text-base font-semibold text-black">
-              Hand Over
-            </Text>
-          </TouchableOpacity>
-        </View>
+          )}
+        </>
       )}
     </View>
   );
