@@ -315,7 +315,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
         // Show success modal with data from backend
         const responseData = response.data.data;
-        setModalTitle("Officer Verified!");
+        setModalTitle("Successful!");
         setModalMessage(
           `Rs. ${responseData.totalAmount.toFixed(
             2

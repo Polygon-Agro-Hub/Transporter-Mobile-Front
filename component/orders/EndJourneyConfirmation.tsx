@@ -118,6 +118,12 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
     ? `#${invoiceNumber}`
     : "End of the Journey";
 
+  const handleBackPress = () => {
+    navigation.navigate("OrderDetails", {
+      processOrderIds: allProcessOrderIds || remainingOrders || processOrderIds,
+    });
+  };
+
   return (
     <View className="flex-1 bg-white">
       <ScrollView
@@ -129,6 +135,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           showBackButton={true}
           showLanguageSelector={false}
           navigation={navigation}
+          onBackPress={handleBackPress}
         />
 
         {/* Icon Section */}

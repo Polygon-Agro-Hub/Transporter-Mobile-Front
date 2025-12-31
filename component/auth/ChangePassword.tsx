@@ -234,7 +234,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-24 "
+            className="flex-1 px-6 py-8 rounded-t-3xl shadow-lg -mt-24 "
           >
             <View>
               <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">
@@ -250,7 +250,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-4 px-3 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-4 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <MaterialIcons name="lock" size={26} color="#F7CA21" />
@@ -279,7 +279,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <MaterialIcons name="lock" size={26} color="#F7CA21" />{" "}
@@ -312,7 +312,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
+                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <MaterialIcons name="lock" size={26} color="#F7CA21" />

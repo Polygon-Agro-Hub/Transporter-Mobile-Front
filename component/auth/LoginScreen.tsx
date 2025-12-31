@@ -13,11 +13,7 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
-import {
-  FontAwesome5,
-  FontAwesome6,
-  MaterialIcons,
-} from "@expo/vector-icons";
+import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
@@ -62,8 +58,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const validateEmpIdFormat = (empId: string) => {
     const trimmedEmpId = empId.trim();
 
+    // Check if EMP ID is in uppercase
     if (trimmedEmpId !== trimmedEmpId.toUpperCase()) {
       setEmpIdError("Please enter Employee ID in uppercase letters");
+      return false;
+    }
+
+    // Check if EMP ID starts with "DRV"
+    if (!trimmedEmpId.startsWith("DRV")) {
+      setEmpIdError("Employee ID must start with 'DRV'");
       return false;
     }
 
@@ -108,7 +111,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       return false;
     }
 
-    if (!validateEmpIdFormat(empid)) {
+    const trimmedEmpId = empid.trim();
+
+    // Check if EMP ID starts with "DRV"
+    if (!trimmedEmpId.startsWith("DRV")) {
+      showModal(
+        "Invalid Employee ID",
+        "Please check both Employee ID & Password and retry again",
+        "error"
+      );
       return false;
     }
 
@@ -266,7 +277,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-9 py-8 rounded-t-3xl shadow-lg -mt-20 pt-10"
+            className="flex-1 px-6 py-8 rounded-t-3xl shadow-lg -mt-20 pt-10"
           >
             <View>
               <Text className="text-3xl font-semibold text-center mt-42 mb-2 text-white">
@@ -282,7 +293,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-4 px-3 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-4 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
@@ -306,7 +317,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 px-3 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <MaterialIcons name="lock" size={26} color="#F7CA21" />

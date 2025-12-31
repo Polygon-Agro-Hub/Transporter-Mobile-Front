@@ -309,7 +309,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       if (result.status === "success") {
         const updatedCount = result.data.driverOrdersUpdated || 0;
 
-        setModalTitle("Success!");
+        setModalTitle("Successful!");
         setModalMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">

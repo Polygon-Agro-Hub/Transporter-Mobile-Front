@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
+import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 
 type ReceivedCashNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -193,25 +194,6 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
           </View>
         ) : (
           <>
-            {/* Select All */}
-            {/* <TouchableOpacity
-              onPress={toggleSelectAll}
-              className="flex-row items-center px-4 py-4 border-b border-gray-100"
-            >
-              <View
-                className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 ${
-                  allSelected
-                    ? "bg-black border-black"
-                    : "bg-white border-gray-300"
-                }`}
-              >
-                {allSelected && (
-                  <AntDesign name="check" size={14} color="#fff" />
-                )}
-              </View>
-              <Text className="text-sm font-medium text-black">Select All</Text>
-            </TouchableOpacity> */}
-            {/* Select All / Deselect All */}
             {/* Select All / Deselect All */}
             <TouchableOpacity
               onPress={toggleSelectAll}
@@ -273,7 +255,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                       Order ID : {item.invoNo}
                     </Text>
                     <Text className="text-base font-semibold text-black">
-                      Rs. {item.amount.toFixed(2)}
+                      Rs. {formatNumberWithCommas(item.amount.toFixed(2))}
                     </Text>
                   </View>
                 </TouchableOpacity>

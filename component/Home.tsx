@@ -17,6 +17,7 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
+import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -143,7 +144,8 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const getPacksCount = () => {
     const todoOrders = amountData?.todoOrders || 0;
     const holdOrders = amountData?.holdOrders || 0;
-    return todoOrders + holdOrders;
+    const ongoingOrders = amountData?.onTheWayOrders || 0;
+    return todoOrders + holdOrders + ongoingOrders;
   };
 
   // Check if should show End My Shift button
@@ -493,7 +495,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           <View>
             <Text className="text-sm text-black">Cash Received</Text>
             <Text className="text-xl font-bold text-black">
-              Rs. {Number(cashAmount).toFixed(2)}
+              Rs. {formatNumberWithCommas(cashAmount)}
             </Text>
           </View>
         </View>
