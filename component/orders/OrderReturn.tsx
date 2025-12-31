@@ -18,6 +18,7 @@ import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RouteProp } from "@react-navigation/native";
 import { AlertModal } from "../common/AlertModal";
+import CustomHeader from "../common/CustomHeader";
 
 type OrderReturnNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -40,7 +41,8 @@ interface Reason {
 }
 
 const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
-  const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } = route.params;
+  const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } =
+    route.params;
   console.log("Order Return page orderIds:", orderIds);
   console.log("All Process Order IDs:", allProcessOrderIds);
   console.log("Remaining Orders:", remainingOrders);
@@ -64,6 +66,18 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     English: { code: "En" as const, key: "rsnEnglish" as const },
     Sinhala: { code: "Si" as const, key: "rsnSinhala" as const },
     Tamil: { code: "Ta" as const, key: "rsnTamil" as const },
+  };
+
+  // Map language code to your existing selectedLanguage format
+  const mapLanguageCode = (code: "EN" | "SI" | "TA"): "En" | "Si" | "Ta" => {
+    switch (code) {
+      case "EN":
+        return "En";
+      case "SI":
+        return "Si";
+      case "TA":
+        return "Ta";
+    }
   };
 
   const languages = ["English", "Sinhala", "Tamil"];
@@ -115,6 +129,16 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   const isOtherReason = (reason: Reason): boolean => {
     return reason.rsnEnglish.toLowerCase() === "other";
+  };
+
+  // Handle back navigation to EndJourneyConfirmation
+  const handleBackPress = () => {
+    navigation.navigate("EndJourneyConfirmation", {
+      processOrderIds: orderIds,
+      allProcessOrderIds: allProcessOrderIds,
+      remainingOrders: remainingOrders,
+      onOrderComplete: onOrderComplete,
+    });
   };
 
   const handleSubmit = async () => {
@@ -214,17 +238,17 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       }
     } catch (error: any) {
       console.error("Error submitting return order:", error);
-      
+
       // Get error message from response
       const errorMessage =
         error.response?.data?.message ||
         "Failed to submit return order. Please try again.";
-      
+
       // Check if it's an "already returned" error
-      const isAlreadyReturnedError = 
-        errorMessage.toLowerCase().includes("already") && 
+      const isAlreadyReturnedError =
+        errorMessage.toLowerCase().includes("already") &&
         errorMessage.toLowerCase().includes("return");
-      
+
       if (isAlreadyReturnedError) {
         // Show error modal for already returned orders
         setSuccessMessage(
@@ -248,7 +272,10 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     // Check if there are remaining orders to process
     if (remainingOrders && remainingOrders.length > 0) {
       // There are more orders, navigate back to OrderDetails
-      console.log("Navigating to OrderDetails with remaining orders:", remainingOrders);
+      console.log(
+        "Navigating to OrderDetails with remaining orders:",
+        remainingOrders
+      );
       navigation.navigate("OrderDetails", {
         processOrderIds: allProcessOrderIds || remainingOrders,
       });
@@ -270,11 +297,14 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     setShowErrorModal(false);
     setSelectedReason(null);
     setOtherReason("");
-    
+
     // Check if there are remaining orders to process
     if (remainingOrders && remainingOrders.length > 0) {
       // There are more orders, navigate back to OrderDetails
-      console.log("Error modal closed, navigating to OrderDetails with remaining orders:", remainingOrders);
+      console.log(
+        "Error modal closed, navigating to OrderDetails with remaining orders:",
+        remainingOrders
+      );
       navigation.navigate("OrderDetails", {
         processOrderIds: allProcessOrderIds || remainingOrders,
       });
@@ -293,29 +323,24 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-white px-4 py-4 flex-row items-center justify-between">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="w-10 h-10 items-center justify-center"
-        >
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text className="text-lg font-semibold text-gray-900">
-          {selectedLanguage === "En"
+      {/* Header - Using CustomHeader like in HoldOrder */}
+      <CustomHeader
+        title={
+          selectedLanguage === "En"
             ? "Return Order"
             : selectedLanguage === "Si"
             ? "ඇණවුම ආපසු"
-            : "ஆர்டரைத் திருப்பி"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setShowLanguageMenu(true)}
-          className="bg-[#F6CA20] px-3 py-1.5 rounded-md flex-row items-center"
-        >
-          <Text className="text-sm font-medium mr-1">{selectedLanguage}</Text>
-          <Ionicons name="chevron-down" size={16} color="#000" />
-        </TouchableOpacity>
-      </View>
+            : "ஆர்டரைத் திருப்பி"
+        }
+        navigation={navigation}
+        showBackButton={true}
+        showLanguageSelector={true}
+        onLanguageChange={(langCode: string) => {
+          const mappedLang = mapLanguageCode(langCode as "EN" | "SI" | "TA");
+          setSelectedLanguage(mappedLang);
+        }}
+        onBackPress={handleBackPress} // Add back press handler
+      />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -484,7 +509,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         duration={3000}
       />
 
-      {/* Language Menu Modal */}
+      {/* Language Menu Modal - You can remove this if CustomHeader handles it */}
       <Modal visible={showLanguageMenu} transparent animationType="fade">
         <TouchableOpacity
           activeOpacity={1}

@@ -336,6 +336,14 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           const mappedLang = mapLanguageCode(langCode as "EN" | "SI" | "TA");
           setSelectedLanguage(mappedLang);
         }}
+        onBackPress={() => {
+          navigation.navigate("EndJourneyConfirmation", {
+            processOrderIds: orderIds,
+            allProcessOrderIds: allProcessOrderIds,
+            remainingOrders: remainingOrders,
+            onOrderComplete: onOrderComplete,
+          });
+        }}
       />
 
       {loading ? (

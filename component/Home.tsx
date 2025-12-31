@@ -17,6 +17,7 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
+import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -42,6 +43,7 @@ interface AmountData {
   returnOrders: number;
   returnReceivedOrders: number;
   cashOrders: number;
+  ongoingProcessOrderIds?: number[];
 }
 
 // Default values for amountData
@@ -55,6 +57,7 @@ const defaultAmountData: AmountData = {
   returnOrders: 0,
   returnReceivedOrders: 0,
   cashOrders: 0,
+  ongoingProcessOrderIds: [],
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -141,7 +144,8 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const getPacksCount = () => {
     const todoOrders = amountData?.todoOrders || 0;
     const holdOrders = amountData?.holdOrders || 0;
-    return todoOrders + holdOrders;
+    const ongoingOrders = amountData?.onTheWayOrders || 0;
+    return todoOrders + holdOrders + ongoingOrders;
   };
 
   // Check if should show End My Shift button
@@ -197,19 +201,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       };
     }
 
-    // If there are orders but all completed
-    if (total > 0 && packsCount === 0) {
-      // Changed from todo === 0 to packsCount === 0
-      return {
-        title: "Great Work!",
-        subtitle: "Click on Close button to end the shift.",
-        bgColor: "#FFF8E1", // Very light yellow
-        showPercentage: false,
-        percentage: 100,
-        style: 1, // First style
-      };
-    }
-
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
     return {
       title: "Way more to go!",
@@ -223,6 +214,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   const motivationalMsg = getMotivationalMessage();
 
+  // Build quick actions dynamically
   // Build quick actions dynamically
   const buildQuickActions = () => {
     const packsCount = getPacksCount();
@@ -249,11 +241,24 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     // Add Ongoing if there are "On the way" orders
     if ((amountData?.onTheWayOrders || 0) > 0) {
+      // Check if amountData has ongoingProcessOrderIds from the backend
+      const ongoingProcessOrderIds = amountData?.ongoingProcessOrderIds || [];
+
       actions.push({
         image: ongoingImage,
         label: "Ongoing",
         color: "#FFF2BF",
-        action: () => navigation.navigate("ReturnOrders"),
+        action: () => {
+          if (ongoingProcessOrderIds.length > 0) {
+            // Navigate to OrderDetails with the ongoing process order IDs
+            navigation.navigate("OrderDetails", {
+              processOrderIds: ongoingProcessOrderIds,
+            });
+          } else {
+            // Fallback: Navigate to Jobs if no process order IDs available
+            navigation.navigate("Jobs");
+          }
+        },
       });
     }
 
@@ -354,7 +359,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                   ? { uri: userProfile.profileImg }
                   : require("@/assets/images/home/profile.webp")
               }
-              className="w-14 h-14 rounded-full border-2 border-yellow-400"
+              className="w-10 h-10 rounded-full border-2 border-yellow-400"
               resizeMode="cover"
             />
           </View>
@@ -372,10 +377,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       {showEndShiftButton ? (
         // END MY SHIFT BUTTON SECTION
         <TouchableOpacity
-          className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-col items-center justify-center border"
+          className="mx-4 mt-8 mb-4 rounded-2xl px-5 py-3 flex-col items-center justify-center border"
           style={{
-            backgroundColor: "#FFFBEA", 
-            borderColor: "#F7CA21", 
+            backgroundColor: "#FFFBEA",
+            borderColor: "#F7CA21",
           }}
           onPress={handleEndShiftPress}
           activeOpacity={0.7}
@@ -406,7 +411,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         (motivationalMsg.style === 1 ? (
           // Style 1: Light yellow background with target icon (no percentage)
           <TouchableOpacity
-            className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+            className="mx-4 mt-8 mb-4 rounded-2xl px-5 py-3 flex-row items-center"
             style={{ backgroundColor: motivationalMsg.bgColor }}
           >
             <View className="flex-1">
@@ -428,7 +433,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         ) : (
           // Style 2: Bright yellow background with circular progress
           <TouchableOpacity
-            className="mx-4 mt-8 mb-4 rounded-2xl p-5 flex-row items-center"
+            className="mx-4 mt-8 mb-4 rounded-2xl px-5 py-3 flex-row items-center"
             style={{ backgroundColor: motivationalMsg.bgColor }}
           >
             <View className="flex-1">
@@ -463,7 +468,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
       {/* Box 2: Cash Received box */}
       <TouchableOpacity
-        className="mx-4 mb-6 bg-white rounded-2xl p-5 border border-gray-200 flex-row items-center"
+        className="mx-4 mb-2 bg-white rounded-2xl px-5 py-1 border border-[#EBEBEB] flex-row items-center"
         onPress={handleCashReceivedPress}
         activeOpacity={cashAmount > 0 ? 0.7 : 1}
         disabled={cashAmount === 0}
@@ -475,9 +480,9 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             resizeMode="contain"
           />
           <View>
-            <Text className="text-sm text-gray-500">Cash Received</Text>
-            <Text className="text-xl font-bold text-gray-900">
-              Rs. {cashAmount}
+            <Text className="text-sm text-black">Cash Received</Text>
+            <Text className="text-xl font-bold text-black">
+              Rs. {formatNumberWithCommas(cashAmount)}
             </Text>
           </View>
         </View>
@@ -499,7 +504,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       <View className="px-4 pt-2 pb-6">
         {/* Grid layout with 2 items per row */}
         {actionRows.map((row, rowIndex) => (
-          <View key={rowIndex} className="flex-row justify-between mb-6">
+          <View key={rowIndex} className="flex-row justify-between mb-4">
             {row.map((action, index) => (
               <TouchableOpacity
                 key={index}
@@ -511,7 +516,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                     action.label === "Ongoing" ? action.color : "#fff",
                   borderRadius: 12,
                   padding: 16,
-                  marginBottom: 6,
+                  marginBottom: 2,
                   alignItems: "center",
                   justifyContent: "center",
                   shadowColor: "#000",
@@ -522,7 +527,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                 }}
               >
                 {/* Image Container */}
-                <View className="w-24 h-24 rounded-lg justify-center items-center mb-3 overflow-hidden">
+                <View className="w-32 h-32 rounded-lg justify-center items-center mb-3 overflow-hidden">
                   <Image
                     source={action.image}
                     style={{ width: "100%", height: "100%" }}
@@ -530,9 +535,23 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                   />
                 </View>
 
-                <Text className="text-sm font-medium text-gray-800 text-center">
-                  {action.label}
-                </Text>
+                <View className="flex-row items-center justify-center">
+                  {action.label === "Ongoing" && (
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: "#F7CA21",
+                        marginRight: 6,
+                      }}
+                    />
+                  )}
+
+                  <Text className="text-sm font-medium text-gray-800">
+                    {action.label}
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))}
 

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Transporter",
-    "slug": "Transporter",
+    "name": "GoVi-Transport",
+    "slug": "GoVi-Transport",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
@@ -14,7 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splash.png",
+        "foregroundImage": "./assets/images/app-icon.png",
         "backgroundColor": "#ffffff",
         "softwareKeyboardLayoutMode": "pan"
       },
