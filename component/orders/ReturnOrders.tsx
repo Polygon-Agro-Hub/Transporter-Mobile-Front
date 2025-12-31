@@ -102,6 +102,8 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         }
       );
 
+      console.log("response dataa", response.data);
+
       if (response.data.status === "success") {
         setReturnOrders(response.data.data.returnOrders);
       } else {
@@ -163,6 +165,21 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
       })}`;
     }
     return "";
+  };
+
+  // Function to get the display text for return reason
+  const getReturnReasonDisplay = (returnDetails: ReturnOrder['returnDetails']) => {
+    // Check if the reason is "Other" (case insensitive)
+    const isOtherReason = returnDetails.reasonEnglish?.toLowerCase() === "other" || 
+                          returnDetails.reason?.toLowerCase() === "other";
+    
+    // If it's "Other" and there's a note, display the note
+    if (isOtherReason && returnDetails.note && returnDetails.note.trim()) {
+      return returnDetails.note;
+    }
+    
+    // Otherwise, display the regular reason
+    return returnDetails.reason || "No reason specified";
   };
 
   const handleCardPress = (order: ReturnOrder) => {
@@ -255,8 +272,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
             {returnOrders.map((order, index) => (
               <TouchableOpacity
                 key={`${order.driverOrderId}-${index}`}
-                className="bg-white rounded-xl p-4 mb-4 border border-[#A4AAB7]
-                "
+                className="bg-white rounded-xl p-4 mb-4 border border-[#A4AAB7]"
                 activeOpacity={0.7}
                 onPress={() => handleCardPress(order)}
                 style={{
@@ -291,8 +307,9 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                     className={`ml-2 flex-1 text-sm ${getStatusColor(
                       order.returnDetails.reason
                     )}`}
+                    numberOfLines={2}
                   >
-                    {order.returnDetails.reason}
+                    {getReturnReasonDisplay(order.returnDetails)}
                   </Text>
                 </View>
 

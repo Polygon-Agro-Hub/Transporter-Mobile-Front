@@ -23,6 +23,15 @@ interface JobsScreenProp {
   navigation: JobsScreenNavigationProp;
 }
 
+interface HoldReason {
+  driverOrderId: number;
+  holdReasonId: number;
+  indexNo: number;
+  rsnEnglish: string;
+  rsnSinhala: string;
+  rsnTamil: string;
+}
+
 interface DriverOrder {
   driverOrderId: number;
   processOrderId: number;
@@ -40,6 +49,7 @@ interface DriverOrder {
   sequenceNumber: string;
   allProcessOrderIds?: number[];
   processOrderIds?: number[];
+  holdReasons?: HoldReason[] | null;
 }
 
 interface OrderStatistics {
@@ -136,6 +146,26 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchDriverOrders();
+  };
+
+  // Helper function to get hold reason text (can be made language-aware)
+  const getHoldReasonText = (orderData: DriverOrder): string => {
+    if (!orderData.holdReasons || orderData.holdReasons.length === 0) {
+      return "Hold reason not specified";
+    }
+
+    // Get the first hold reason (or you can concatenate multiple reasons)
+    const reason = orderData.holdReasons[0];
+    
+    // Return English reason by default
+    // You can make this dynamic based on user's language preference
+    return reason.rsnEnglish || "Hold reason not specified";
+    
+    // For multiple languages, you could do:
+    // const language = await AsyncStorage.getItem("language");
+    // if (language === "si") return reason.rsnSinhala;
+    // if (language === "ta") return reason.rsnTamil;
+    // return reason.rsnEnglish;
   };
 
   // Helper function to get schedule time priority
@@ -412,6 +442,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           {dataToShow.map((item, index) => {
             const isOnHold = item.status === "Hold";
             const isOnTheWay = item.status === "On the way";
+            const holdReasonText = isOnHold ? getHoldReasonText(item.orderData) : "";
 
             return (
               <TouchableOpacity
@@ -463,8 +494,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                         size={18}
                         color="#FF0000"
                       />
-                      <Text className="text-[#647B94] text-xs mr-2">
-                        Need Add Hold Reason here
+                      <Text className="text-[#647B94] text-xs mr-2" numberOfLines={2}>
+                        {holdReasonText}
                       </Text>
                     </View>
                   )}
