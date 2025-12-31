@@ -15,7 +15,7 @@ import { environment } from "@/environment/environment";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 
-const splashscreen = require("@/assets/images/splash.png");
+const splashscreen = require("@/assets/images/splash.webp");
 
 type SplashNavigationProp = NativeStackNavigationProp<
   RootStackParamList,

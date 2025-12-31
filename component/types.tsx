@@ -12,12 +12,6 @@ export type RootStackParamList = {
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
   ReceivedCashQR: { amount: number; selectedCount: number };
-  VerifyOrderQR: {
-    invNo: string;
-    orderId: number;
-    allOrderIds: number[];
-    totalToScan: number;
-  };
   ReturnOrderQR: {
     invoiceNumber: string;
     orderId: number;

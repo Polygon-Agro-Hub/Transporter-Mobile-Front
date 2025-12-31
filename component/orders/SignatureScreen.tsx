@@ -187,6 +187,16 @@ export default function SignatureScreen({
     onOrderComplete,
   } = route.params;
 
+  // Handle back navigation to EndJourneyConfirmation
+  const handleBackPress = () => {
+    navigation.navigate("EndJourneyConfirmation", {
+      processOrderIds: processOrderIds,
+      allProcessOrderIds: allProcessOrderIds,
+      remainingOrders: remainingOrders,
+      onOrderComplete: onOrderComplete,
+    });
+  };
+
   // Use useFocusEffect to handle orientation changes
   useFocusEffect(
     React.useCallback(() => {
@@ -475,9 +485,6 @@ export default function SignatureScreen({
     }
   `;
 
-  // Calculate remaining orders count
-  const remainingCount = remainingOrders?.length || 0;
-
   return (
     <View className="flex-1 bg-white">
       <CustomHeader
@@ -485,6 +492,7 @@ export default function SignatureScreen({
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
+        onBackPress={handleBackPress} 
       />
 
       {/* SIGNATURE AREA */}
@@ -539,7 +547,7 @@ export default function SignatureScreen({
       {/* BOTTOM BUTTONS */}
       <View className="flex-row justify-between items-center px-4 pb-4">
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleBackPress} 
           className="flex-row items-center bg-white border border-gray-300 px-6 py-3 rounded-full"
           disabled={loading}
         >

@@ -16,6 +16,7 @@ import {
   MaterialIcons,
   FontAwesome5,
   FontAwesome6,
+  FontAwesome,
 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
@@ -25,6 +26,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
+import { formatScheduleTime } from "@/utils/formatScheduleTime";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -70,6 +72,7 @@ interface OrderItem {
   orderId: number;
   sheduleTime: string;
   fullName: string;
+  title: string;
   phonecode1: string;
   phone1: string;
   phonecode2: string | null;
@@ -85,6 +88,59 @@ interface OrderDetailsResponse {
   user: UserDetails;
   orders: OrderItem[];
 }
+
+// Helper function to format address with colored labels
+const formatAddressWithLabels = (address: string) => {
+  if (!address || address === "Address not specified") {
+    return address;
+  }
+
+  // Split the address by comma
+  const parts = address.split(", ");
+
+  // Define label mappings
+  const labelMappings: { [key: string]: string } = {
+    "B.No": "B.No :",
+    "B.Name": "B.Name :",
+    "Unit.No": "F.No :", // Changed from Unit.No to F.No based on your requirement
+    "Floor.No": "Floor.No :",
+    "House.No": "House.No :",
+    Street: "Street :",
+    City: "City :",
+  };
+
+  // Process each part
+  return parts.map((part, index) => {
+    // Find the label in the part
+    for (const [key, label] of Object.entries(labelMappings)) {
+      if (part.startsWith(key)) {
+        // Extract the value after the label
+        const value = part.substring(key.length).trim();
+
+        // Check if value starts with ":" and remove it
+        const cleanValue = value.startsWith(":")
+          ? value.substring(1).trim()
+          : value;
+
+        return (
+          <Text key={index}>
+            <Text style={{ color: "#5E6982" }}>{label} </Text>
+            <Text style={{ color: "#000000" }}>{cleanValue}</Text>
+            {index < parts.length - 1 ? ", " : ""}
+          </Text>
+        );
+      }
+    }
+
+    // If no label found, return as black text
+    return (
+      <Text key={index} style={{ color: "#000000" }}>
+        {part}
+        {index < parts.length - 1 ? ", " : ""}
+      </Text>
+    );
+  });
+};
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const { processOrderIds = [] } = route.params;
@@ -159,21 +215,90 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           throw new Error("No data found");
         }
 
+        // Helper function to get sort priority for schedule time
+        const getScheduleTimePriority = (time: string) => {
+          if (!time) return 999; // Put undefined times at the end
+
+          const lowerTime = time.toLowerCase();
+
+          // Check for "8:00 AM – 2:00 PM" or similar morning/early afternoon slots
+          if (
+            lowerTime.includes("8:00") ||
+            lowerTime.includes("8 am") ||
+            lowerTime.includes("8:00am") ||
+            lowerTime.includes("8:00 am") ||
+            lowerTime.includes("morning") ||
+            lowerTime.includes("early")
+          ) {
+            return 1; // Highest priority
+          }
+
+          // Check for "2:00 PM – 8:00 PM" or similar afternoon/evening slots
+          if (
+            lowerTime.includes("2:00") ||
+            lowerTime.includes("2 pm") ||
+            lowerTime.includes("2:00pm") ||
+            lowerTime.includes("2:00 pm") ||
+            lowerTime.includes("afternoon") ||
+            lowerTime.includes("evening") ||
+            lowerTime.includes("late")
+          ) {
+            return 2; // Second priority
+          }
+
+          // For other time formats, try to parse and prioritize earlier times
+          const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
+          if (match) {
+            let hour = parseInt(match[1], 10);
+            const period = match[2].toUpperCase();
+
+            if (period === "PM" && hour !== 12) hour += 12;
+            if (period === "AM" && hour === 12) hour = 0;
+
+            return hour; // Earlier hours get lower numbers (higher priority)
+          }
+
+          return 999; // Default: put at the end
+        };
+
+        // Sort orders by schedule time priority
+        const sortedOrders = [...data.orders].sort((a, b) => {
+          const priorityA = getScheduleTimePriority(a.sheduleTime);
+          const priorityB = getScheduleTimePriority(b.sheduleTime);
+
+          // First sort by time priority
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+          }
+
+          // If same priority, sort by order ID as tie-breaker
+          return a.orderId - b.orderId;
+        });
+
+        console.log(
+          "Sorted orders by schedule time:",
+          sortedOrders.map((order) => ({
+            orderId: order.orderId,
+            scheduleTime: order.sheduleTime,
+            priority: getScheduleTimePriority(order.sheduleTime),
+          }))
+        );
+
         setUserDetails(data.user);
-        setOrders(data.orders);
+        setOrders(sortedOrders); // Use sorted orders instead of original
 
         // Debug: Log each order's status
         console.log("Orders with status:");
-        data.orders.forEach((order, index) => {
+        sortedOrders.forEach((order, index) => {
           console.log(
             `Order ${index + 1}: ID=${order.processOrder.id}, Status=${
               order.processOrder.status
-            }`
+            }, Time=${order.sheduleTime}`
           );
         });
 
         // Initialize completed orders based on status
-        const completed = data.orders
+        const completed = sortedOrders
           .filter(
             (order) =>
               order.processOrder.status.toLowerCase() === "completed" ||
@@ -185,7 +310,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         setCompletedOrders(completed);
 
         // Show continue button if there are pending orders
-        const pendingOrders = data.orders.filter(
+        const pendingOrders = sortedOrders.filter(
           (order) => !completed.includes(order.processOrder.id)
         );
 
@@ -293,19 +418,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) return "Rs. 0.00";
     return `Rs. ${numAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
-  };
-
-  const formatPaymentMethod = (paymentMethod: string) => {
-    switch (paymentMethod?.toLowerCase()) {
-      case "cash":
-        return "Cash";
-      case "card":
-        return "Card";
-      case "online":
-        return "Online";
-      default:
-        return paymentMethod || "Cash";
-    }
   };
 
   const getFullName = () => {
@@ -438,7 +550,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             processOrderIds: [processOrderId],
             allProcessOrderIds: processOrderIds,
             remainingOrders: remainingOrders,
-            orderData: currentOrder,
+            orderData: currentOrder, // Pass the entire order data
             onOrderComplete: (completedId: number) => {
               handleOrderComplete(completedId);
             },
@@ -496,7 +608,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             processOrderIds: [processOrderId],
             allProcessOrderIds: processOrderIds,
             remainingOrders: remainingOrders,
-            orderData: currentOrder,
+            orderData: currentOrder, // Pass the entire order data
             onOrderComplete: (completedId: number) => {
               handleOrderComplete(completedId);
             },
@@ -576,6 +688,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: processOrderIds,
     });
+  };
+
+  const hasOnTheWayOrder = () => {
+    return orders.some(
+      (order) => order.processOrder.status.toLowerCase() === "on the way"
+    );
   };
 
   if (loading) {
@@ -665,11 +783,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             <Image
               source={{ uri: userDetails.image }}
               className="w-20 h-20 rounded-full"
-              defaultSource={require("@/assets/ProfileCustomer.webp")}
+              defaultSource={require("@/assets/images/auth/profilecustomer.webp")}
             />
           ) : (
             <Image
-              source={require("@/assets/ProfileCustomer.webp")}
+              source={require("@/assets/images/auth/profilecustomer.webp")}
               className="w-20 h-20 rounded-full"
             />
           )}
@@ -679,29 +797,30 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
           {userDetails.address &&
             userDetails.address !== "Address not specified" && (
-              <View className="flex-row mt-1 max-w-[90%]">
-                <Ionicons name="location-sharp" size={18} color="black" />
-                <Text className="ml-1 text-base max-w-[90%]">
-                  {userDetails.address}
+              <View className="flex-row mt-1 max-w-[90%] justify-center text-center">
+                <Text className="text-base max-w-[90%] text-center">
+                  <Ionicons name="location-sharp" size={18} color="black" />
+                  {formatAddressWithLabels(userDetails.address)}
                 </Text>
+                =
               </View>
             )}
         </View>
 
         {/* Stats Cards */}
         <View className="flex-row justify-between mt-6">
-          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
-            <Text className="mt-2 text-lg font-semibold">
+            <Text className="mt-2 text-md font-semibold">
               {getTotalPackCount()}{" "}
               {getTotalPackCount() === 1 ? "Pack" : "Packs"}
             </Text>
           </View>
 
-          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-5 items-center">
+          <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
-            <Text className="mt-2 text-lg font-semibold">
-              {getScheduleTimeDisplay()}
+            <Text className="mt-2 text-md font-semibold">
+              {formatScheduleTime(getScheduleTimeDisplay())}
             </Text>
           </View>
         </View>
@@ -716,16 +835,31 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             const isCompleted =
               normalizedStatus === "completed" || normalizedStatus === "return";
             const isTodo = normalizedStatus === "todo";
+            const isOnTheWay = normalizedStatus === "on the way";
+            const isHold = normalizedStatus === "hold";
+
             const buttonText = getJourneyButtonText(status);
             const isButtonActive = isButtonEnabled(status);
+
+            // Check if we should disable this button
+            // Disable if:
+            // 1. This is not the "On the way" order AND there is an "On the way" order
+            // 2. OR if this is already completed
+            // 3. OR if button is not active for other reasons
+            const shouldDisableButton =
+              (!isOnTheWay && hasOnTheWayOrder()) ||
+              isCompleted ||
+              !isButtonActive;
 
             console.log(`Rendering order ${index + 1}:`);
             console.log(`  Status: ${status}`);
             console.log(`  Normalized: ${normalizedStatus}`);
+            console.log(`  Is On the way: ${isOnTheWay}`);
+            console.log(
+              `  Has On the way order in list: ${hasOnTheWayOrder()}`
+            );
             console.log(`  Button Text: "${buttonText}"`);
-            console.log(`  Button Active: ${isButtonActive}`);
-            console.log(`  Is Completed: ${isCompleted}`);
-            console.log(`  Is Todo: ${isTodo}`);
+            console.log(`  Should Disable: ${shouldDisableButton}`);
 
             return (
               <View
@@ -740,7 +874,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       #{order.processOrder.invNo || "N/A"}
                     </Text>
                     <Text className="font-bold text-base mt-2">
-                      {order.fullName || "Customer"}
+                      {order.title || ""}. {order.fullName || "Customer"}
                     </Text>
                   </View>
                 </View>
@@ -750,15 +884,15 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <View className="flex-row items-center mb-2">
                     <Ionicons name="time" size={16} color="#000" />
                     <Text className="ml-2 text-sm text-black">
-                      {order.sheduleTime || "Not Scheduled"}
+                      {formatScheduleTime(order.sheduleTime)}
                     </Text>
                   </View>
 
                   {/* Payment Info */}
                   <View className="flex-row items-center mb-4">
                     {order.processOrder.isPaid ? (
-                      <FontAwesome6
-                        name="circle-check"
+                      <FontAwesome
+                        name="check-circle"
                         size={16}
                         color="#F7CA21"
                       />
@@ -769,12 +903,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       {order.processOrder.isPaid ? (
                         <Text className="text-black">Already Paid!</Text>
                       ) : (
-                        <Text>
-                          {formatPaymentMethod(
-                            order.processOrder.paymentMethod
-                          )}{" "}
-                          : {formatCurrency(order.pricing)}
-                        </Text>
+                        <Text>{formatCurrency(order.pricing)}</Text>
                       )}
                     </Text>
                   </View>
@@ -828,22 +957,22 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Journey Button - Only show if there's a button text */}
+                {/* Journey Button */}
                 <TouchableOpacity
                   className={`rounded-full py-3 items-center ${
-                    isButtonActive ? "bg-[#F7CA21]" : "bg-[#D1D5DB]"
+                    !shouldDisableButton ? "bg-[#F7CA21]" : "bg-[#D1D5DB]"
                   }`}
                   style={{
                     shadowColor: "#000",
                     shadowOffset: { width: 2, height: 2 },
-                    shadowOpacity: isButtonActive ? 0.2 : 0,
+                    shadowOpacity: !shouldDisableButton ? 0.2 : 0,
                     shadowRadius: 5,
-                    elevation: isButtonActive ? 4 : 0,
+                    elevation: !shouldDisableButton ? 4 : 0,
                   }}
                   onPress={() => handleStartJourneyForOrder(order.orderId)}
                   disabled={
                     startingJourney === order.orderId.toString() ||
-                    !isButtonActive
+                    shouldDisableButton // Use shouldDisableButton here
                   }
                 >
                   {startingJourney === order.orderId.toString() ? (
@@ -856,9 +985,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                 {/* Info Text for same location orders */}
                 {findOrdersWithSameLocation(order.orderId).length > 1 && (
                   <Text className="text-xs text-gray-500 text-center mt-2">
-                    This order shares location with{" "}
-                    {findOrdersWithSameLocation(order.orderId).length - 1} other
-                    order(s)
+                    All orders are for exact same location
                   </Text>
                 )}
               </View>

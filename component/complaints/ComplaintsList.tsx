@@ -220,7 +220,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 >
                   {/* Complaint ID */}
                   <Text className="text-sm font-semibold text-gray-900 mb-1">
-                    {complaint.refNo}
+                    #{complaint.refNo}
                   </Text>
 
                   {/* Title */}

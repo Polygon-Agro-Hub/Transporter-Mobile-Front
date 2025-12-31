@@ -359,7 +359,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
 
             {profileData?.createdAt && (
-              <Text className="text-md font-bold text-black mt-2">
+              <Text className="text-md font-bold text-black mt-2 italic">
                 Joined {formatJoinedDate(profileData.createdAt)}
               </Text>
             )}
