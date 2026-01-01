@@ -23,7 +23,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { 
   selectAuthToken, 
   logoutUser, 
-  updateProfileImage // Import the update action
+  updateProfileImage
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
@@ -48,7 +48,44 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [uploading, setUploading] = useState(false);
 
   const token = useSelector(selectAuthToken);
-  const dispatch = useDispatch(); // Get dispatch function
+  const dispatch = useDispatch();
+
+  // Request permissions based on platform
+  const requestPermissions = async () => {
+    if (Platform.OS === 'android') {
+      // For Android, check if device is running Android 13+ (API 33)
+      const platformVersion = typeof Platform.Version === 'string' 
+        ? parseInt(Platform.Version, 10) 
+        : Platform.Version;
+      
+      if (platformVersion >= 33) {
+        // Android 13+ - Use the photo picker which doesn't need permission
+        // But we should still check for gallery access
+        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          return newStatus === 'granted';
+        }
+        return true;
+      } else {
+        // Android 12 and below - Need READ_EXTERNAL_STORAGE permission
+        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          return newStatus === 'granted';
+        }
+        return true;
+      }
+    } else {
+      // iOS - Request photo library permission
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        return newStatus === 'granted';
+      }
+      return true;
+    }
+  };
 
   const formatJoinedDate = (dateString: string) => {
     if (!dateString) return "";
@@ -111,12 +148,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const handleImageUpload = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const hasPermission = await requestPermissions();
       
-      if (status !== 'granted') {
+      if (!hasPermission) {
         Alert.alert(
           'Permission Required',
-          'Please allow access to your photo library to update your profile picture.',
+          Platform.OS === 'ios' 
+            ? 'Please allow access to your photo library to update your profile picture.'
+            : 'Please allow access to your photos to update your profile picture.',
           [{ text: 'OK' }]
         );
         return;
@@ -127,6 +166,52 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        // For Android, we can specify to use the system picker
+        presentationStyle: ImagePicker.UIImagePickerPresentationStyle.POPOVER,
+        allowsMultipleSelection: false,
+        // Android-specific options
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        
+        Alert.alert(
+          "Update Profile Picture",
+          "Do you want to update your profile picture?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Upload", 
+              onPress: () => uploadProfileImage(selectedImage) 
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert("Error", "Failed to open image picker");
+    }
+  };
+
+  // Alternative approach using MediaLibrary API for Android Photo Picker
+  const handleImageUploadAndroidPicker = async () => {
+    if (Platform.OS !== 'android') {
+      handleImageUpload();
+      return;
+    }
+
+    try {
+      // For Android, we can use launchImageLibraryAsync which uses the system picker
+      // The system picker on Android 13+ doesn't require READ_MEDIA_IMAGES permission
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        // These options help use the system picker
+        exif: false,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -338,7 +423,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               )}
 
               <TouchableOpacity
-                onPress={handleImageUpload}
+                onPress={handleImageUploadAndroidPicker} // Use the Android-optimized version
                 disabled={uploading}
                 style={{
                   position: "absolute",
