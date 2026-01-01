@@ -44,6 +44,7 @@ interface AmountData {
   returnReceivedOrders: number;
   cashOrders: number;
   ongoingProcessOrderIds?: number[];
+  uniqueLocationsCount?: number; // NEW: Add this field to get unique locations from backend
 }
 
 // Default values for amountData
@@ -58,6 +59,7 @@ const defaultAmountData: AmountData = {
   returnReceivedOrders: 0,
   cashOrders: 0,
   ongoingProcessOrderIds: [],
+  uniqueLocationsCount: 0, // NEW: Default value
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -148,6 +150,13 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     return todoOrders + holdOrders + ongoingOrders;
   };
 
+  // NEW: Function to get unique locations count
+  const getUniqueLocationsCount = () => {
+    // Use the uniqueLocationsCount from backend if available
+    // This should be calculated on the backend by counting distinct delivery locations
+    return amountData?.uniqueLocationsCount || 0;
+  };
+
   // Check if should show End My Shift button
   const shouldShowEndShiftButton = () => {
     const packsCount = getPacksCount();
@@ -184,7 +193,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     const total = amountData?.totalOrders || 0;
     const completed = amountData?.completedOrders || 0;
-    const packsCount = getPacksCount(); // Use packsCount here
+    const locationsCount = getUniqueLocationsCount(); // CHANGED: Use unique locations count
 
     const completionRate =
       total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -202,9 +211,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     }
 
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
+    // CHANGED: Use locationsCount instead of packsCount in subtitle
     return {
       title: "Way more to go!",
-      subtitle: `${packsCount} Location${packsCount > 1 ? "s" : ""} to go..`, // Use packsCount
+      subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
       bgColor: "#F7CA21", // Bright yellow like in the image
       showPercentage: true,
       percentage: completionRate,

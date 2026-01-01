@@ -397,9 +397,10 @@ export default function SignatureScreen({
 
     // ALWAYS navigate back to OrderDetails, never to Home
     console.log("✓ Navigating back to OrderDetails");
-    navigation.navigate("OrderDetails", {
-      processOrderIds: allProcessOrderIds,
-    });
+    // navigation.navigate("OrderDetails", {
+    //   processOrderIds: allProcessOrderIds,
+    // });
+    navigation.navigate("Jobs");
   };
 
   const handleSuccessModalClose = () => {
