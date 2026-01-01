@@ -297,148 +297,324 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       setLoading(false);
     }
   };
+const handleBarCodeScanned = async ({
+  type,
+  data,
+}: {
+  type: string;
+  data: string;
+}) => {
+  if (scanned || loading || !isFocusedRef.current) return;
 
-  const handleBarCodeScanned = async ({
-    type,
-    data,
-  }: {
-    type: string;
-    data: string;
-  }) => {
-    if (scanned || loading || !isFocusedRef.current) return;
+  setScanned(true);
 
-    setScanned(true);
+  // Clear the timeout timer when scan is detected
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+  }
 
-    // Clear the timeout timer when scan is detected
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  try {
+    // Extract invoice number from QR
+    const invoiceNo = extractInvoiceNumber(data);
+
+    if (!invoiceNo) {
+      setModalTitle("Error!");
+      setModalMessage(
+        "The QR code is not identified.\nPlease check and try again."
+      );
+      setShowRescanButton(true);
+      setModalType("error");
+      setShowErrorModal(true);
+      return;
     }
 
-    try {
-      // Extract invoice number from QR
-      const invoiceNo = extractInvoiceNumber(data);
+    console.log("Extracted invoice:", invoiceNo);
 
-      if (!invoiceNo) {
-        setModalTitle("Error!");
-        setModalMessage(
-          "The QR code is not identified.\nPlease check and try again."
-        );
-        setShowRescanButton(true);
-        setModalType("error");
-        setShowErrorModal(true);
-        return;
-      }
+    // Call API to assign order
+    const result = await assignOrderToDriver(invoiceNo);
 
-      console.log("Extracted invoice:", invoiceNo);
-
-      // Call API to assign order
-      const result = await assignOrderToDriver(invoiceNo);
-
-      if (result.status === "success") {
-        setModalTitle("Successful!");
-        // Create rich text with bold invoice number
-        setModalMessage(
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
-              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
-              been successfully assigned to you.
-            </Text>
-          </View>
-        );
-        setModalType("success");
-        setShowSuccessModal(true);
-      } else {
-        // Set modal title based on the specific error message from backend
-        let title = "Error";
-        const message = result.message || "Failed to assign order";
-
-        if (message.includes("already in your target list")) {
-          title = "Already got this!";
-        } else if (
-          message.includes("already been assigned to another driver")
-        ) {
-          title = "Order Unavailable!";
-        } else if (
-          message.includes("Still processing this order") ||
-          message.includes("Scanning will be available")
-        ) {
-          title = "Order Not Ready!";
-        }
-
-        setModalTitle(title);
-        setModalMessage(message);
-        setModalType("error");
-        setShowErrorModal(true);
-      }
-    } catch (error: any) {
-      console.error("Error processing QR scan:", error);
-
-      // Handle specific error cases
+    if (result.status === "success") {
+      setModalTitle("Successful!");
+      setModalMessage(
+        <View className="items-center">
+          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+            Order:{" "}
+            <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
+            been successfully assigned to you.
+          </Text>
+        </View>
+      );
+      setModalType("success");
+      setShowSuccessModal(true);
+    } else {
+      // Handle non-success responses from API
       let title = "Error";
-      let message = error.message || "Failed to process QR code";
-      let type: "error" | "success" = "error";
+      const message = result.message || "Failed to assign order";
 
-      // Set modal title based on the specific error message from backend
       if (message.includes("already in your target list")) {
         title = "Already got this!";
-      } else if (message.includes("already been assigned to another driver")) {
+      } else if (
+        message.includes("already been collected") ||
+        message.includes("already been assigned to another driver")
+      ) {
         title = "Order Unavailable!";
       } else if (
         message.includes("Still processing this order") ||
-        message.includes("Scanning will be available") ||
-        (error.response?.data?.message &&
-          error.response.data.message.includes("Still processing"))
+        message.includes("Scanning will be available")
       ) {
         title = "Order Not Ready!";
-        message =
-          "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
-      } else if (
-        message.includes("not found") ||
-        message.includes("Invoice number not found")
-      ) {
-        title = "Invalid Invoice!";
-        message = "The invoice number was not found. Please check the QR code.";
-      } else if (
-        message.includes("Network error") ||
-        error.message?.includes("Network Error")
-      ) {
-        title = "Network Error";
-        message = "Please check your internet connection and try again.";
-      } else if (message.includes("Unauthorized")) {
-        title = "Session Expired";
-        message = "Please login again to continue.";
-      } else if (error.status === 404 || error.response?.status === 404) {
-        title = "Server Error";
-        message = "The server endpoint was not found. Please contact support.";
-      } else if (error.status === 500 || error.response?.status === 500) {
-        title = "Server Error";
-        message = "Internal server error. Please try again later.";
-      } else if (error.response?.status === 400) {
-        // Handle 400 errors which might include the "Still processing" message
-        if (
-          error.response?.data?.message &&
-          error.response.data.message.includes("Still processing")
-        ) {
-          title = "Order Not Ready!";
-          message = error.response.data.message;
-        } else {
-          title = "Invalid Request";
-          message =
-            error.response?.data?.message ||
-            "Invalid request. Please try again.";
-        }
-      } else if (error.status === 400) {
-        title = "Invalid Request";
-        message = error.message || "Invalid request. Please try again.";
       }
 
       setModalTitle(title);
       setModalMessage(message);
-      setModalType(type);
+      setModalType("error");
       setShowErrorModal(true);
     }
-  };
+  } catch (error: any) {
+    console.error("Error processing QR scan:", error);
+
+    let title = "Error";
+    let message = error.message || "Failed to process QR code";
+    let type: "error" | "success" = "error";
+
+    // Get the actual error message from the response
+    const errorMessage = error.response?.data?.message || error.message || message;
+    const statusCode = error.response?.status || error.status;
+
+    console.log("Error details:", { errorMessage, statusCode });
+
+    // PRIORITY 1: Check if order already assigned to SAME driver (409 status)
+    if (
+      statusCode === 409 &&
+      (errorMessage.includes("already in your target list") ||
+       errorMessage.toLowerCase().includes("already got"))
+    ) {
+      title = "Already got this!";
+      message = errorMessage;
+    }
+    // PRIORITY 2: Check if order assigned to ANOTHER driver (409 status)
+    else if (
+      statusCode === 409 &&
+      (errorMessage.includes("already been collected") ||
+       errorMessage.includes("already been assigned to another driver") ||
+       errorMessage.toLowerCase().includes("collected by another officer") ||
+       errorMessage.toLowerCase().includes("assigned to another") ||
+       errorMessage.toLowerCase().includes("officer id:"))
+    ) {
+      title = "Order Unavailable!";
+      message = errorMessage;
+    }
+    // PRIORITY 3: Check for "Order Not Ready" (400 status with processing message)
+    else if (
+      statusCode === 400 &&
+      (errorMessage.includes("Still processing this order") ||
+       errorMessage.includes("Scanning will be available") ||
+       errorMessage.toLowerCase().includes("not ready") ||
+       errorMessage.toLowerCase().includes("processing"))
+    ) {
+      title = "Order Not Ready!";
+      message = errorMessage.includes("Scanning will be available") 
+        ? errorMessage 
+        : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
+    }
+    // Check for invalid invoice (404 status)
+    else if (
+      statusCode === 404 ||
+      errorMessage.includes("not found") ||
+      errorMessage.includes("Invoice number not found") ||
+      errorMessage.toLowerCase().includes("invalid invoice")
+    ) {
+      title = "Invalid Invoice!";
+      message = "The invoice number was not found. Please check the QR code.";
+    }
+    // Network errors
+    else if (
+      errorMessage.includes("Network error") ||
+      errorMessage.includes("Network Error")
+    ) {
+      title = "Network Error";
+      message = "Please check your internet connection and try again.";
+    }
+    // Authentication errors (401 status)
+    else if (statusCode === 401 || errorMessage.includes("Unauthorized")) {
+      title = "Session Expired";
+      message = "Please login again to continue.";
+    }
+    // Server errors (500 status)
+    else if (statusCode === 500) {
+      title = "Server Error";
+      message = "Internal server error. Please try again later.";
+    }
+    // Bad request (400 status) - general
+    else if (statusCode === 400) {
+      title = "Invalid Request";
+      message = errorMessage || "Invalid request. Please try again.";
+    }
+
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalType(type);
+    setShowErrorModal(true);
+  }
+};
+//   const handleBarCodeScanned = async ({
+//     type,
+//     data,
+//   }: {
+//     type: string;
+//     data: string;
+//   }) => {
+//     if (scanned || loading || !isFocusedRef.current) return;
+
+//     setScanned(true);
+
+//     // Clear the timeout timer when scan is detected
+//     if (timerRef.current) {
+//       clearTimeout(timerRef.current);
+//     }
+
+//     try {
+//       // Extract invoice number from QR
+//       const invoiceNo = extractInvoiceNumber(data);
+
+//       if (!invoiceNo) {
+//         setModalTitle("Error!");
+//         setModalMessage(
+//           "The QR code is not identified.\nPlease check and try again."
+//         );
+//         setShowRescanButton(true);
+//         setModalType("error");
+//         setShowErrorModal(true);
+//         return;
+//       }
+
+//       console.log("Extracted invoice:", invoiceNo);
+
+//       // Call API to assign order
+//       const result = await assignOrderToDriver(invoiceNo);
+
+//       if (result.status === "success") {
+//         setModalTitle("Successful!");
+//         // Create rich text with bold invoice number
+//         setModalMessage(
+//           <View className="items-center">
+//             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+//               Order:{" "}
+//               <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
+//               been successfully assigned to you.
+//             </Text>
+//           </View>
+//         );
+//         setModalType("success");
+//         setShowSuccessModal(true);
+//       } else {
+//         // Set modal title based on the specific error message from backend
+//         let title = "Error";
+//         const message = result.message || "Failed to assign order";
+
+//         if (message.includes("already in your target list")) {
+//           title = "Already got this!";
+//         } else if (
+//           message.includes("already been assigned to another driver")
+//         ) {
+//           title = "Order Unavailable!";
+//         } else if (
+//           message.includes("Still processing this order") ||
+//           message.includes("Scanning will be available")
+//         ) {
+//           title = "Order Not Ready!";
+//         }
+
+//         setModalTitle(title);
+//         setModalMessage(message);
+//         setModalType("error");
+//         setShowErrorModal(true);
+//       }
+//     } catch (error: any) {
+//   console.error("Error processing QR scan:", error);
+
+//   // Handle specific error cases
+//   let title = "Error";
+//   let message = error.message || "Failed to process QR code";
+//   let type: "error" | "success" = "error";
+
+//   // Get the actual error message from the response
+//   const errorMessage = error.response?.data?.message || error.message || message;
+
+//   // PRIORITY 1: Check for "already assigned" conditions FIRST
+//   if (
+//     errorMessage.includes("already in your target list") ||
+//     errorMessage.toLowerCase().includes("already got")
+//   ) {
+//     title = "Already got this!";
+//     message = errorMessage;
+//   } 
+//   // Check for order assigned to another driver (Collected by another officer)
+//   else if (
+//     errorMessage.includes("already been assigned to another driver") ||
+//     errorMessage.toLowerCase().includes("assigned to another") ||
+//     errorMessage.toLowerCase().includes("belongs to another") ||
+//     errorMessage.toLowerCase().includes("collected by another") ||
+//     (errorMessage.toLowerCase().includes("collected") && 
+//      errorMessage.toLowerCase().includes("officer"))
+//   ) {
+//     title = "Order Unavailable!";
+//     message = errorMessage;
+//   } 
+//   // PRIORITY 2: Then check for "Order Not Ready" conditions
+//   else if (
+//     errorMessage.includes("Still processing this order") ||
+//     errorMessage.includes("Scanning will be available") ||
+//     errorMessage.toLowerCase().includes("not ready") ||
+//     errorMessage.toLowerCase().includes("processing")
+//   ) {
+//     title = "Order Not Ready!";
+//     message = errorMessage.includes("Scanning will be available") 
+//       ? errorMessage 
+//       : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
+//   } 
+//   // Check for invalid invoice
+//   else if (
+//     errorMessage.includes("not found") ||
+//     errorMessage.includes("Invoice number not found") ||
+//     errorMessage.toLowerCase().includes("invalid invoice")
+//   ) {
+//     title = "Invalid Invoice!";
+//     message = "The invoice number was not found. Please check the QR code.";
+//   } 
+//   // Network errors
+//   else if (
+//     errorMessage.includes("Network error") ||
+//     errorMessage.includes("Network Error")
+//   ) {
+//     title = "Network Error";
+//     message = "Please check your internet connection and try again.";
+//   } 
+//   // Authentication errors
+//   else if (errorMessage.includes("Unauthorized")) {
+//     title = "Session Expired";
+//     message = "Please login again to continue.";
+//   } 
+//   // HTTP status code specific errors
+//   else if (error.status === 404 || error.response?.status === 404) {
+//     title = "Server Error";
+//     message = "The server endpoint was not found. Please contact support.";
+//   } 
+//   else if (error.status === 500 || error.response?.status === 500) {
+//     title = "Server Error";
+//     message = "Internal server error. Please try again later.";
+//   } 
+//   else if (error.response?.status === 400) {
+//     title = "Invalid Request";
+//     message = errorMessage || "Invalid request. Please try again.";
+//   }
+
+//   setModalTitle(title);
+//   setModalMessage(message);
+//   setModalType(type);
+//   setShowErrorModal(true);
+// }
+//   };
 
   const handleErrorModalClose = () => {
     setShowErrorModal(false);
