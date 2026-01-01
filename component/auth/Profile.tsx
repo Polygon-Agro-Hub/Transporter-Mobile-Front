@@ -23,13 +23,14 @@ import { useSelector, useDispatch } from "react-redux";
 import { 
   selectAuthToken, 
   logoutUser, 
-  updateProfileImage // Import the update action
+  updateProfileImage
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
 import axios from "axios";
+import { AlertModal } from "../common/AlertModal";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -46,9 +47,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // AlertModal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const token = useSelector(selectAuthToken);
-  const dispatch = useDispatch(); // Get dispatch function
+  const dispatch = useDispatch();
 
   const formatJoinedDate = (dateString: string) => {
     if (!dateString) return "";
@@ -159,18 +163,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     try {
       setUploading(true);
 
-      // Create FormData
       const formData = new FormData();
       
-      // Get filename from URI
       const uriParts = selectedImage.uri.split('/');
       const filename = uriParts[uriParts.length - 1];
       
-      // Determine mime type
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-      // Append image to FormData
       formData.append('profileImage', {
         uri: selectedImage.uri,
         name: filename,
@@ -202,10 +202,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           image: newImageUrl,
         }));
         
-        // UPDATE REDUX STATE
+        // Update Redux state
         dispatch(updateProfileImage(newImageUrl));
         
-        Alert.alert("Success", "Profile picture updated successfully!");
+        // Show success modal instead of Alert
+        setShowSuccessModal(true);
       } else {
         Alert.alert("Error", response.data.message || "Upload failed");
       }
@@ -403,6 +404,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Success Modal for Profile Image Upload */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Success!"
+        message="Profile picture updated successfully!"
+        type="success"
+        onClose={() => setShowSuccessModal(false)}
+        autoClose={true}
+        duration={3000}
+      />
+
+      {/* Logout Confirmation Modal */}
       <Modal
         visible={showLogoutModal}
         transparent={true}
