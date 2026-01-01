@@ -50,6 +50,7 @@ interface DriverOrder {
   allProcessOrderIds?: number[];
   processOrderIds?: number[];
   holdReasons?: HoldReason[] | null;
+  completedDate?: string; // Add this field to track completion date
 }
 
 interface OrderStatistics {
@@ -73,6 +74,20 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   useEffect(() => {
     fetchDriverOrders();
   }, []);
+
+  // Helper function to check if a date is today
+  const isToday = (dateString: string): boolean => {
+    if (!dateString) return false;
+    
+    const date = new Date(dateString);
+    const today = new Date();
+    
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
 
   const fetchDriverOrders = async () => {
     try {
@@ -127,7 +142,26 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       );
 
       if (completedResponse.data.status === "success") {
-        setCompletedOrders(completedResponse.data.data.orders);
+        const allCompleted = completedResponse.data.data.orders;
+        
+        // Filter to show only today's completed orders
+        const todayCompleted = allCompleted.filter((order: DriverOrder) => {
+          // Check if the order has a completedDate field
+          if (order.completedDate) {
+            return isToday(order.completedDate);
+          }
+          
+          // Fallback: If no completedDate field, you might need to check other date fields
+          // This depends on your API structure. Common alternatives:
+          // - order.updatedAt
+          // - order.completionTime
+          // - order.lastModified
+          // Replace 'updatedAt' with the actual field name from your API
+          return true; // Temporarily show all until you verify the field name
+        });
+        
+        console.log("Today's completed orders:", todayCompleted.length);
+        setCompletedOrders(todayCompleted);
       }
     } catch (error: any) {
       console.error("Error fetching driver orders:", error);
@@ -160,12 +194,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     // Return English reason by default
     // You can make this dynamic based on user's language preference
     return reason.rsnEnglish || "Hold reason not specified";
-    
-    // For multiple languages, you could do:
-    // const language = await AsyncStorage.getItem("language");
-    // if (language === "si") return reason.rsnSinhala;
-    // if (language === "ta") return reason.rsnTamil;
-    // return reason.rsnEnglish;
   };
 
   // Helper function to get schedule time priority
@@ -239,7 +267,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     // Map with correct sequence numbers
     return sortedOrders.map((order, index) => ({
-      id: (index + 1).toString().padStart(2, "0"), // Always generate #01, #02, #03 based on sorted order
+      id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
       name: order.fullName || "Customer",
       time: formatScheduleTime(
@@ -280,7 +308,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     // Map with correct sequence numbers
     return sortedOrders.map((order, index) => ({
-      id: (index + 1).toString().padStart(2, "0"), // Always generate #01, #02, #03 based on sorted order
+      id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
       name: order.fullName || "Customer",
       time: formatScheduleTime(
@@ -312,7 +340,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const navigateToOrderDetails = (orderData: DriverOrder) => {
     console.log("Navigating with order data:", orderData);
 
-    // Get processOrderId from the orderData - THIS IS THE KEY CHANGE
+    // Get processOrderId from the orderData
     const processOrderId = orderData.processOrderId;
 
     // If processOrderId exists, use it; otherwise fall back to marketOrderId
@@ -525,9 +553,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           })}
         </ScrollView>
       ) : (
-        // Center-aligned empty state with Lottie animation
         <View className="flex-1 justify-center items-center px-5">
-          {/* Lottie Animation */}
           <LottieView
             source={require("@/assets/json/no-data.json")}
             autoPlay
@@ -547,10 +573,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           ) : (
             <>
               <Text className="text-gray-500 text-lg text-center">
-                No completed jobs
+                No completed jobs today
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
-                Completed jobs will appear here
+                Today's completed jobs will appear here
               </Text>
             </>
           )}

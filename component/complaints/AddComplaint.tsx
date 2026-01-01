@@ -15,6 +15,7 @@ import { RootStackParamList } from "@/component/types";
 import DropDownPicker from "react-native-dropdown-picker";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AlertModal } from "../common/AlertModal";
 import { environment } from "@/environment/environment";
 import axios from "axios";
 
@@ -48,10 +49,28 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const [value, setValue] = useState<string | null>(null);
   const [items, setItems] = useState<DropdownItem[]>([]);
   const [description, setDescription] = useState("");
+  
+  // Modal states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: "",
+    message: "",
+    type: "success" as "success" | "error",
+  });
 
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Handle description change with auto-capitalization
+  const handleDescriptionChange = (text: string) => {
+    if (text.length > 0 && description.length === 0) {
+      // Capitalize first letter when starting to type
+      setDescription(text.charAt(0).toUpperCase() + text.slice(1));
+    } else {
+      setDescription(text);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -71,17 +90,17 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         // Transform backend data to dropdown format
         const categoryItems: DropdownItem[] = response.data.data.map(
           (category: Category) => ({
-            label: category.categoryEnglish, // You can use categorySinhala or categoryTamil based on language preference
+            label: category.categoryEnglish,
             value: category.id.toString(),
           })
         );
         setItems(categoryItems);
       } else {
-        showAlert("Error", "Failed to load categories");
+        showModal("Error", "Failed to load categories", "error");
       }
     } catch (error: any) {
       console.error("Error fetching categories:", error);
-      showAlert("Error", "Failed to load categories. Please try again later.");
+      showModal("Error", "Failed to load categories. Please try again later.", "error");
     } finally {
       setCategoriesLoading(false);
     }
@@ -95,13 +114,29 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     }, 2000);
   };
 
+  // Show custom modal
+  const showModal = (title: string, message: string, type: "success" | "error") => {
+    setModalConfig({ title, message, type });
+    setModalVisible(true);
+  };
+
+  // For backward compatibility with existing Alert.alert calls
   const showAlert = (title: string, message: string) => {
     Alert.alert(title, message, [{ text: "OK" }]);
   };
 
+  const handleModalClose = () => {
+    setModalVisible(false);
+    
+    // If it was a success modal, navigate to ComplaintsList after closing
+    if (modalConfig.type === "success") {
+      navigation.navigate("ComplaintsList");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!value || !description.trim()) {
-      showAlert("Error", "Please select a category and enter description");
+      showModal("Error", "Please select a category and enter description", "error");
       return;
     }
 
@@ -127,27 +162,34 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
       );
 
       if (response.data.status === "success") {
-        showAlert("Success", "Complaint submitted successfully!");
         // Reset form
         setValue(null);
         setDescription("");
-        navigation.navigate("ComplaintsList");
+        
+        // Show success modal
+        showModal(
+          "Success!", 
+          "Your complaint has been submitted successfully. We'll review it shortly.",
+          "success"
+        );
       } else {
-        showAlert(
+        showModal(
           "Error",
-          response.data.message || "Failed to submit complaint"
+          response.data.message || "Failed to submit complaint",
+          "error"
         );
       }
     } catch (error: any) {
       console.error("Error submitting complaint:", error);
 
       if (axios.isAxiosError(error) && error.response) {
-        showAlert(
+        showModal(
           "Error",
-          error.response.data?.message || "Failed to submit complaint"
+          error.response.data?.message || "Failed to submit complaint",
+          "error"
         );
       } else {
-        showAlert("Error", "Something went wrong. Please try again later.");
+        showModal("Error", "Something went wrong. Please try again later.", "error");
       }
     } finally {
       setLoading(false);
@@ -242,7 +284,15 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
                   nestedScrollEnabled: true,
                 }}
                 dropDownDirection="BOTTOM"
-                searchable={false}
+                searchable={true}
+                searchPlaceholder="Search categories..."
+                searchTextInputStyle={{
+                  borderColor: "#A4AAB7",
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  paddingHorizontal: 10,
+                  fontSize: 16,
+                }}
                 showTickIcon={true}
                 modalProps={{
                   animationType: "fade",
@@ -269,8 +319,9 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
               numberOfLines={8}
               textAlignVertical="top"
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               editable={!categoriesLoading}
+              autoCapitalize="sentences"
             />
           </View>
 
@@ -278,7 +329,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={!isFormValid || loading || categoriesLoading}
-            className={`rounded-full py-3 items-center ${
+            className={`rounded-full py-3 mx-10 items-center ${
               isFormValid && !loading && !categoriesLoading
                 ? "bg-[#F7CA21]"
                 : "bg-[#DCDCDC]"
@@ -300,6 +351,17 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Alert Modal */}
+      <AlertModal
+        visible={modalVisible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        onClose={handleModalClose}
+        autoClose={true}
+        duration={3000}
+      />
     </View>
   );
 };
