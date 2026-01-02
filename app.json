@@ -18,7 +18,7 @@
         "backgroundColor": "#ffffff",
         "softwareKeyboardLayoutMode": "pan"
       },
-      "versionCode": 12,
+      "versionCode": 13,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 24,
@@ -28,6 +28,7 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.CAMERA",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED",
@@ -65,9 +66,8 @@
         "origin": false
       },
       "eas": {
-        "projectId": "ad9b2bb4-0844-4a71-b0e2-023a953f0788"
+        "projectId": "424f967f-2d96-43bc-b8c7-a0792907bf09"
       }
-    },
-    "owner": "polygonholdings"
+    }
   }
 }
