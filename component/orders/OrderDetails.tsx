@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Ionicons,
   MaterialIcons,
@@ -159,11 +159,35 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     message: "",
     type: "error" as "success" | "error",
     showOpenOngoingButton: false,
+    ongoingProcessOrderIds: [] as number[],
   });
 
+  // Add a ref to track previous processOrderIds
+  const prevProcessOrderIdsRef = useRef<number[]>([]);
+
+  // Fetch data when component mounts or when route params change
   useEffect(() => {
-    fetchOrderUserDetails();
-  }, []);
+    // Check if processOrderIds have changed
+    const hasParamsChanged =
+      JSON.stringify(processOrderIds) !==
+      JSON.stringify(prevProcessOrderIdsRef.current);
+
+    if (hasParamsChanged) {
+      console.log("Process order IDs changed, fetching new data...");
+      fetchOrderUserDetails();
+      prevProcessOrderIdsRef.current = processOrderIds;
+    }
+  }, [processOrderIds]);
+
+  // Also listen for screen focus to refresh data
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      console.log("Screen focused, refreshing data...");
+      fetchOrderUserDetails();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const fetchOrderUserDetails = async () => {
     try {
@@ -340,6 +364,38 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     }
   };
 
+  // Update the handleOpenOngoingActivity function to use navigation.replace instead of navigate
+  const handleOpenOngoingActivity = () => {
+    console.log("DEBUG - handleOpenOngoingActivity called");
+    console.log("  Current alertModal state:", alertModal);
+    console.log("  ongoingProcessOrderIds:", alertModal.ongoingProcessOrderIds);
+
+    setAlertModal({
+      ...alertModal,
+      visible: false,
+    });
+
+    // Use ongoing process order IDs from the alert modal state
+    const ongoingIds = alertModal.ongoingProcessOrderIds;
+
+    if (ongoingIds && ongoingIds.length > 0) {
+      console.log("DEBUG - Navigating to OrderDetails with IDs:", ongoingIds);
+
+      // Use navigation.replace instead of navigate to force a fresh instance
+      navigation.replace("OrderDetails", {
+        processOrderIds: ongoingIds,
+      });
+    } else {
+      console.log(
+        "DEBUG - No ongoing IDs, navigating to EndJourneyConfirmation"
+      );
+      // Fallback: Navigate to EndJourneyConfirmation with the current process order IDs
+      navigation.navigate("EndJourneyConfirmation", {
+        processOrderIds: processOrderIds,
+      });
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchOrderUserDetails();
@@ -444,11 +500,19 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const getJourneyButtonText = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
 
-    if (normalizedStatus === "todo") return "Start Journey";
-    if (normalizedStatus === "on the way" || normalizedStatus === "hold")
-      return "Continue";
+    if (normalizedStatus === "todo") {
+      return "Start Journey";
+    }
 
-    // FOR COMPLETED / RETURN
+    if (normalizedStatus === "on the way") {
+      return "Continue";
+    }
+
+    if (normalizedStatus === "hold") {
+      return "Restart Journey";
+    }
+
+    // completed / return / others
     return "Start Journey";
   };
 
@@ -464,13 +528,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   const getCardStyle = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
-    console.log(
-      `getCardStyle: status=${status}, normalized=${normalizedStatus}`
-    );
 
-    // If status is "Todo", use white background
-    if (normalizedStatus === "todo" || normalizedStatus === "completed") {
-      console.log("Card style: White background");
+    // WHITE THEME
+    if (
+      normalizedStatus === "todo" ||
+      normalizedStatus === "completed" ||
+      normalizedStatus === "hold"
+    ) {
       return {
         backgroundColor: "#FFFFFF",
         borderColor: "#A4AAB7",
@@ -478,8 +542,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       };
     }
 
-    // For all other statuses, use yellow background
-    console.log("Card style: Yellow background");
+    // YELLOW THEME (on the way, others)
     return {
       backgroundColor: "#FFF2BF",
       borderColor: "#F7CA21",
@@ -623,6 +686,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       if (error.response) {
         console.error("Error response data:", error.response.data);
         console.error("Error response status:", error.response.status);
+
+        // DEBUG: Log the exact response structure
+        console.log(
+          "Full error response:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
 
       const errorMessage =
@@ -634,6 +703,15 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         errorMessage.includes("ongoing") ||
         errorMessage.includes("Ongoing");
 
+      // Get ongoing process order IDs from response (if available)
+      const ongoingProcessOrderIds =
+        error.response?.data?.ongoingProcessOrderIds || [];
+
+      console.log("DEBUG - Setting alert modal with:");
+      console.log("  hasOngoingActivity:", hasOngoingActivity);
+      console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
+      console.log("  errorMessage:", errorMessage);
+
       if (hasOngoingActivity) {
         setAlertModal({
           visible: true,
@@ -641,6 +719,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           message: errorMessage,
           type: "error",
           showOpenOngoingButton: true,
+          ongoingProcessOrderIds: ongoingProcessOrderIds,
         });
       } else {
         setAlertModal({
@@ -649,6 +728,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           message: errorMessage,
           type: "error",
           showOpenOngoingButton: false,
+          ongoingProcessOrderIds: [],
         });
       }
     } finally {
@@ -676,17 +756,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       }
 
       return newCompleted;
-    });
-  };
-
-  const handleOpenOngoingActivity = () => {
-    setAlertModal({
-      ...alertModal,
-      visible: false,
-    });
-
-    navigation.navigate("EndJourneyConfirmation", {
-      processOrderIds: processOrderIds,
     });
   };
 

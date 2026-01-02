@@ -67,14 +67,14 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     React.useCallback(() => {
       // Screen is focused
       isFocusedRef.current = true;
-      
+
       // Reset all states when screen comes into focus
       setScanned(false);
       setLoading(false);
       setShowTimeoutModal(false);
       setShowErrorModal(false);
       setShowSuccessModal(false);
-      
+
       // Start the timer
       if (permission?.granted) {
         startTimeoutTimer();
@@ -83,7 +83,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       return () => {
         // Screen is blurred (navigating away)
         isFocusedRef.current = false;
-        
+
         // Clear the timer when leaving the screen
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -178,10 +178,29 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     ).start();
   };
 
-  // Validate if officer ID starts with DCM or DCH
+  // Validate if officer ID starts with DCM (ONLY DCM allowed)
   const validateOfficerType = (officerId: string): boolean => {
     const upperOfficerId = officerId.toUpperCase();
-    return upperOfficerId.startsWith("DCM") || upperOfficerId.startsWith("DCH");
+
+    // Only allow DCM
+    if (upperOfficerId.startsWith("DCM")) {
+      return true;
+    }
+
+    // Check if it's one of the disallowed types
+    const disallowedTypes = ["DCH", "DIO", "FIO", "CFO"];
+    for (const type of disallowedTypes) {
+      if (upperOfficerId.startsWith(type)) {
+        console.log(
+          `Officer ID ${officerId} is disallowed (starts with ${type})`
+        );
+        return false;
+      }
+    }
+
+    // Any other pattern is also not allowed
+    console.log(`Officer ID ${officerId} is not a DCM officer`);
+    return false;
   };
 
   // Extract officer ID from QR data

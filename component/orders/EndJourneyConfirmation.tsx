@@ -126,23 +126,25 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView
-        showsVerticalScrollIndicator={true}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        <CustomHeader
-          title={headerTitle}
-          showBackButton={true}
-          showLanguageSelector={false}
-          navigation={navigation}
-          onBackPress={handleBackPress}
-        />
+      {/* Fixed Header Section - No Scroll */}
+      <CustomHeader
+        title={headerTitle}
+        showBackButton={true}
+        showLanguageSelector={false}
+        navigation={navigation}
+        onBackPress={handleBackPress}
+      />
 
-        {/* Icon Section */}
-        <View className="items-center my-6">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        className="flex-1"
+      >
+        {/* Icon Section - Reduced size */}
+        <View className="items-center mt-6">
           <Image
             source={locationImage}
-            className="w-40 h-40"
+            className="w-32 h-32" // Reduced from w-40 h-40 to w-32 h-32
             resizeMode="contain"
           />
         </View>
@@ -178,7 +180,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
         </View>
 
         {/* Divider */}
-        <View className="items-center my-4  pt-4">
+        <View className="items-center my-4 pt-4">
           <Text className="text-black text-lg font-medium">Or..</Text>
         </View>
 
@@ -201,27 +203,26 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
 
-      {/* Fixed Bottom Button - Continue to Map */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
-        <TouchableOpacity
-          onPress={openGoogleMapsNavigation}
-          className="w-full py-4 rounded-full bg-[#F7CA21] flex-row items-center justify-center"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 5,
-          }}
-        >
-          <FontAwesome5 name="map-marked-alt" size={20} color="black" />
-          <Text className="ml-2 text-base font-bold text-black">
-            Continue to map
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View className="items-center px-4 border-t border-gray-300 pt-6">
+          <TouchableOpacity
+            onPress={openGoogleMapsNavigation}
+            className="w-full py-4 rounded-full bg-[#F7CA21] flex-row items-center justify-center mt-1"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
+            <FontAwesome5 name="map-marked-alt" size={20} color="black" />
+            <Text className="ml-2 text-base font-bold text-black">
+              Continue to map
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
