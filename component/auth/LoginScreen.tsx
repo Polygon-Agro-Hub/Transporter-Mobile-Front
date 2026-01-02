@@ -55,25 +55,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setModalVisible(true);
   };
 
-  const validateEmpIdFormat = (empId: string) => {
-    const trimmedEmpId = empId.trim();
-
-    // Check if EMP ID is in uppercase
-    if (trimmedEmpId !== trimmedEmpId.toUpperCase()) {
-      setEmpIdError("Please enter Employee ID in uppercase letters");
-      return false;
-    }
-
-    // Check if EMP ID starts with "DRV"
-    if (!trimmedEmpId.startsWith("DRV")) {
-      setEmpIdError("Employee ID must start with 'DRV'");
-      return false;
-    }
-
-    setEmpIdError("");
-    return true;
-  };
-
   const handleEmpIdChange = (text: string) => {
     setEmpid(text);
 
@@ -116,8 +97,48 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     // Check if EMP ID starts with "DRV"
     if (!trimmedEmpId.startsWith("DRV")) {
       showModal(
-        "Invalid Employee ID",
-        "Please check both Employee ID & Password and retry again",
+        "Unauthorized Access",
+        "You are not authorized to access this system. Please use a valid Employee ID.",
+        "error"
+      );
+      return false;
+    }
+
+    // Password format validation
+    if (password.length < 8) {
+      showModal(
+        "Invalid Password",
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error"
+      );
+      return false;
+    }
+
+    // Check for at least 1 uppercase letter
+    if (!/[A-Z]/.test(password)) {
+      showModal(
+        "Invalid Password",
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error"
+      );
+      return false;
+    }
+
+    // Check for at least 1 number
+    if (!/[0-9]/.test(password)) {
+      showModal(
+        "Invalid Password",
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error"
+      );
+      return false;
+    }
+
+    // Check for at least 1 special character
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      showModal(
+        "Invalid Password",
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
         "error"
       );
       return false;
@@ -152,20 +173,45 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         setLoading(false);
 
         const message = data.message?.toLowerCase() || "";
+        const statusCode = response.status;
 
-        if (message.includes("invalid password")) {
+        // Check for "not approved" error
+        if (
+          message.includes("not approved") ||
+          message.includes("emp id not approved")
+        ) {
+          showModal(
+            "Not Approved EMP ID",
+            "This EMP ID is not approved.",
+            "error"
+          );
+        }
+        // Check for invalid password
+        else if (
+          statusCode === 401 ||
+          message.includes("invalid") ||
+          message.includes("password")
+        ) {
           showModal(
             "Invalid Password!",
             "Please check the Password and retry again.",
             "error"
           );
-        } else if (message.includes("user not found")) {
+        }
+        // Check for user not found
+        else if (
+          statusCode === 404 ||
+          message.includes("user not found") ||
+          message.includes("not found")
+        ) {
           showModal(
             "Invalid Employee ID!",
             "Please check the Employee ID and retry again.",
             "error"
           );
-        } else {
+        }
+        // Generic error
+        else {
           showModal(
             "Sorry",
             "Something went wrong. Please try again.",
@@ -234,7 +280,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       showModal("Error", "Something went wrong. Please try again.", "error");
     }
   };
-
+  
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => true;

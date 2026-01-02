@@ -313,26 +313,29 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   </Text>
                 </View>
 
-                {/* Payment Info */}
+                {/* Payment Info - Updated logic */}
                 <View className="flex-row items-center pt-1">
                   <View className="flex-row items-center">
                     {getPaymentIcon(order.isPaid, order.paymentMethod)}
+                    
+                    {/* Show payment method or "Already Paid!" */}
                     <Text
-                      className={`mx-2 text-sm ${
+                      className={`ml-2 mr-1 text-sm ${
                         order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
                       }`}
                     >
-                      {/* Always show "Already Paid!" if isPaid is true */}
-                      {order.isPaid
-                        ? "Already Paid!"
-                        : order.paymentMethod || "Cash"}{" "}
-                      :
+                      {order.isPaid ? "Already Paid!" : order.paymentMethod || "Cash"}
                     </Text>
+
+                    {/* Show colon only for non-paid orders with a payment method */}
+                    {!order.isPaid && (
+                      <Text className="text-sm text-[#8A8A8A]">:</Text>
+                    )}
                   </View>
 
                   {/* Show amount only if not paid */}
                   {!order.isPaid && (
-                    <Text className="text-sm text-[#8A8A8A]">
+                    <Text className="text-sm text-[#8A8A8A] ml-1">
                       {getAmountText(
                         order.isPaid,
                         order.amount,
