@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -29,6 +30,7 @@ import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../../store/authSlice";
+import LottieView from "lottie-react-native";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -54,6 +56,8 @@ interface Complaint {
   categorySinhala: string;
   categoryTamil: string;
 }
+
+const NodataAnimation = require("@/assets/json/no-data.json")
 
 const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -104,6 +108,21 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
+        useEffect(() => {
+      const backAction = () => {
+        navigation.navigate('Home') 
+        return true;
+      };
+  
+      // Add the back handler listener
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+  
+      // Cleanup listener on component unmount
+      return () => {
+        backHandler.remove();
+      };
+    }, [ navigation]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const hours = date.getHours();
@@ -151,6 +170,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
     setSelectedComplaint(null);
   };
 
+  // Handler for back button - always navigate to Home
+  const handleBackPress = () => {
+    navigation.navigate("Home");
+  };
+
   // Get user's full name
   const getUserName = () => {
     const firstName = userProfile?.firstName || "User";
@@ -166,6 +190,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           showBackButton={true}
           showLanguageSelector={false}
           navigation={navigation}
+          onBackPress={handleBackPress}
         />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#000000" />
@@ -182,6 +207,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
+        onBackPress={handleBackPress}
       />
 
       {complaints.length === 0 ? (
@@ -191,10 +217,16 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
             className="items-center justify-center"
             style={{
               position: "absolute",
-              top: "50%",
+              top: "30%",
               transform: [{ translateY: -50 }],
             }}
           >
+              <LottieView
+          source={NodataAnimation}
+          autoPlay
+          loop={true}
+          style={{ width: 200, height: 200 }}
+        />
             <Text className="text-[#495D86] text-base mb-2">
               -- No Complaints Yet --
             </Text>

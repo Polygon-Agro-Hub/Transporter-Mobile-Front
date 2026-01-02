@@ -36,7 +36,7 @@ interface HomeProps {
 interface AmountData {
   totalOrders: number;
   totalCashAmount: number;
-  todoOrders: number;
+  todoOrders: number; // This should now be ALL todo orders, not just today's
   completedOrders: number;
   onTheWayOrders: number;
   holdOrders: number;
@@ -44,7 +44,7 @@ interface AmountData {
   returnReceivedOrders: number;
   cashOrders: number;
   ongoingProcessOrderIds?: number[];
-  uniqueLocationsCount?: number; // NEW: Add this field to get unique locations from backend
+  uniqueLocationsCount?: number; // This should also be for ALL pending orders
 }
 
 // Default values for amountData
@@ -59,7 +59,7 @@ const defaultAmountData: AmountData = {
   returnReceivedOrders: 0,
   cashOrders: 0,
   ongoingProcessOrderIds: [],
-  uniqueLocationsCount: 0, // NEW: Default value
+  uniqueLocationsCount: 0,
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -75,7 +75,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const fetchAmountData = useCallback(async () => {
     try {
       setError(null);
-      setLoading(true); // Always show loading when fetching
+      setLoading(true);
 
       const token = await AsyncStorage.getItem("token");
 
@@ -85,7 +85,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         return;
       }
 
-      // Replace with your actual API endpoint
+      // API should return ALL todo orders (not filtered by today)
+      // Backend needs to be updated to return:
+      // - todoOrders: count of ALL pending orders (not just today)
+      // - uniqueLocationsCount: count of unique locations for ALL pending orders
       const response = await axios.get(
         `${environment.API_BASE_URL}api/home/get-amount`,
         {
@@ -143,17 +146,18 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     return cash;
   };
 
+  // UPDATED: Get total packs count (ALL pending orders, not just today)
   const getPacksCount = () => {
-    const todoOrders = amountData?.todoOrders || 0;
+    const todoOrders = amountData?.todoOrders || 0; // ALL todo orders
     const holdOrders = amountData?.holdOrders || 0;
     const ongoingOrders = amountData?.onTheWayOrders || 0;
     return todoOrders + holdOrders + ongoingOrders;
   };
 
-  // NEW: Function to get unique locations count
+  // UPDATED: Get unique locations count (for ALL pending orders)
   const getUniqueLocationsCount = () => {
-    // Use the uniqueLocationsCount from backend if available
     // This should be calculated on the backend by counting distinct delivery locations
+    // for ALL pending orders (todo + hold + on the way)
     return amountData?.uniqueLocationsCount || 0;
   };
 
@@ -193,7 +197,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     const total = amountData?.totalOrders || 0;
     const completed = amountData?.completedOrders || 0;
-    const locationsCount = getUniqueLocationsCount(); // CHANGED: Use unique locations count
+    const locationsCount = getUniqueLocationsCount(); // Uses ALL pending orders
 
     const completionRate =
       total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -203,22 +207,22 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       return {
         title: "Have a nice Day!",
         subtitle: "Scan packages to start..",
-        bgColor: "#FFF2BF", // Very light yellow
+        bgColor: "#FFF2BF",
         showPercentage: false,
         percentage: 0,
-        style: 1, // First style
+        style: 1,
       };
     }
 
     // If there are orders to complete - Style 2 (Bright yellow with percentage)
-    // CHANGED: Use locationsCount instead of packsCount in subtitle
+    // Shows unique locations for ALL pending orders
     return {
       title: "Way more to go!",
       subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
-      bgColor: "#F7CA21", // Bright yellow like in the image
+      bgColor: "#F7CA21",
       showPercentage: true,
       percentage: completionRate,
-      style: 2, // Second style
+      style: 2,
     };
   };
 
@@ -226,7 +230,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   // Build quick actions dynamically
   const buildQuickActions = () => {
-    const packsCount = getPacksCount();
+    const packsCount = getPacksCount(); // ALL pending orders
     const actions = [
       {
         image: scanQRImage,
@@ -236,7 +240,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       },
       {
         image: packsImage,
-        label: `${packsCount} Packs`,
+        label: `${packsCount} Packs`, // Shows ALL pending packs
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
       },
@@ -250,7 +254,6 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
     // Add Ongoing if there are "On the way" orders
     if ((amountData?.onTheWayOrders || 0) > 0) {
-      // Check if amountData has ongoingProcessOrderIds from the backend
       const ongoingProcessOrderIds = amountData?.ongoingProcessOrderIds || [];
 
       actions.push({
@@ -259,12 +262,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         color: "#FFF2BF",
         action: () => {
           if (ongoingProcessOrderIds.length > 0) {
-            // Navigate to OrderDetails with the ongoing process order IDs
             navigation.navigate("OrderDetails", {
               processOrderIds: ongoingProcessOrderIds,
             });
           } else {
-            // Fallback: Navigate to Jobs if no process order IDs available
             navigation.navigate("Jobs");
           }
         },
