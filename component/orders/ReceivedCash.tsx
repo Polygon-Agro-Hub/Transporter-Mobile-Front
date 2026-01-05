@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  BackHandler,
   Image,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -159,6 +160,22 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       selectedCount: selectedItems.length,
     });
   };
+
+useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      navigation.navigate("Home");
+      return true; // Prevent default behavior
+    };
+    
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+    
+    return () => subscription.remove();
+  }, [navigation])
+);
 
   const allSelected =
     cashItems.length > 0 && cashItems.every((item) => item.selected);

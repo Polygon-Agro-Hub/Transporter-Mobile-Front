@@ -564,76 +564,74 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   };
 
   const handleStartJourneyForOrder = async (orderId: number) => {
-    try {
-      setStartingJourney(orderId.toString());
-      setError(null);
+  try {
+    setStartingJourney(orderId.toString());
+    setError(null);
 
-      const token = await AsyncStorage.getItem("token");
+    const token = await AsyncStorage.getItem("token");
 
-      if (!token) {
-        navigation.navigate("Login");
-        return;
-      }
+    if (!token) {
+      navigation.navigate("Login");
+      return;
+    }
 
-      const currentOrder = orders.find((order) => order.orderId === orderId);
-      if (!currentOrder || !currentOrder.processOrder?.id) {
-        throw new Error("Order not found");
-      }
+    const currentOrder = orders.find((order) => order.orderId === orderId);
+    if (!currentOrder || !currentOrder.processOrder?.id) {
+      throw new Error("Order not found");
+    }
 
-      const processOrderId = currentOrder.processOrder.id;
-      const currentStatus = currentOrder.processOrder.status.toLowerCase();
-      const latitude = currentOrder.latitude;
-      const longitude = currentOrder.longitude;
-      const address = currentOrder.address;
+    const processOrderId = currentOrder.processOrder.id;
+    const currentStatus = currentOrder.processOrder.status.toLowerCase();
+    const latitude = currentOrder.latitude;
+    const longitude = currentOrder.longitude;
+    const address = currentOrder.address;
 
-      console.log(
-        `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
-      );
+    console.log(
+      `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
+    );
 
-      // OPEN GOOGLE MAPS FOR BOTH "Start Journey" AND "Continue"
-      if (latitude && longitude) {
-        console.log("Opening Google Maps navigation to destination");
-        setTimeout(() => {
-          openGoogleMapsNavigation(latitude, longitude, address);
-        }, 300);
-      }
+    // OPEN GOOGLE MAPS FOR "Start Journey", "Continue", and "Restart Journey"
+    if (latitude && longitude) {
+      console.log("Opening Google Maps navigation to destination");
+      setTimeout(() => {
+        openGoogleMapsNavigation(latitude, longitude, address);
+      }, 300);
+    }
 
-      // If status is already "On the way" or "Hold", navigate directly to EndJourneyConfirmation
-      if (currentStatus === "on the way" || currentStatus === "hold") {
-        console.log(
-          "Status is already on the way or hold, navigating directly"
-        );
-        const remainingOrders = orders
-          .filter((order) => order.processOrder.id !== processOrderId)
-          .map((order) => order.processOrder.id);
+    // If status is "On the way", navigate directly to EndJourneyConfirmation (no API call)
+    if (currentStatus === "on the way") {
+      console.log("Status is on the way, navigating directly");
+      const remainingOrders = orders
+        .filter((order) => order.processOrder.id !== processOrderId)
+        .map((order) => order.processOrder.id);
 
-        // Add a small delay to ensure maps opens before navigation
-        setTimeout(() => {
-          navigation.navigate("EndJourneyConfirmation", {
-            processOrderIds: [processOrderId],
-            allProcessOrderIds: processOrderIds,
-            remainingOrders: remainingOrders,
-            orderData: currentOrder, // Pass the entire order data
-            onOrderComplete: (completedId: number) => {
-              handleOrderComplete(completedId);
-            },
-          });
-        }, 500);
-        return;
-      }
+      setTimeout(() => {
+        navigation.navigate("EndJourneyConfirmation", {
+          processOrderIds: [processOrderId],
+          allProcessOrderIds: processOrderIds,
+          remainingOrders: remainingOrders,
+          orderData: currentOrder,
+          onOrderComplete: (completedId: number) => {
+            handleOrderComplete(completedId);
+          },
+        });
+      }, 500);
+      return;
+    }
 
-      // Only start journey for "Todo" status (API call)
-      console.log("Starting journey for process order:", processOrderId);
+    // For "Hold" status: Call re-start-journey endpoint
+    if (currentStatus === "hold") {
+      console.log("Restarting journey for hold order:", processOrderId);
 
       const payload = {
         orderIds: processOrderId.toString(),
         isProcessOrderIds: 1,
       };
 
-      console.log("Sending payload:", payload);
+      console.log("Sending restart payload:", payload);
 
       const response = await axios.post(
-        `${environment.API_BASE_URL}api/order/start-journey`,
+        `${environment.API_BASE_URL}api/order/re-start-journey`,
         payload,
         {
           headers: {
@@ -643,9 +641,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         }
       );
 
-      console.log("Start journey response:", response.data);
+      console.log("Restart journey response:", response.data);
 
       if (response.data.status === "success") {
+        // Update local state to "On the Way"
         setOrders((prevOrders) =>
           prevOrders.map((order) => {
             if (order.processOrder.id === processOrderId) {
@@ -665,76 +664,304 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
 
-        // Navigate after a delay to ensure maps opens
         setTimeout(() => {
           navigation.navigate("EndJourneyConfirmation", {
             processOrderIds: [processOrderId],
             allProcessOrderIds: processOrderIds,
             remainingOrders: remainingOrders,
-            orderData: currentOrder, // Pass the entire order data
+            orderData: currentOrder,
             onOrderComplete: (completedId: number) => {
               handleOrderComplete(completedId);
             },
           });
         }, 500);
       } else {
-        throw new Error(response.data.message || "Failed to start journey");
+        throw new Error(response.data.message || "Failed to restart journey");
       }
-    } catch (error: any) {
-      console.error("Error starting journey:", error);
-
-      if (error.response) {
-        console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-
-        // DEBUG: Log the exact response structure
-        console.log(
-          "Full error response:",
-          JSON.stringify(error.response.data, null, 2)
-        );
-      }
-
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to start journey";
-      const hasOngoingActivity =
-        errorMessage.includes("ongoing activity") ||
-        errorMessage.includes("ongoing") ||
-        errorMessage.includes("Ongoing");
-
-      // Get ongoing process order IDs from response (if available)
-      const ongoingProcessOrderIds =
-        error.response?.data?.ongoingProcessOrderIds || [];
-
-      console.log("DEBUG - Setting alert modal with:");
-      console.log("  hasOngoingActivity:", hasOngoingActivity);
-      console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
-      console.log("  errorMessage:", errorMessage);
-
-      if (hasOngoingActivity) {
-        setAlertModal({
-          visible: true,
-          title: "Already Have Active Journey",
-          message: errorMessage,
-          type: "error",
-          showOpenOngoingButton: true,
-          ongoingProcessOrderIds: ongoingProcessOrderIds,
-        });
-      } else {
-        setAlertModal({
-          visible: true,
-          title: "Error",
-          message: errorMessage,
-          type: "error",
-          showOpenOngoingButton: false,
-          ongoingProcessOrderIds: [],
-        });
-      }
-    } finally {
-      setStartingJourney(null);
+      return;
     }
-  };
+
+    // For "Todo" status: Call start-journey endpoint
+    console.log("Starting journey for todo order:", processOrderId);
+
+    const payload = {
+      orderIds: processOrderId.toString(),
+      isProcessOrderIds: 1,
+    };
+
+    console.log("Sending payload:", payload);
+
+    const response = await axios.post(
+      `${environment.API_BASE_URL}api/order/start-journey`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("Start journey response:", response.data);
+
+    if (response.data.status === "success") {
+      setOrders((prevOrders) =>
+        prevOrders.map((order) => {
+          if (order.processOrder.id === processOrderId) {
+            return {
+              ...order,
+              processOrder: {
+                ...order.processOrder,
+                status: "On the Way",
+              },
+            };
+          }
+          return order;
+        })
+      );
+
+      const remainingOrders = orders
+        .filter((order) => order.processOrder.id !== processOrderId)
+        .map((order) => order.processOrder.id);
+
+      setTimeout(() => {
+        navigation.navigate("EndJourneyConfirmation", {
+          processOrderIds: [processOrderId],
+          allProcessOrderIds: processOrderIds,
+          remainingOrders: remainingOrders,
+          orderData: currentOrder,
+          onOrderComplete: (completedId: number) => {
+            handleOrderComplete(completedId);
+          },
+        });
+      }, 500);
+    } else {
+      throw new Error(response.data.message || "Failed to start journey");
+    }
+  } catch (error: any) {
+    console.error("Error starting/restarting journey:", error);
+
+    if (error.response) {
+      console.error("Error response data:", error.response.data);
+      console.error("Error response status:", error.response.status);
+      console.log(
+        "Full error response:",
+        JSON.stringify(error.response.data, null, 2)
+      );
+    }
+
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to start journey";
+    const hasOngoingActivity =
+      errorMessage.includes("ongoing activity") ||
+      errorMessage.includes("ongoing") ||
+      errorMessage.includes("Ongoing");
+
+    const ongoingProcessOrderIds =
+      error.response?.data?.ongoingProcessOrderIds || [];
+
+    console.log("DEBUG - Setting alert modal with:");
+    console.log("  hasOngoingActivity:", hasOngoingActivity);
+    console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
+    console.log("  errorMessage:", errorMessage);
+
+    if (hasOngoingActivity) {
+      setAlertModal({
+        visible: true,
+        title: "Already Have Active Journey",
+        message: errorMessage,
+        type: "error",
+        showOpenOngoingButton: true,
+        ongoingProcessOrderIds: ongoingProcessOrderIds,
+      });
+    } else {
+      setAlertModal({
+        visible: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+        showOpenOngoingButton: false,
+        ongoingProcessOrderIds: [],
+      });
+    }
+  } finally {
+    setStartingJourney(null);
+  }
+};
+  // const handleStartJourneyForOrder = async (orderId: number) => {
+  //   try {
+  //     setStartingJourney(orderId.toString());
+  //     setError(null);
+
+  //     const token = await AsyncStorage.getItem("token");
+
+  //     if (!token) {
+  //       navigation.navigate("Login");
+  //       return;
+  //     }
+
+  //     const currentOrder = orders.find((order) => order.orderId === orderId);
+  //     if (!currentOrder || !currentOrder.processOrder?.id) {
+  //       throw new Error("Order not found");
+  //     }
+
+  //     const processOrderId = currentOrder.processOrder.id;
+  //     const currentStatus = currentOrder.processOrder.status.toLowerCase();
+  //     const latitude = currentOrder.latitude;
+  //     const longitude = currentOrder.longitude;
+  //     const address = currentOrder.address;
+
+  //     console.log(
+  //       `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
+  //     );
+
+  //     // OPEN GOOGLE MAPS FOR BOTH "Start Journey" AND "Continue"
+  //     if (latitude && longitude) {
+  //       console.log("Opening Google Maps navigation to destination");
+  //       setTimeout(() => {
+  //         openGoogleMapsNavigation(latitude, longitude, address);
+  //       }, 300);
+  //     }
+
+  //     // If status is already "On the way" or "Hold", navigate directly to EndJourneyConfirmation
+  //     if (currentStatus === "on the way" || currentStatus === "hold") {
+  //       console.log(
+  //         "Status is already on the way or hold, navigating directly"
+  //       );
+  //       const remainingOrders = orders
+  //         .filter((order) => order.processOrder.id !== processOrderId)
+  //         .map((order) => order.processOrder.id);
+
+  //       // Add a small delay to ensure maps opens before navigation
+  //       setTimeout(() => {
+  //         navigation.navigate("EndJourneyConfirmation", {
+  //           processOrderIds: [processOrderId],
+  //           allProcessOrderIds: processOrderIds,
+  //           remainingOrders: remainingOrders,
+  //           orderData: currentOrder, // Pass the entire order data
+  //           onOrderComplete: (completedId: number) => {
+  //             handleOrderComplete(completedId);
+  //           },
+  //         });
+  //       }, 500);
+  //       return;
+  //     }
+
+  //     // Only start journey for "Todo" status (API call)
+  //     console.log("Starting journey for process order:", processOrderId);
+
+  //     const payload = {
+  //       orderIds: processOrderId.toString(),
+  //       isProcessOrderIds: 1,
+  //     };
+
+  //     console.log("Sending payload:", payload);
+
+  //     const response = await axios.post(
+  //       `${environment.API_BASE_URL}api/order/start-journey`,
+  //       payload,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     console.log("Start journey response:", response.data);
+
+  //     if (response.data.status === "success") {
+  //       setOrders((prevOrders) =>
+  //         prevOrders.map((order) => {
+  //           if (order.processOrder.id === processOrderId) {
+  //             return {
+  //               ...order,
+  //               processOrder: {
+  //                 ...order.processOrder,
+  //                 status: "On the Way",
+  //               },
+  //             };
+  //           }
+  //           return order;
+  //         })
+  //       );
+
+  //       const remainingOrders = orders
+  //         .filter((order) => order.processOrder.id !== processOrderId)
+  //         .map((order) => order.processOrder.id);
+
+  //       // Navigate after a delay to ensure maps opens
+  //       setTimeout(() => {
+  //         navigation.navigate("EndJourneyConfirmation", {
+  //           processOrderIds: [processOrderId],
+  //           allProcessOrderIds: processOrderIds,
+  //           remainingOrders: remainingOrders,
+  //           orderData: currentOrder, // Pass the entire order data
+  //           onOrderComplete: (completedId: number) => {
+  //             handleOrderComplete(completedId);
+  //           },
+  //         });
+  //       }, 500);
+  //     } else {
+  //       throw new Error(response.data.message || "Failed to start journey");
+  //     }
+  //   } catch (error: any) {
+  //     console.error("Error starting journey:", error);
+
+  //     if (error.response) {
+  //       console.error("Error response data:", error.response.data);
+  //       console.error("Error response status:", error.response.status);
+
+  //       // DEBUG: Log the exact response structure
+  //       console.log(
+  //         "Full error response:",
+  //         JSON.stringify(error.response.data, null, 2)
+  //       );
+  //     }
+
+  //     const errorMessage =
+  //       error.response?.data?.message ||
+  //       error.message ||
+  //       "Failed to start journey";
+  //     const hasOngoingActivity =
+  //       errorMessage.includes("ongoing activity") ||
+  //       errorMessage.includes("ongoing") ||
+  //       errorMessage.includes("Ongoing");
+
+  //     // Get ongoing process order IDs from response (if available)
+  //     const ongoingProcessOrderIds =
+  //       error.response?.data?.ongoingProcessOrderIds || [];
+
+  //     console.log("DEBUG - Setting alert modal with:");
+  //     console.log("  hasOngoingActivity:", hasOngoingActivity);
+  //     console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
+  //     console.log("  errorMessage:", errorMessage);
+
+  //     if (hasOngoingActivity) {
+  //       setAlertModal({
+  //         visible: true,
+  //         title: "Already Have Active Journey",
+  //         message: errorMessage,
+  //         type: "error",
+  //         showOpenOngoingButton: true,
+  //         ongoingProcessOrderIds: ongoingProcessOrderIds,
+  //       });
+  //     } else {
+  //       setAlertModal({
+  //         visible: true,
+  //         title: "Error",
+  //         message: errorMessage,
+  //         type: "error",
+  //         showOpenOngoingButton: false,
+  //         ongoingProcessOrderIds: [],
+  //       });
+  //     }
+  //   } finally {
+  //     setStartingJourney(null);
+  //   }
+  // };
 
   const handleOrderComplete = (completedId: number) => {
     console.log(`handleOrderComplete: completedId=${completedId}`);

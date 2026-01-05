@@ -178,30 +178,53 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     ).start();
   };
 
-  // Validate if officer ID starts with DCM (ONLY DCM allowed)
   const validateOfficerType = (officerId: string): boolean => {
-    const upperOfficerId = officerId.toUpperCase();
+  const upperOfficerId = officerId.toUpperCase();
 
-    // Only allow DCM
-    if (upperOfficerId.startsWith("DCM")) {
-      return true;
+  // Only allow DCM or DCH
+  if (upperOfficerId.startsWith("DCM") || upperOfficerId.startsWith("DCH")) {
+    return true;
+  }
+
+  // Check if it's one of the disallowed types
+  const disallowedTypes = ["DIO", "FIO", "CFO"];
+  for (const type of disallowedTypes) {
+    if (upperOfficerId.startsWith(type)) {
+      console.log(
+        `Officer ID ${officerId} is disallowed (starts with ${type})`
+      );
+      return false;
     }
+  }
 
-    // Check if it's one of the disallowed types
-    const disallowedTypes = ["DCH", "DIO", "FIO", "CFO"];
-    for (const type of disallowedTypes) {
-      if (upperOfficerId.startsWith(type)) {
-        console.log(
-          `Officer ID ${officerId} is disallowed (starts with ${type})`
-        );
-        return false;
-      }
-    }
+  // Any other pattern is also not allowed
+  console.log(`Officer ID ${officerId} is not a DCM/DCH officer`);
+  return false;
+};
+  // Validate if officer ID starts with DCM (ONLY DCM allowed)
+  // const validateOfficerType = (officerId: string): boolean => {
+  //   const upperOfficerId = officerId.toUpperCase();
 
-    // Any other pattern is also not allowed
-    console.log(`Officer ID ${officerId} is not a DCM officer`);
-    return false;
-  };
+  //   // Only allow DCM
+  //   if (upperOfficerId.startsWith("DCM")) {
+  //     return true;
+  //   }
+
+  //   // Check if it's one of the disallowed types
+  //   const disallowedTypes = ["DCH", "DIO", "FIO", "CFO"];
+  //   for (const type of disallowedTypes) {
+  //     if (upperOfficerId.startsWith(type)) {
+  //       console.log(
+  //         `Officer ID ${officerId} is disallowed (starts with ${type})`
+  //       );
+  //       return false;
+  //     }
+  //   }
+
+  //   // Any other pattern is also not allowed
+  //   console.log(`Officer ID ${officerId} is not a DCM officer`);
+  //   return false;
+  // };
 
   // Extract officer ID from QR data
   const extractOfficerId = (qrData: string): string | null => {
@@ -315,15 +338,15 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
       // Validate if officer is DCM or DCH
       if (!validateOfficerType(officerId)) {
-        // UPDATED: Show specific error message when QR doesn't start with DCM/DCH
-        setModalTitle("Error!");
-        setModalMessage(
-          "The QR code is not identified.\nPlease check and try again."
-        );
-        setModalType("error");
-        setShowErrorModal(true);
-        return;
-      }
+      // UPDATED: Show specific error message when QR doesn't start with DCM/DCH
+      setModalTitle("Error!");
+      setModalMessage(
+        "Cash can be received only by a Distribution Centre Manager. Please scan a valid Centre Manager's QR code."
+      );
+      setModalType("error");
+      setShowErrorModal(true);
+      return;
+    }
 
       // Show loading while making API call
       setLoading(true);

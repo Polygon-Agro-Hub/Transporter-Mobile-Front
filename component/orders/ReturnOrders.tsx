@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -21,6 +22,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
+import { useFocusEffect } from "@react-navigation/core";
+import MarqueeText from "@/component/common/MarqueeText";
+
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -190,6 +194,24 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     });
   };
 
+  
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Home");
+        return true; // Prevent default behavior
+      };
+      
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+      
+      return () => subscription.remove();
+    }, [navigation])
+  );
+
   if (loading) {
     return (
       <View className="flex-1 bg-white">
@@ -312,7 +334,30 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                     {getReturnReasonDisplay(order.returnDetails)}
                   </Text>
                 </View>
+{/* <View className="flex-row items-center" style={{ minHeight: 24 }}>
+  <FontAwesome
+    name="exclamation-circle"
+    size={wp(5)}
+    color="black"
+  />
 
+  <View style={{ 
+    flex: 1, 
+    marginLeft: 8,
+    height: 24,
+  }}>
+    <MarqueeText
+      text={getReturnReasonDisplay(order.returnDetails)}
+      className={`text-sm ${getStatusColor(order.returnDetails.reason)}`}
+      style={{ 
+        lineHeight: 18,
+        fontSize: 14,
+        includeFontPadding: false,
+      }}
+      speed={30}
+    />
+  </View>
+</View> */}
                 {/* Payment Info - Updated logic */}
                 <View className="flex-row items-center pt-1">
                   <View className="flex-row items-center">

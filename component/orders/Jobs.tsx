@@ -50,7 +50,7 @@ interface DriverOrder {
   allProcessOrderIds?: number[];
   processOrderIds?: number[];
   holdReasons?: HoldReason[] | null;
-  completedDate?: string; // Add this field to track completion date
+  completeTime?: string | Date; // Can be either string or Date object from backend
 }
 
 interface OrderStatistics {
@@ -76,17 +76,55 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   }, []);
 
   // Helper function to check if a date is today
-  const isToday = (dateString: string): boolean => {
-    if (!dateString) return false;
+  const isToday = (dateInput: string | Date): boolean => {
+    if (!dateInput) {
+      console.log("isToday: Empty dateInput");
+      return false;
+    }
     
-    const date = new Date(dateString);
-    const today = new Date();
-    
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
+    try {
+      let date: Date;
+      
+      // Handle both Date objects and strings
+      if (dateInput instanceof Date) {
+        date = dateInput;
+        console.log("isToday: Received Date object:", dateInput.toISOString());
+      } else if (typeof dateInput === 'string') {
+        // Parse string format: "2026-01-05 05:14:48" or "2026-01-05T05:14:48.000Z"
+        const datePart = dateInput.split(' ')[0].split('T')[0]; // "2026-01-05"
+        const [year, month, day] = datePart.split('-').map(Number);
+        date = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+        console.log("isToday: Parsed string to date:", datePart);
+      } else {
+        console.log("isToday: Invalid input type:", typeof dateInput);
+        return false;
+      }
+      
+      // Get today's date in local timezone
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+      const todayDay = today.getDate();
+      
+      // Get the date components in local timezone
+      const dateYear = date.getFullYear();
+      const dateMonth = date.getMonth();
+      const dateDay = date.getDate();
+      
+      const matches = dateYear === todayYear && dateMonth === todayMonth && dateDay === todayDay;
+      
+      console.log(`isToday comparison:`, {
+        input: dateInput instanceof Date ? dateInput.toISOString() : dateInput,
+        orderDate: `${dateYear}-${dateMonth + 1}-${dateDay}`,
+        todayDate: `${todayYear}-${todayMonth + 1}-${todayDay}`,
+        matches: matches
+      });
+      
+      return matches;
+    } catch (error) {
+      console.error('Error parsing date:', dateInput, error);
+      return false;
+    }
   };
 
   const fetchDriverOrders = async () => {
@@ -144,23 +182,57 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       if (completedResponse.data.status === "success") {
         const allCompleted = completedResponse.data.data.orders;
         
-        // Filter to show only today's completed orders
-        const todayCompleted = allCompleted.filter((order: DriverOrder) => {
-          // Check if the order has a completedDate field
-          if (order.completedDate) {
-            return isToday(order.completedDate);
-          }
-          
-          // Fallback: If no completedDate field, you might need to check other date fields
-          // This depends on your API structure. Common alternatives:
-          // - order.updatedAt
-          // - order.completionTime
-          // - order.lastModified
-          // Replace 'updatedAt' with the actual field name from your API
-          return true; // Temporarily show all until you verify the field name
+        console.log("=== COMPLETED ORDERS DEBUG ===");
+        console.log("Total completed orders FROM API:", allCompleted.length);
+        
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        console.log("Today's date string:", todayStr);
+        console.log("Current timestamp:", now.toISOString());
+        
+        // Log ALL orders to see their completeTime - FULL OBJECTS
+        console.log("\n--- FULL API RESPONSE (first 3 orders) ---");
+        allCompleted.slice(0, 3).forEach((order: DriverOrder, idx: number) => {
+          console.log(`\nOrder ${idx + 1}:`, JSON.stringify(order, null, 2));
         });
         
-        console.log("Today's completed orders:", todayCompleted.length);
+        console.log("\n--- CHECKING completeTime FOR ALL ORDERS ---");
+        allCompleted.forEach((order: DriverOrder, idx: number) => {
+          console.log(`Order ${idx + 1} [ID: ${order.driverOrderId}]:`, {
+            completeTime: order.completeTime,
+            fullName: order.fullName,
+            jobCount: order.jobCount,
+            hasCompleteTime: !!order.completeTime,
+            completeTimeType: typeof order.completeTime,
+            completeTimeValue: order.completeTime === null ? "NULL" : order.completeTime === undefined ? "UNDEFINED" : order.completeTime
+          });
+        });
+        
+        // Count how many have completeTime
+        const withCompleteTime = allCompleted.filter((o: DriverOrder) => o.completeTime);
+        console.log(`\n📊 Orders WITH completeTime: ${withCompleteTime.length}/${allCompleted.length}`);
+        console.log(`📊 Orders WITHOUT completeTime: ${allCompleted.length - withCompleteTime.length}/${allCompleted.length}`);
+        
+        // Filter to show only today's completed orders using completeTime field
+        const todayCompleted = allCompleted.filter((order: DriverOrder) => {
+          // Must have completeTime to be included
+          if (!order.completeTime) {
+            console.log(`❌ Order ${order.driverOrderId}: NO completeTime - EXCLUDED`);
+            return false;
+          }
+          
+          const isTodayOrder = isToday(order.completeTime);
+          const symbol = isTodayOrder ? "✅" : "❌";
+          console.log(`${symbol} Order ${order.driverOrderId}: completeTime="${order.completeTime}" isToday=${isTodayOrder}`);
+          
+          return isTodayOrder;
+        });
+        
+        console.log("\n--- FILTER RESULTS ---");
+        console.log("✅ Today's completed orders count:", todayCompleted.length);
+        console.log("✅ Filtered order IDs:", todayCompleted.map((o: DriverOrder) => o.driverOrderId));
+        console.log("=== END DEBUG ===\n");
+        
         setCompletedOrders(todayCompleted);
       }
     } catch (error: any) {

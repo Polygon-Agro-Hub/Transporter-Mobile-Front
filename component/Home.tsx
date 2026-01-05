@@ -36,15 +36,17 @@ interface HomeProps {
 interface AmountData {
   totalOrders: number;
   totalCashAmount: number;
-  todoOrders: number; // This should now be ALL todo orders, not just today's
+  todoOrders: number;
   completedOrders: number;
+  todayCompletedOrders: number; // NEW: Today's completed orders only
+  todayReturnOrders: number; // NEW: Today's return orders (Return + Return Received)
   onTheWayOrders: number;
   holdOrders: number;
   returnOrders: number;
   returnReceivedOrders: number;
   cashOrders: number;
   ongoingProcessOrderIds?: number[];
-  uniqueLocationsCount?: number; // This should also be for ALL pending orders
+  uniqueLocationsCount?: number;
 }
 
 // Default values for amountData
@@ -53,6 +55,8 @@ const defaultAmountData: AmountData = {
   totalCashAmount: 0,
   todoOrders: 0,
   completedOrders: 0,
+  todayCompletedOrders: 0,
+  todayReturnOrders: 0,
   onTheWayOrders: 0,
   holdOrders: 0,
   returnOrders: 0,
@@ -190,41 +194,55 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   // Determine the motivational message based on progress
   const getMotivationalMessage = () => {
-    // Don't show motivational message if End My Shift button should be shown
-    if (shouldShowEndShiftButton()) {
-      return null;
-    }
+  // Don't show motivational message if End My Shift button should be shown
+  if (shouldShowEndShiftButton()) {
+    return null;
+  }
 
-    const total = amountData?.totalOrders || 0;
-    const completed = amountData?.completedOrders || 0;
-    const locationsCount = getUniqueLocationsCount(); // Uses ALL pending orders
+  const todoOrders = amountData?.todoOrders || 0;
+  const holdOrders = amountData?.holdOrders || 0;
+  const onTheWayOrders = amountData?.onTheWayOrders || 0;
+  const todayCompleted = amountData?.todayCompletedOrders || 0;
+  const todayReturns = amountData?.todayReturnOrders || 0;
+  const locationsCount = getUniqueLocationsCount();
 
-    const completionRate =
-      total > 0 ? Math.round((completed / total) * 100) : 0;
+  // Calculate total pending orders
+  const totalPending = todoOrders + holdOrders + onTheWayOrders;
+  
+  // Calculate today's completed work
+  const todayFinished = todayCompleted + todayReturns;
+  
+  // Calculate total work (pending + today's finished)
+  const totalWork = totalPending + todayFinished;
+  
+  // Calculate completion percentage
+  // Formula: (today's completed + today's returns) / (todo + hold + on the way + today's completed + today's returns) * 100
+  const completionRate = totalWork > 0 
+    ? Math.round((todayFinished / totalWork) * 100) 
+    : 0;
 
-    // If no orders at all - Style 1 (Light yellow with target icon)
-    if (total === 0) {
-      return {
-        title: "Have a nice Day!",
-        subtitle: "Scan packages to start..",
-        bgColor: "#FFF2BF",
-        showPercentage: false,
-        percentage: 0,
-        style: 1,
-      };
-    }
-
-    // If there are orders to complete - Style 2 (Bright yellow with percentage)
-    // Shows unique locations for ALL pending orders
+  // If no work at all - Style 1 (Light yellow with target icon)
+  if (totalWork === 0) {
     return {
-      title: "Way more to go!",
-      subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
-      bgColor: "#F7CA21",
-      showPercentage: true,
-      percentage: completionRate,
-      style: 2,
+      title: "Have a nice Day!",
+      subtitle: "Scan packages to start..",
+      bgColor: "#FFF2BF",
+      showPercentage: false,
+      percentage: 0,
+      style: 1,
     };
+  }
+
+  // If there are orders to complete - Style 2 (Bright yellow with percentage)
+  return {
+    title: "Way more to go!",
+    subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
+    bgColor: "#F7CA21",
+    showPercentage: true,
+    percentage: completionRate,
+    style: 2,
   };
+};
 
   const motivationalMsg = getMotivationalMessage();
 
@@ -490,7 +508,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             resizeMode="contain"
           />
           <View>
-            <Text className="text-sm text-black">Cash Received</Text>
+            <Text className="text-sm text-black">Cash Received :</Text>
             <Text className="text-xl font-bold text-black">
               Rs. {formatNumberWithCommas(cashAmount)}
             </Text>
