@@ -16,6 +16,7 @@ import axios from "axios";
 import { environment } from "@/environment/environment";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LottieView from "lottie-react-native"; 
+import MarqueeText from "@/component/common/MarqueeText";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
 
@@ -587,7 +588,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                     {item.title}. {item.name}
                   </Text>
                   <Text className="text-sm mt-1">{item.time}</Text>
-                  {isOnHold && (
+                  {/* {isOnHold && (
                     <View className="flex flex-row items-center gap-2 mt-0.5">
                       <FontAwesome6
                         name="circle-exclamation"
@@ -598,7 +599,29 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                         {holdReasonText}
                       </Text>
                     </View>
-                  )}
+                  )} */}
+                  {isOnHold && (
+  <View className="flex flex-row items-center gap-2 mt-0.5">
+    <FontAwesome6
+      name="circle-exclamation"
+      size={18}
+      color="#FF0000"
+    />
+    {/* Use FixedMarqueeText for hold reason */}
+    <View style={{ flex: 1, height: 20 }}>
+      <MarqueeText
+        text={holdReasonText}
+        style={{ 
+          fontSize: 12,
+          color: '#647B94',
+          lineHeight: 16,
+        }}
+    //    speed={50}
+      />
+    </View>
+  </View>
+)}
+
                 </View>
 
                 <View className="flex-row items-center">

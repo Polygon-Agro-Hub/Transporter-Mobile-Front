@@ -172,19 +172,23 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
   };
 
   // Function to get the display text for return reason
-  const getReturnReasonDisplay = (returnDetails: ReturnOrder['returnDetails']) => {
-    // Check if the reason is "Other" (case insensitive)
-    const isOtherReason = returnDetails.reasonEnglish?.toLowerCase() === "other" || 
-                          returnDetails.reason?.toLowerCase() === "other";
-    
-    // If it's "Other" and there's a note, display the note
-    if (isOtherReason && returnDetails.note && returnDetails.note.trim()) {
-      return returnDetails.note;
-    }
-    
-    // Otherwise, display the regular reason
-    return returnDetails.reason || "No reason specified";
-  };
+ // Function to get the display text for return reason
+const getReturnReasonDisplay = (returnDetails: ReturnOrder['returnDetails']) => {
+  // Check if the reason is "Other" (case insensitive)
+  const isOtherReason = returnDetails.reasonEnglish?.toLowerCase() === "other" || 
+                        returnDetails.reason?.toLowerCase() === "other";
+  
+  // If it's "Other" and there's a note, display the note
+  if (isOtherReason && returnDetails.note && returnDetails.note.trim()) {
+    return returnDetails.note.trim();
+  }
+  
+  // Otherwise, display the regular reason - ensure it's not truncated
+  const reason = returnDetails.reasonEnglish || returnDetails.reason || "No reason specified";
+  
+  // Remove any ellipsis that might be in the data
+  return reason.replace(/\.{3,}$/, '').trim();
+};
 
   const handleCardPress = (order: ReturnOrder) => {
     // Navigate to ReturnOrderQR with invoice number and orderId
@@ -194,7 +198,14 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     });
   };
 
-  
+  // Add this logging in your component
+useEffect(() => {
+  returnOrders.forEach((order, index) => {
+    const displayText = getReturnReasonDisplay(order.returnDetails);
+    console.log(`Order ${index} text: "${displayText}"`);
+    console.log(`Order ${index} text length: ${displayText.length}`);
+  });
+}, [returnOrders]);
 
   useFocusEffect(
     useCallback(() => {
@@ -318,7 +329,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                 </View>
 
                 {/* Status */}
-                <View className="flex-row items-center">
+                {/* <View className="flex-row items-center">
                   <FontAwesome
                     name="exclamation-circle"
                     size={wp(5)}
@@ -333,31 +344,33 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   >
                     {getReturnReasonDisplay(order.returnDetails)}
                   </Text>
-                </View>
-{/* <View className="flex-row items-center" style={{ minHeight: 24 }}>
+                </View> */}
+
+<View className="flex-row items-start mb-2">
   <FontAwesome
     name="exclamation-circle"
-    size={wp(5)}
+    size={wp(4)}
     color="black"
+    style={{ marginTop: 2, marginRight: 8 }}
   />
-
+  
+  {/* Force wider container by reducing padding elsewhere */}
   <View style={{ 
-    flex: 1, 
-    marginLeft: 8,
+    flex: 1,
+    marginLeft: -4, // Negative margin to get more space
+    marginRight: -4,
     height: 24,
   }}>
     <MarqueeText
       text={getReturnReasonDisplay(order.returnDetails)}
-      className={`text-sm ${getStatusColor(order.returnDetails.reason)}`}
       style={{ 
-        lineHeight: 18,
         fontSize: 14,
-        includeFontPadding: false,
+        color: '#000000',
       }}
-      speed={30}
+   //   speed={60}
     />
   </View>
-</View> */}
+</View>
                 {/* Payment Info - Updated logic */}
                 <View className="flex-row items-center pt-1">
                   <View className="flex-row items-center">
