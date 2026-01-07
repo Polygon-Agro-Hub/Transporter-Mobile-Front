@@ -397,12 +397,15 @@ const handleBarCodeScanned = async ({
       statusCode === 409 &&
       (errorMessage.includes("already been collected") ||
        errorMessage.includes("already been assigned to another driver") ||
-       errorMessage.toLowerCase().includes("collected by another officer") ||
+       errorMessage.toLowerCase().includes("collected by another Driver") ||
        errorMessage.toLowerCase().includes("assigned to another") ||
-       errorMessage.toLowerCase().includes("officer id:"))
+       errorMessage.toLowerCase().includes("Driver id:"))
     ) {
       title = "Order Unavailable!";
-      message = errorMessage;
+      // Replace "officer" with "Driver" in the error message
+      message = errorMessage
+        .replace(/officer/gi, "Driver")
+        .replace(/Officer ID:/gi, "Driver ID:");
     }
     // PRIORITY 3: Check for "Order Not Ready" (400 status with processing message)
     else if (
@@ -424,8 +427,8 @@ const handleBarCodeScanned = async ({
       errorMessage.includes("Invoice number not found") ||
       errorMessage.toLowerCase().includes("invalid invoice")
     ) {
-      title = "Invalid Invoice!";
-      message = "The invoice number was not found. Please check the QR code.";
+      title = "Error!";
+      message = "The QR code is not identified.Please check and try again.";
     }
     // Network errors
     else if (

@@ -20,6 +20,7 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import CustomHeader from "../common/CustomHeader";
 import { useSelector, useDispatch } from "react-redux";
+import { AlertModal } from "../common/AlertModal";
 import { 
   selectAuthToken, 
   logoutUser, 
@@ -46,6 +47,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // AlertModal states
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   const token = useSelector(selectAuthToken);
   const dispatch = useDispatch();
@@ -53,14 +59,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   // Request permissions based on platform
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
-      // For Android, check if device is running Android 13+ (API 33)
       const platformVersion = typeof Platform.Version === 'string' 
         ? parseInt(Platform.Version, 10) 
         : Platform.Version;
       
       if (platformVersion >= 33) {
-        // Android 13+ - Use the photo picker which doesn't need permission
-        // But we should still check for gallery access
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
           const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -68,7 +71,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         }
         return true;
       } else {
-        // Android 12 and below - Need READ_EXTERNAL_STORAGE permission
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
           const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -77,7 +79,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         return true;
       }
     } else {
-      // iOS - Request photo library permission
       const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -166,10 +167,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        // For Android, we can specify to use the system picker
         presentationStyle: ImagePicker.UIImagePickerPresentationStyle.POPOVER,
         allowsMultipleSelection: false,
-        // Android-specific options
         exif: false,
       });
 
@@ -190,11 +189,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert("Error", "Failed to open image picker");
+      setModalMessage("Failed to open image picker");
+      setShowErrorModal(true);
     }
   };
 
-  // Alternative approach using MediaLibrary API for Android Photo Picker
   const handleImageUploadAndroidPicker = async () => {
     if (Platform.OS !== 'android') {
       handleImageUpload();
@@ -202,14 +201,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
 
     try {
-      // For Android, we can use launchImageLibraryAsync which uses the system picker
-      // The system picker on Android 13+ doesn't require READ_MEDIA_IMAGES permission
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        // These options help use the system picker
         exif: false,
         base64: false,
       });
@@ -231,31 +227,29 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert("Error", "Failed to open image picker");
+      setModalMessage("Failed to open image picker");
+      setShowErrorModal(true);
     }
   };
 
   const uploadProfileImage = async (selectedImage: ImagePicker.ImagePickerAsset) => {
     if (!token) {
-      Alert.alert("Error", "Authentication required");
+      setModalMessage("Authentication required");
+      setShowErrorModal(true);
       return;
     }
 
     try {
       setUploading(true);
 
-      // Create FormData
       const formData = new FormData();
       
-      // Get filename from URI
       const uriParts = selectedImage.uri.split('/');
       const filename = uriParts[uriParts.length - 1];
       
-      // Determine mime type
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-      // Append image to FormData
       formData.append('profileImage', {
         uri: selectedImage.uri,
         name: filename,
@@ -287,12 +281,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           image: newImageUrl,
         }));
         
-        // UPDATE REDUX STATE
+        // Update Redux state
         dispatch(updateProfileImage(newImageUrl));
         
-        Alert.alert("Success", "Profile picture updated successfully!");
+        // Show success modal instead of Alert
+        setModalMessage("Your profile picture has been updated successfully!");
+        setShowSuccessModal(true);
       } else {
-        Alert.alert("Error", response.data.message || "Upload failed");
+        setModalMessage(response.data.message || "Upload failed");
+        setShowErrorModal(true);
       }
     } catch (error: any) {
       console.error("Upload error details:", error);
@@ -304,7 +301,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         console.log("Data:", error.response.data);
         
         if (error.response.status === 404) {
-          errorMessage = "Update profile endpoint not found (404). Please check the backend route.";
+          errorMessage = "Update profile endpoint not found. Please check the backend route.";
         } else if (error.response.data?.message) {
           errorMessage = error.response.data.message;
         }
@@ -314,7 +311,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         errorMessage = error.message || "Unknown error occurred";
       }
       
-      Alert.alert("Upload Error", errorMessage);
+      setModalMessage(errorMessage);
+      setShowErrorModal(true);
     } finally {
       setUploading(false);
     }
@@ -423,7 +421,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               )}
 
               <TouchableOpacity
-                onPress={handleImageUploadAndroidPicker} // Use the Android-optimized version
+                onPress={handleImageUploadAndroidPicker}
                 disabled={uploading}
                 style={{
                   position: "absolute",
@@ -488,6 +486,29 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Success Alert Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Success!"
+        message={modalMessage}
+        type="success"
+        onClose={() => setShowSuccessModal(false)}
+        autoClose={true}
+        duration={3000}
+      />
+
+      {/* Error Alert Modal */}
+      <AlertModal
+        visible={showErrorModal}
+        title="Upload Failed"
+        message={modalMessage}
+        type="error"
+        onClose={() => setShowErrorModal(false)}
+        autoClose={true}
+        duration={4000}
+      />
+
+      {/* Logout Confirmation Modal */}
       <Modal
         visible={showLogoutModal}
         transparent={true}
