@@ -38,18 +38,19 @@ interface AmountData {
   totalCashAmount: number;
   todoOrders: number;
   completedOrders: number;
-  todayCompletedOrders: number; // NEW: Today's completed orders only
-  todayReturnOrders: number; // NEW: Today's return orders (Return + Return Received)
+  todayCompletedOrders: number;
+  todayReturnOrders: number;
   onTheWayOrders: number;
   holdOrders: number;
   returnOrders: number;
   returnReceivedOrders: number;
   cashOrders: number;
   ongoingProcessOrderIds?: number[];
-  uniqueLocationsCount?: number;
+  pendingLocationsCount?: number; // NEW: Count of pending locations
+  todayCompletedLocationsCount?: number; // NEW: Count of today's completed locations
 }
 
-// Default values for amountData
+// Update default values
 const defaultAmountData: AmountData = {
   totalOrders: 0,
   totalCashAmount: 0,
@@ -63,7 +64,8 @@ const defaultAmountData: AmountData = {
   returnReceivedOrders: 0,
   cashOrders: 0,
   ongoingProcessOrderIds: [],
-  uniqueLocationsCount: 0,
+  pendingLocationsCount: 0,
+  todayCompletedLocationsCount: 0,
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -159,11 +161,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   };
 
   // UPDATED: Get unique locations count (for ALL pending orders)
-  const getUniqueLocationsCount = () => {
-    // This should be calculated on the backend by counting distinct delivery locations
-    // for ALL pending orders (todo + hold + on the way)
-    return amountData?.uniqueLocationsCount || 0;
-  };
+  // const getUniqueLocationsCount = () => {
+  //   // This should be calculated on the backend by counting distinct delivery locations
+  //   // for ALL pending orders (todo + hold + on the way)
+  //   return amountData?.uniqueLocationsCount || 0;
+  // };
 
   // Check if should show End My Shift button
   const shouldShowEndShiftButton = () => {
@@ -193,30 +195,80 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   };
 
   // Determine the motivational message based on progress
-  const getMotivationalMessage = () => {
+//   const getMotivationalMessage = () => {
+//   // Don't show motivational message if End My Shift button should be shown
+//   if (shouldShowEndShiftButton()) {
+//     return null;
+//   }
+
+//   const todoOrders = amountData?.todoOrders || 0;
+//   const holdOrders = amountData?.holdOrders || 0;
+//   const onTheWayOrders = amountData?.onTheWayOrders || 0;
+//   const todayCompleted = amountData?.todayCompletedOrders || 0;
+//   const todayReturns = amountData?.todayReturnOrders || 0;
+//   const locationsCount = getUniqueLocationsCount();
+
+//   // Calculate total pending orders
+//   const totalPending = todoOrders + holdOrders + onTheWayOrders;
+  
+//   // Calculate today's completed work
+//   const todayFinished = todayCompleted + todayReturns;
+  
+//   // Calculate total work (pending + today's finished)
+//   const totalWork = totalPending + todayFinished;
+  
+//   // Calculate completion percentage
+//   // Formula: (today's completed + today's returns) / (todo + hold + on the way + today's completed + today's returns) * 100
+//   const completionRate = totalWork > 0 
+//     ? Math.round((todayFinished / totalWork) * 100) 
+//     : 0;
+
+//   // If no work at all - Style 1 (Light yellow with target icon)
+//   if (totalWork === 0) {
+//     return {
+//       title: "Have a nice Day!",
+//       subtitle: "Scan packages to start..",
+//       bgColor: "#FFF2BF",
+//       showPercentage: false,
+//       percentage: 0,
+//       style: 1,
+//     };
+//   }
+
+//   // If there are orders to complete - Style 2 (Bright yellow with percentage)
+//   return {
+//     title: "Way more to go!",
+//     subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
+//     bgColor: "#F7CA21",
+//     showPercentage: true,
+//     percentage: completionRate,
+//     style: 2,
+//   };
+// };
+const getUniqueLocationsCount = () => {
+  // This now returns pending locations only (for subtitle display)
+  return amountData?.pendingLocationsCount || 0;
+};
+
+// Update the motivational message function
+const getMotivationalMessage = () => {
   // Don't show motivational message if End My Shift button should be shown
   if (shouldShowEndShiftButton()) {
     return null;
   }
 
-  const todoOrders = amountData?.todoOrders || 0;
-  const holdOrders = amountData?.holdOrders || 0;
-  const onTheWayOrders = amountData?.onTheWayOrders || 0;
-  const todayCompleted = amountData?.todayCompletedOrders || 0;
+  const pendingLocations = amountData?.pendingLocationsCount || 0;
+  const todayCompletedLocations = amountData?.todayCompletedLocationsCount || 0;
   const todayReturns = amountData?.todayReturnOrders || 0;
-  const locationsCount = getUniqueLocationsCount();
 
-  // Calculate total pending orders
-  const totalPending = todoOrders + holdOrders + onTheWayOrders;
+  // Calculate today's finished work (completed locations + returns)
+  const todayFinished = todayCompletedLocations + todayReturns;
   
-  // Calculate today's completed work
-  const todayFinished = todayCompleted + todayReturns;
-  
-  // Calculate total work (pending + today's finished)
-  const totalWork = totalPending + todayFinished;
+  // Calculate total work (pending locations + today's finished)
+  const totalWork = pendingLocations + todayFinished;
   
   // Calculate completion percentage
-  // Formula: (today's completed + today's returns) / (todo + hold + on the way + today's completed + today's returns) * 100
+  // Formula: (today's completed locations + today's returns) / (pending locations + today's completed locations + today's returns) * 100
   const completionRate = totalWork > 0 
     ? Math.round((todayFinished / totalWork) * 100) 
     : 0;
@@ -233,10 +285,10 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     };
   }
 
-  // If there are orders to complete - Style 2 (Bright yellow with percentage)
+  // If there are locations to complete - Style 2 (Bright yellow with percentage)
   return {
     title: "Way more to go!",
-    subtitle: `${locationsCount} Location${locationsCount !== 1 ? "s" : ""} to go..`,
+    subtitle: `${pendingLocations} Location${pendingLocations !== 1 ? "s" : ""} to go..`,
     bgColor: "#F7CA21",
     showPercentage: true,
     percentage: completionRate,
