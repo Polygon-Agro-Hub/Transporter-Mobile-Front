@@ -182,7 +182,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   const upperOfficerId = officerId.toUpperCase();
 
   // Only allow DCM or DCH
-  if (upperOfficerId.startsWith("DCM") || upperOfficerId.startsWith("DCH")) {
+  if (upperOfficerId.startsWith("DCM") ) {
     return true;
   }
 
