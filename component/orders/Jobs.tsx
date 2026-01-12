@@ -15,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
-import LottieView from "lottie-react-native"; 
+import LottieView from "lottie-react-native";
 import MarqueeText from "@/component/common/MarqueeText";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
@@ -51,7 +51,8 @@ interface DriverOrder {
   allProcessOrderIds?: number[];
   processOrderIds?: number[];
   holdReasons?: HoldReason[] | null;
-  completeTime?: string | Date; // Can be either string or Date object from backend
+  completeTime?: string | Date;
+  allCompleteTimes?: (string | Date)[]; 
 }
 
 interface OrderStatistics {
@@ -71,64 +72,41 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const [completedOrders, setCompletedOrders] = useState<DriverOrder[]>([]);
   const [statistics, setStatistics] = useState<OrderStatistics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState<string>("");
 
   useEffect(() => {
-    fetchDriverOrders();
+    // Set current date when component mounts
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    setCurrentDate(todayStr);
+    
+    fetchDriverOrders(todayStr);
   }, []);
 
   // Helper function to check if a date is today
-  const isToday = (dateInput: string | Date): boolean => {
-    if (!dateInput) {
-      console.log("isToday: Empty dateInput");
-      return false;
-    }
+ // Simple version that works with both formats
+const isToday = (dateInput: string | Date): boolean => {
+  if (!dateInput) return false;
+  
+  try {
+    const inputDate = new Date(dateInput);
+    const today = new Date();
     
-    try {
-      let date: Date;
-      
-      // Handle both Date objects and strings
-      if (dateInput instanceof Date) {
-        date = dateInput;
-        console.log("isToday: Received Date object:", dateInput.toISOString());
-      } else if (typeof dateInput === 'string') {
-        // Parse string format: "2026-01-05 05:14:48" or "2026-01-05T05:14:48.000Z"
-        const datePart = dateInput.split(' ')[0].split('T')[0]; // "2026-01-05"
-        const [year, month, day] = datePart.split('-').map(Number);
-        date = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
-        console.log("isToday: Parsed string to date:", datePart);
-      } else {
-        console.log("isToday: Invalid input type:", typeof dateInput);
-        return false;
-      }
-      
-      // Get today's date in local timezone
-      const today = new Date();
-      const todayYear = today.getFullYear();
-      const todayMonth = today.getMonth();
-      const todayDay = today.getDate();
-      
-      // Get the date components in local timezone
-      const dateYear = date.getFullYear();
-      const dateMonth = date.getMonth();
-      const dateDay = date.getDate();
-      
-      const matches = dateYear === todayYear && dateMonth === todayMonth && dateDay === todayDay;
-      
-      console.log(`isToday comparison:`, {
-        input: dateInput instanceof Date ? dateInput.toISOString() : dateInput,
-        orderDate: `${dateYear}-${dateMonth + 1}-${dateDay}`,
-        todayDate: `${todayYear}-${todayMonth + 1}-${todayDay}`,
-        matches: matches
-      });
-      
-      return matches;
-    } catch (error) {
-      console.error('Error parsing date:', dateInput, error);
-      return false;
-    }
-  };
+    // Compare year, month, and date in local time
+    return (
+      inputDate.getDate() === today.getDate() &&
+      inputDate.getMonth() === today.getMonth() &&
+      inputDate.getFullYear() === today.getFullYear()
+    );
+  } catch (error) {
+    console.error("Error in isToday:", error);
+    return false;
+  }
+};
 
-  const fetchDriverOrders = async () => {
+  const fetchDriverOrders = async (dateStr?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -137,6 +115,18 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       if (!token) {
         throw new Error("Authentication token not found");
       }
+
+      // Use provided date string or get current date
+      let todayDate = dateStr;
+      if (!todayDate) {
+        const now = new Date();
+        todayDate = `${now.getFullYear()}-${String(
+          now.getMonth() + 1
+        ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        setCurrentDate(todayDate);
+      }
+
+      console.log("📅 Fetching orders with date:", todayDate);
 
       // Fetch Todo and Hold orders for "To Do" tab
       const todoHoldResponse = await axios.get(
@@ -170,9 +160,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         setStatistics(todoHoldResponse.data.data.statistics);
       }
 
-      // Fetch Completed orders for "Completed" tab
+      // Fetch Completed orders for "Completed" tab with date parameter
       const completedResponse = await axios.get(
-        `${environment.API_BASE_URL}api/order/get-driver-orders?status=Completed&isHandOver=0`,
+        `${environment.API_BASE_URL}api/order/get-driver-orders?status=Completed&date=${todayDate}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -180,61 +170,29 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         }
       );
 
+      console.log("📦 Completed API response:", {
+        status: completedResponse.data.status,
+        dataCount: completedResponse.data.data?.orders?.length || 0,
+        dateUsed: todayDate
+      });
+
       if (completedResponse.data.status === "success") {
         const allCompleted = completedResponse.data.data.orders;
-        
+
         console.log("=== COMPLETED ORDERS DEBUG ===");
         console.log("Total completed orders FROM API:", allCompleted.length);
-        
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        console.log("Today's date string:", todayStr);
-        console.log("Current timestamp:", now.toISOString());
-        
-        // Log ALL orders to see their completeTime - FULL OBJECTS
-        console.log("\n--- FULL API RESPONSE (first 3 orders) ---");
-        allCompleted.slice(0, 3).forEach((order: DriverOrder, idx: number) => {
-          console.log(`\nOrder ${idx + 1}:`, JSON.stringify(order, null, 2));
+        console.log("Date parameter sent to backend:", todayDate);
+
+        // Update completed orders directly without filtering
+        setCompletedOrders((prevState) => {
+          console.log(
+            "🔄 Setting completedOrders from API:",
+            allCompleted.length
+          );
+          return allCompleted;
         });
-        
-        console.log("\n--- CHECKING completeTime FOR ALL ORDERS ---");
-        allCompleted.forEach((order: DriverOrder, idx: number) => {
-          console.log(`Order ${idx + 1} [ID: ${order.driverOrderId}]:`, {
-            completeTime: order.completeTime,
-            fullName: order.fullName,
-            jobCount: order.jobCount,
-            hasCompleteTime: !!order.completeTime,
-            completeTimeType: typeof order.completeTime,
-            completeTimeValue: order.completeTime === null ? "NULL" : order.completeTime === undefined ? "UNDEFINED" : order.completeTime
-          });
-        });
-        
-        // Count how many have completeTime
-        const withCompleteTime = allCompleted.filter((o: DriverOrder) => o.completeTime);
-        console.log(`\n📊 Orders WITH completeTime: ${withCompleteTime.length}/${allCompleted.length}`);
-        console.log(`📊 Orders WITHOUT completeTime: ${allCompleted.length - withCompleteTime.length}/${allCompleted.length}`);
-        
-        // Filter to show only today's completed orders using completeTime field
-        const todayCompleted = allCompleted.filter((order: DriverOrder) => {
-          // Must have completeTime to be included
-          if (!order.completeTime) {
-            console.log(`❌ Order ${order.driverOrderId}: NO completeTime - EXCLUDED`);
-            return false;
-          }
-          
-          const isTodayOrder = isToday(order.completeTime);
-          const symbol = isTodayOrder ? "✅" : "❌";
-          console.log(`${symbol} Order ${order.driverOrderId}: completeTime="${order.completeTime}" isToday=${isTodayOrder}`);
-          
-          return isTodayOrder;
-        });
-        
-        console.log("\n--- FILTER RESULTS ---");
-        console.log("✅ Today's completed orders count:", todayCompleted.length);
-        console.log("✅ Filtered order IDs:", todayCompleted.map((o: DriverOrder) => o.driverOrderId));
+
         console.log("=== END DEBUG ===\n");
-        
-        setCompletedOrders(todayCompleted);
       }
     } catch (error: any) {
       console.error("Error fetching driver orders:", error);
@@ -252,7 +210,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDriverOrders();
+    // Get current date for refresh
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    setCurrentDate(todayStr);
+    fetchDriverOrders(todayStr);
   };
 
   // Helper function to get hold reason text (can be made language-aware)
@@ -263,7 +227,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     // Get the first hold reason (or you can concatenate multiple reasons)
     const reason = orderData.holdReasons[0];
-    
+
     // Return English reason by default
     // You can make this dynamic based on user's language preference
     return reason.rsnEnglish || "Hold reason not specified";
@@ -274,40 +238,44 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     if (!time) return Number.MAX_SAFE_INTEGER;
 
     const lowerTime = time.toLowerCase();
-    
+
     // Check for "8:00 AM – 2:00 PM" or similar morning/early afternoon slots
-    if (lowerTime.includes("8:00") || 
-        lowerTime.includes("8 am") || 
-        lowerTime.includes("8:00am") ||
-        lowerTime.includes("8:00 am") ||
-        lowerTime.includes("morning") ||
-        lowerTime.includes("early")) {
+    if (
+      lowerTime.includes("8:00") ||
+      lowerTime.includes("8 am") ||
+      lowerTime.includes("8:00am") ||
+      lowerTime.includes("8:00 am") ||
+      lowerTime.includes("morning") ||
+      lowerTime.includes("early")
+    ) {
       return 1; // Highest priority
     }
-    
+
     // Check for "2:00 PM – 8:00 PM" or similar afternoon/evening slots
-    if (lowerTime.includes("2:00") || 
-        lowerTime.includes("2 pm") || 
-        lowerTime.includes("2:00pm") ||
-        lowerTime.includes("2:00 pm") ||
-        lowerTime.includes("afternoon") ||
-        lowerTime.includes("evening") ||
-        lowerTime.includes("late")) {
+    if (
+      lowerTime.includes("2:00") ||
+      lowerTime.includes("2 pm") ||
+      lowerTime.includes("2:00pm") ||
+      lowerTime.includes("2:00 pm") ||
+      lowerTime.includes("afternoon") ||
+      lowerTime.includes("evening") ||
+      lowerTime.includes("late")
+    ) {
       return 2; // Second priority
     }
-    
+
     // For other time formats, try to parse and prioritize earlier times
     const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
     if (match) {
       let hour = parseInt(match[1], 10);
       const period = match[2].toUpperCase();
-      
+
       if (period === "PM" && hour !== 12) hour += 12;
       if (period === "AM" && hour === 12) hour = 0;
-      
+
       return hour; // Earlier hours get lower numbers (higher priority)
     }
-    
+
     return Number.MAX_SAFE_INTEGER; // Default: put at the end
   };
 
@@ -319,24 +287,29 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     const sortedOrders = allOrders.sort((a, b) => {
       const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
       const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
-      
+
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
-      
+
       // First sort by time priority
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
-      
+
       // If same priority, sort by order ID as tie-breaker
       return a.processOrderId - b.processOrderId;
     });
 
-    console.log("Sorted ToDo orders:", sortedOrders.map(order => ({
-      processOrderId: order.processOrderId,
-      scheduleTime: order.primaryScheduleTime || order.allScheduleTimes?.[0],
-      priority: getScheduleTimePriority(order.primaryScheduleTime || order.allScheduleTimes?.[0])
-    })));
+    console.log(
+      "Sorted ToDo orders:",
+      sortedOrders.map((order) => ({
+        processOrderId: order.processOrderId,
+        scheduleTime: order.primaryScheduleTime || order.allScheduleTimes?.[0],
+        priority: getScheduleTimePriority(
+          order.primaryScheduleTime || order.allScheduleTimes?.[0]
+        ),
+      }))
+    );
 
     // Map with correct sequence numbers
     return sortedOrders.map((order, index) => ({
@@ -356,43 +329,112 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
   // Get completed orders for display with proper sorting
   const getCompletedDisplayOrders = () => {
+    console.log("\n🎯 ===== getCompletedDisplayOrders START =====");
+    console.log("🎯 completedOrders state length:", completedOrders.length);
+    console.log("🎯 Current date for filtering:", currentDate);
+    console.log(
+      "🎯 completedOrders full data:",
+      JSON.stringify(
+        completedOrders.map((o) => ({
+          driverOrderId: o.driverOrderId,
+          processOrderId: o.processOrderId,
+          fullName: o.fullName,
+          completeTime: o.completeTime,
+          allCompleteTimes: o.allCompleteTimes,
+          drvStatus: o.drvStatus,
+        })),
+        null,
+        2
+      )
+    );
+
+    // Filter by current date (backend should already do this, but we double-check)
+    const todayCompletedOrders = completedOrders.filter((order) => {
+      if (!order.completeTime) {
+        console.log(
+          `❌ Order ${order.driverOrderId}: NO completeTime - EXCLUDED`
+        );
+        return false;
+      }
+
+      const isTodayOrder = isToday(order.completeTime);
+      console.log(
+        `${isTodayOrder ? "✅" : "❌"} Order ${
+          order.driverOrderId
+        }: completeTime="${order.completeTime}" isToday=${isTodayOrder}`
+      );
+
+      return isTodayOrder;
+    });
+
+    console.log("🎯 Today's completed orders after filtering:", todayCompletedOrders.length);
+
     // Sort by schedule time priority first, then by order ID
-    const sortedOrders = [...completedOrders].sort((a, b) => {
+    const sortedOrders = [...todayCompletedOrders].sort((a, b) => {
       const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
       const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
-      
+
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
-      
+
       // First sort by time priority
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
-      
+
       // If same priority, sort by order ID as tie-breaker
       return a.processOrderId - b.processOrderId;
     });
 
-    console.log("Sorted Completed orders:", sortedOrders.map(order => ({
-      processOrderId: order.processOrderId,
-      scheduleTime: order.primaryScheduleTime || order.allScheduleTimes?.[0],
-      priority: getScheduleTimePriority(order.primaryScheduleTime || order.allScheduleTimes?.[0])
-    })));
+    console.log("🎯 After sorting, orders count:", sortedOrders.length);
 
-    // Map with correct sequence numbers
-    return sortedOrders.map((order, index) => ({
-      id: (index + 1).toString().padStart(2, "0"),
-      title: order.title || "",
-      name: order.fullName || "Customer",
-      time: formatScheduleTime(
-        order.primaryScheduleTime ||
-          order.allScheduleTimes[0] ||
-          "Not Scheduled"
-      ),
-      count: order.jobCount || 1,
-      status: "Completed",
-      orderData: order,
-    }));
+    const displayOrders = sortedOrders.map((order, index) => {
+      // Count how many orders in this group were completed today
+      let todayCompletedCount = 1; // Default to 1
+
+      if (order.allCompleteTimes && order.allCompleteTimes.length > 0) {
+        todayCompletedCount = order.allCompleteTimes.filter((completeTime) => {
+          const isTodayCompleted = isToday(completeTime);
+          return isTodayCompleted;
+        }).length;
+      }
+
+      console.log(
+        `📊 Order ${order.driverOrderId}: Total jobs=${
+          order.jobCount
+        }, Completed today=${todayCompletedCount}, allCompleteTimes=${
+          order.allCompleteTimes?.length || 0
+        }`
+      );
+
+      return {
+        id: (index + 1).toString().padStart(2, "0"),
+        title: order.title || "",
+        name: order.fullName || "Customer",
+        time: formatScheduleTime(
+          order.primaryScheduleTime ||
+            order.allScheduleTimes[0] ||
+            "Not Scheduled"
+        ),
+        count: todayCompletedCount, 
+        status: "Completed",
+        orderData: order,
+      };
+    });
+
+    console.log("🎯 Final display orders count:", displayOrders.length);
+    console.log(
+      "🎯 Display orders with counts:",
+      displayOrders.map((o) => ({
+        id: o.id,
+        name: o.name,
+        count: o.count,
+        driverOrderId: o.orderData.driverOrderId,
+      }))
+    );
+    console.log("🎯 ===== getCompletedDisplayOrders END =====\n");
+
+    return displayOrders;
   };
 
   const formatCount = (count: number) => {
@@ -469,7 +511,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         <View className="mx-4 mt-4 p-3 bg-red-100 rounded-lg">
           <Text className="text-red-700 text-center">{error}</Text>
           <TouchableOpacity
-            onPress={fetchDriverOrders}
+            onPress={() => {
+              const now = new Date();
+              const todayStr = `${now.getFullYear()}-${String(
+                now.getMonth() + 1
+              ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+              fetchDriverOrders(todayStr);
+            }}
             className="mt-2 bg-red-600 py-2 rounded-lg"
           >
             <Text className="text-white text-center font-semibold">Retry</Text>
@@ -543,7 +591,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           {dataToShow.map((item, index) => {
             const isOnHold = item.status === "Hold";
             const isOnTheWay = item.status === "On the way";
-            const holdReasonText = isOnHold ? getHoldReasonText(item.orderData) : "";
+            const holdReasonText = isOnHold
+              ? getHoldReasonText(item.orderData)
+              : "";
 
             return (
               <TouchableOpacity
@@ -588,40 +638,25 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                     {item.title}. {item.name}
                   </Text>
                   <Text className="text-sm mt-1">{item.time}</Text>
-                  {/* {isOnHold && (
+                  {isOnHold && (
                     <View className="flex flex-row items-center gap-2 mt-0.5">
                       <FontAwesome6
                         name="circle-exclamation"
                         size={18}
                         color="#FF0000"
                       />
-                      <Text className="text-[#647B94] text-xs mr-2" numberOfLines={2}>
-                        {holdReasonText}
-                      </Text>
+                      <View style={{ flex: 1, height: 20 }}>
+                        <MarqueeText
+                          text={holdReasonText}
+                          style={{
+                            fontSize: 12,
+                            color: "#647B94",
+                            lineHeight: 16,
+                          }}
+                        />
+                      </View>
                     </View>
-                  )} */}
-                  {isOnHold && (
-  <View className="flex flex-row items-center gap-2 mt-0.5">
-    <FontAwesome6
-      name="circle-exclamation"
-      size={18}
-      color="#FF0000"
-    />
-    {/* Use FixedMarqueeText for hold reason */}
-    <View style={{ flex: 1, height: 20 }}>
-      <MarqueeText
-        text={holdReasonText}
-        style={{ 
-          fontSize: 12,
-          color: '#647B94',
-          lineHeight: 16,
-        }}
-    //    speed={50}
-      />
-    </View>
-  </View>
-)}
-
+                  )}
                 </View>
 
                 <View className="flex-row items-center">
@@ -655,7 +690,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             loop
             style={{ width: 200, height: 200 }}
           />
-          
+
           {activeTab === "todo" ? (
             <>
               <Text className="text-gray-500 text-lg text-center">
