@@ -55,25 +55,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setModalVisible(true);
   };
 
-  const validateEmpIdFormat = (empId: string) => {
-    const trimmedEmpId = empId.trim();
-
-    // Check if EMP ID is in uppercase
-    if (trimmedEmpId !== trimmedEmpId.toUpperCase()) {
-      setEmpIdError("Please enter Employee ID in uppercase letters");
-      return false;
-    }
-
-    // Check if EMP ID starts with "DRV"
-    if (!trimmedEmpId.startsWith("DRV")) {
-      setEmpIdError("Employee ID must start with 'DRV'");
-      return false;
-    }
-
-    setEmpIdError("");
-    return true;
-  };
-
   const handleEmpIdChange = (text: string) => {
     setEmpid(text);
 
@@ -86,154 +67,475 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setPassword(text);
   };
 
-  const handleLogin = async () => {
-    Keyboard.dismiss();
 
-    // Clear any existing errors
-    setEmpIdError("");
+  // Replace the handleLogin function with this updated version
+const handleLogin = async () => {
+  Keyboard.dismiss();
 
-    if (!empid && !password) {
+  // Clear any existing errors
+  setEmpIdError("");
+
+  if (!empid && !password) {
+    showModal(
+      "Sorry",
+      "Password & Employee ID are not allowed to be empty",
+      "error"
+    );
+    return false;
+  }
+
+  if (empid && !password) {
+    showModal("Sorry", "Password is not allowed to be empty", "error");
+    return false;
+  }
+
+  if (!empid && password) {
+    showModal("Sorry", "Employee ID is not allowed to be empty", "error");
+    return false;
+  }
+
+  const trimmedEmpId = empid.trim();
+
+  // First check: if format matches DRV/drv + 5 digits (case-insensitive)
+  const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
+
+  if (!empIdPatternRegex.test(trimmedEmpId)) {
+    // Check if it starts with DRV at all (case-insensitive)
+    const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
+    
+    if (!startsWithDRV) {
+      // Doesn't start with DRV at all - show unauthorized modal
       showModal(
-        "Sorry",
-        "Password & Employee ID are not allowed to be empty",
+        "Unauthorized Access",
+        "You are not authorized to access this system. Please use a valid Employee ID.",
         "error"
       );
-      return false;
-    }
-
-    if (empid && !password) {
-      showModal("Sorry", "Password is not allowed to be empty", "error");
-      return false;
-    }
-
-    if (!empid && password) {
-      showModal("Sorry", "Employee ID is not allowed to be empty", "error");
-      return false;
-    }
-
-    const trimmedEmpId = empid.trim();
-
-    // Check if EMP ID starts with "DRV"
-    if (!trimmedEmpId.startsWith("DRV")) {
+    } else {
+      // Starts with DRV but format is wrong - show invalid EMP ID modal
       showModal(
-        "Invalid Employee ID",
-        "Please check both Employee ID & Password and retry again",
+        "Invalid EMP ID",
+        "Please enter a valid Employee ID.",
         "error"
       );
-      return false;
     }
+    return false;
+  }
 
-    setLoading(true);
+  // Check if it's in uppercase (DRV)
+  const uppercaseRegex = /^DRV\d{5}$/;
 
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("empid");
+  if (!uppercaseRegex.test(trimmedEmpId)) {
+    // Format is correct but not uppercase - show inline error (matching screenshot)
+    setEmpIdError("Please enter Employee ID in uppercase letters");
+    return false;
+  }
 
-    try {
-      const trimmedEmpId = empid.trim();
+  // Password format validation
+  if (password.length < 8) {
+    showModal(
+      "Invalid Password",
+      "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+      "error"
+    );
+    return false;
+  }
 
-      const response = await fetch(
-        `${environment.API_BASE_URL}api/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            empId: trimmedEmpId,
-            password,
-          }),
-        }
-      );
+  // Check for at least 1 uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    showModal(
+      "Invalid Password",
+      "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+      "error"
+    );
+    return false;
+  }
 
-      const data = await response.json();
-      console.log("Login response:", data);
+  // Check for at least 1 number
+  if (!/[0-9]/.test(password)) {
+    showModal(
+      "Invalid Password",
+      "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+      "error"
+    );
+    return false;
+  }
 
-      if (!response.ok || !data.success) {
-        setLoading(false);
+  // Check for at least 1 special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    showModal(
+      "Invalid Password",
+      "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+      "error"
+    );
+    return false;
+  }
 
-        const message = data.message?.toLowerCase() || "";
+  setLoading(true);
 
-        if (message.includes("invalid password")) {
-          showModal(
-            "Invalid Password!",
-            "Please check the Password and retry again.",
-            "error"
-          );
-        } else if (message.includes("user not found")) {
-          showModal(
-            "Invalid Employee ID!",
-            "Please check the Employee ID and retry again.",
-            "error"
-          );
-        } else {
-          showModal(
-            "Sorry",
-            "Something went wrong. Please try again.",
-            "error"
-          );
-        }
+  await AsyncStorage.removeItem("token");
+  await AsyncStorage.removeItem("empid");
 
-        return;
+  try {
+    const response = await fetch(
+      `${environment.API_BASE_URL}api/auth/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          empId: trimmedEmpId,
+          password,
+        }),
       }
+    );
 
-      // Extract data properly
-      const {
-        firstNameEnglish,
-        lastNameEnglish,
-        image,
-        token,
-        passwordUpdated,
-        empId,
-      } = data.data;
+    const data = await response.json();
+    console.log("Login response:", data);
 
-      // Save token + empId
-      await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("empid", empId.toString());
-
-      dispatch(setUser({ token, empId: empId.toString() }));
-
-      // Save First name, Last name, Image into Redux
-      dispatch(
-        setUserProfile({
-          firstName: firstNameEnglish,
-          lastName: lastNameEnglish,
-          profileImg: image,
-          empId: empId.toString(),
-        })
-      );
-
-      // Store token timestamps
-      if (token) {
-        const timestamp = new Date();
-        const expirationTime = new Date(
-          timestamp.getTime() + 8 * 60 * 60 * 1000
-        );
-
-        await AsyncStorage.multiSet([
-          ["tokenStoredTime", timestamp.toISOString()],
-          ["tokenExpirationTime", expirationTime.toISOString()],
-        ]);
-      }
-
-      console.log("Password update required:", passwordUpdated);
-
-      setTimeout(() => {
-        setLoading(false);
-
-        if (passwordUpdated === 0) {
-          navigation.navigate("ChangePassword", {
-            passwordUpdated: passwordUpdated,
-          });
-        } else {
-          navigation.navigate("Home");
-        }
-      }, 4000);
-    } catch (error) {
+    if (!response.ok || !data.success) {
       setLoading(false);
-      console.error("Login error:", error);
-      showModal("Error", "Something went wrong. Please try again.", "error");
+
+      const message = data.message?.toLowerCase() || "";
+      const statusCode = response.status;
+
+      // Check for "not approved" error
+      if (
+        message.includes("not approved") ||
+        message.includes("emp id not approved")
+      ) {
+        showModal(
+          "Not Approved EMP ID",
+          "This EMP ID is not approved.",
+          "error"
+        );
+      }
+      // Check for invalid password
+      else if (
+        statusCode === 401 ||
+        message.includes("invalid") ||
+        message.includes("password")
+      ) {
+        showModal(
+          "Invalid Password!",
+          "Please check the Password and retry again.",
+          "error"
+        );
+      }
+      // Check for user not found
+      else if (
+        statusCode === 404 ||
+        message.includes("user not found") ||
+        message.includes("not found")
+      ) {
+        showModal(
+          "Invalid Employee ID!",
+          "Please check the Employee ID and retry again.",
+          "error"
+        );
+      }
+      // Generic error
+      else {
+        showModal(
+          "Sorry",
+          "Something went wrong. Please try again.",
+          "error"
+        );
+      }
+
+      return;
     }
-  };
+
+    // Extract data properly
+    const {
+      firstNameEnglish,
+      lastNameEnglish,
+      image,
+      token,
+      passwordUpdated,
+      empId,
+    } = data.data;
+
+    // Save token + empId
+    await AsyncStorage.setItem("token", token);
+    await AsyncStorage.setItem("empid", empId.toString());
+
+    dispatch(setUser({ token, empId: empId.toString() }));
+
+    // Save First name, Last name, Image into Redux
+    dispatch(
+      setUserProfile({
+        firstName: firstNameEnglish,
+        lastName: lastNameEnglish,
+        profileImg: image,
+        empId: empId.toString(),
+      })
+    );
+
+    // Store token timestamps
+    if (token) {
+      const timestamp = new Date();
+      const expirationTime = new Date(
+        timestamp.getTime() + 8 * 60 * 60 * 1000
+      );
+
+      await AsyncStorage.multiSet([
+        ["tokenStoredTime", timestamp.toISOString()],
+        ["tokenExpirationTime", expirationTime.toISOString()],
+      ]);
+    }
+
+    console.log("Password update required:", passwordUpdated);
+
+    setTimeout(() => {
+      setLoading(false);
+
+      if (passwordUpdated === 0) {
+        navigation.navigate("ChangePassword", {
+          passwordUpdated: passwordUpdated,
+        });
+      } else {
+        navigation.navigate("Home");
+      }
+    }, 4000);
+  } catch (error) {
+    setLoading(false);
+    console.error("Login error:", error);
+    showModal("Error", "Something went wrong. Please try again.", "error");
+  }
+};
+  // const handleLogin = async () => {
+  //   Keyboard.dismiss();
+
+  //   // Clear any existing errors
+  //   setEmpIdError("");
+
+  //   if (!empid && !password) {
+  //     showModal(
+  //       "Sorry",
+  //       "Password & Employee ID are not allowed to be empty",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   if (empid && !password) {
+  //     showModal("Sorry", "Password is not allowed to be empty", "error");
+  //     return false;
+  //   }
+
+  //   if (!empid && password) {
+  //     showModal("Sorry", "Employee ID is not allowed to be empty", "error");
+  //     return false;
+  //   }
+
+  //   const trimmedEmpId = empid.trim();
+
+  //   if (!trimmedEmpId.startsWith("DRV")) {
+  //     showModal(
+  //       "Unauthorized Access",
+  //       "You are not authorized to access this system. Please use a valid Employee ID.",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   // Check if format matches DRV/drv + 5 digits (case-insensitive)
+  //   const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
+
+  //   if (!empIdPatternRegex.test(trimmedEmpId)) {
+  //     // Format is completely wrong - show popup modal
+  //     showModal(
+  //       "Invalid EMP ID",
+  //       "Please enter a valid Employee ID .",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   // Check if it's in uppercase (DRV)
+  //   const uppercaseRegex = /^DRV\d{5}$/;
+
+  //   if (!uppercaseRegex.test(trimmedEmpId)) {
+  //     // Format is correct but not uppercase - show inline error
+  //     setEmpIdError("Please enter Employee ID in uppercase letters");
+  //     return false;
+  //   }
+
+  //   // Password format validation
+  //   if (password.length < 8) {
+  //     showModal(
+  //       "Invalid Password",
+  //       "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   // Check for at least 1 uppercase letter
+  //   if (!/[A-Z]/.test(password)) {
+  //     showModal(
+  //       "Invalid Password",
+  //       "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   // Check for at least 1 number
+  //   if (!/[0-9]/.test(password)) {
+  //     showModal(
+  //       "Invalid Password",
+  //       "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   // Check for at least 1 special character
+  //   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  //     showModal(
+  //       "Invalid Password",
+  //       "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+  //       "error"
+  //     );
+  //     return false;
+  //   }
+
+  //   setLoading(true);
+
+  //   await AsyncStorage.removeItem("token");
+  //   await AsyncStorage.removeItem("empid");
+
+  //   try {
+  //     const response = await fetch(
+  //       `${environment.API_BASE_URL}api/auth/login`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           empId: trimmedEmpId,
+  //           password,
+  //         }),
+  //       }
+  //     );
+
+  //     const data = await response.json();
+  //     console.log("Login response:", data);
+
+  //     if (!response.ok || !data.success) {
+  //       setLoading(false);
+
+  //       const message = data.message?.toLowerCase() || "";
+  //       const statusCode = response.status;
+
+  //       // Check for "not approved" error
+  //       if (
+  //         message.includes("not approved") ||
+  //         message.includes("emp id not approved")
+  //       ) {
+  //         showModal(
+  //           "Not Approved EMP ID",
+  //           "This EMP ID is not approved.",
+  //           "error"
+  //         );
+  //       }
+  //       // Check for invalid password
+  //       else if (
+  //         statusCode === 401 ||
+  //         message.includes("invalid") ||
+  //         message.includes("password")
+  //       ) {
+  //         showModal(
+  //           "Invalid Password!",
+  //           "Please check the Password and retry again.",
+  //           "error"
+  //         );
+  //       }
+  //       // Check for user not found
+  //       else if (
+  //         statusCode === 404 ||
+  //         message.includes("user not found") ||
+  //         message.includes("not found")
+  //       ) {
+  //         showModal(
+  //           "Invalid Employee ID!",
+  //           "Please check the Employee ID and retry again.",
+  //           "error"
+  //         );
+  //       }
+  //       // Generic error
+  //       else {
+  //         showModal(
+  //           "Sorry",
+  //           "Something went wrong. Please try again.",
+  //           "error"
+  //         );
+  //       }
+
+  //       return;
+  //     }
+
+  //     // Extract data properly
+  //     const {
+  //       firstNameEnglish,
+  //       lastNameEnglish,
+  //       image,
+  //       token,
+  //       passwordUpdated,
+  //       empId,
+  //     } = data.data;
+
+  //     // Save token + empId
+  //     await AsyncStorage.setItem("token", token);
+  //     await AsyncStorage.setItem("empid", empId.toString());
+
+  //     dispatch(setUser({ token, empId: empId.toString() }));
+
+  //     // Save First name, Last name, Image into Redux
+  //     dispatch(
+  //       setUserProfile({
+  //         firstName: firstNameEnglish,
+  //         lastName: lastNameEnglish,
+  //         profileImg: image,
+  //         empId: empId.toString(),
+  //       })
+  //     );
+
+  //     // Store token timestamps
+  //     if (token) {
+  //       const timestamp = new Date();
+  //       const expirationTime = new Date(
+  //         timestamp.getTime() + 8 * 60 * 60 * 1000
+  //       );
+
+  //       await AsyncStorage.multiSet([
+  //         ["tokenStoredTime", timestamp.toISOString()],
+  //         ["tokenExpirationTime", expirationTime.toISOString()],
+  //       ]);
+  //     }
+
+  //     console.log("Password update required:", passwordUpdated);
+
+  //     setTimeout(() => {
+  //       setLoading(false);
+
+  //       if (passwordUpdated === 0) {
+  //         navigation.navigate("ChangePassword", {
+  //           passwordUpdated: passwordUpdated,
+  //         });
+  //       } else {
+  //         navigation.navigate("Home");
+  //       }
+  //     }, 4000);
+  //   } catch (error) {
+  //     setLoading(false);
+  //     console.error("Login error:", error);
+  //     showModal("Error", "Something went wrong. Please try again.", "error");
+  //   }
+  // };
 
   useFocusEffect(
     useCallback(() => {
@@ -293,7 +595,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-4 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-1 py-3"
               >
                 <View className="flex-row items-center ml-4">
                   <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
@@ -317,7 +619,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3"
+                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3 mt-3"
               >
                 <View className="flex-row items-center ml-4">
                   <MaterialIcons name="lock" size={26} color="#F7CA21" />

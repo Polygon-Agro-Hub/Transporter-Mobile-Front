@@ -73,6 +73,16 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       return false;
     }
 
+    // Check if current password and new password are the same
+    if (currentPassword === newPassword) {
+      showModal(
+        "Same Password",
+        "The current password and new password are the same. Please enter a different new password.",
+        "error"
+      );
+      return false;
+    }
+
     // Check if new password meets format requirements
     if (newPassword.length < 8) {
       Alert.alert(

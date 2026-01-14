@@ -1,25 +1,22 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   BackHandler,
   Text,
-  View,
   Dimensions,
   TextInput,
 } from "react-native";
-import { NavigationContainer, useNavigation } from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import {
   SafeAreaProvider,
   SafeAreaView,
-  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector } from "react-redux";
 import store, { RootState } from "@/services/store";
 import NetInfo from "@react-native-community/netinfo";
-import { useTranslation } from "react-i18next";
 import { navigationRef } from "../navigationRef";
 import CustomDrawerContent from "@/Items/CustomDrawerContent";
 
@@ -28,7 +25,7 @@ import { LogBox } from "react-native";
 import Splash from "@/component/common/Splash";
 import Home from "@/component/Home";
 import ComplaintsList from "@/component/complaints/ComplaintsList";
-import AddComplaint from "@/component/complaints/AddComplaint"
+import AddComplaint from "@/component/complaints/AddComplaint";
 import LoginScreen from "@/component/auth/LoginScreen";
 import ChangePassword from "@/component/auth/ChangePassword";
 import ProfileScreen from "@/component/auth/Profile";
@@ -63,7 +60,6 @@ NativeWindStyleSheet.setOutput({
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Drawer = createDrawerNavigator();
-const windowDimensions = Dimensions.get("window");
 
 function HomeDrawer() {
   return (
@@ -84,23 +80,21 @@ function HomeDrawer() {
 }
 
 function AppContent() {
-  const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
 
   const [isOfflineAlertShown, setIsOfflineAlertShown] = useState(false);
 
   useEffect(() => {
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       if (!state.isConnected && !isOfflineAlertShown) {
-        setIsOfflineAlertShown(true); // mark that alert is shown
+        setIsOfflineAlertShown(true);
+
         Alert.alert(
-          t("Main.No Internet Connection"),
-          t("Main.Please turn on mobile data or Wi-Fi to continue."),
+          "No Internet Connection",
+          "Please turn on mobile data or Wi-Fi to continue.",
           [
             {
               text: "OK",
               onPress: () => {
-                // Reset flag after user presses OK
                 setIsOfflineAlertShown(false);
               },
             },
@@ -154,17 +148,23 @@ function AppContent() {
             <Stack.Screen name="Home" component={HomeDrawer} />
             <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
-            <Stack.Screen name="Login" component={LoginScreen}  />
+            <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
-            <Stack.Screen name="AssignOrderQR" component={AssignOrderQR}  />
-            <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR}  />
-            <Stack.Screen name="ReceivedCashQR" component={ReceivedCashQR}  />
+            <Stack.Screen name="AssignOrderQR" component={AssignOrderQR} />
+            <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR} />
+            <Stack.Screen name="ReceivedCashQR" component={ReceivedCashQR} />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
-            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation } />
+            <Stack.Screen
+              name="EndJourneyConfirmation"
+              component={EndJourneyConfirmation}
+            />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
-            <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
+            <Stack.Screen
+              name="DeliverySuccessful"
+              component={DeliverySuccessful}
+            />
             <Stack.Screen name="OrderReturn" component={OrderReturn} />
             <Stack.Screen name="HoldOrder" component={HoldOrder} />
             <Stack.Screen name="ReceivedCash" component={ReceivedCash} />

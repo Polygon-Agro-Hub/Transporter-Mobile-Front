@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -21,6 +22,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
+import { useFocusEffect } from "@react-navigation/core";
+import FixedMarqueeText from "@/component/common/MarqueeText";
+
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -129,14 +133,14 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
 
   const getStatusColor = (returnReason: string) => {
     if (returnReason.toLowerCase().includes("confirmed")) {
-      return "text-[#000000]";
+      return "#000000";
     } else if (
       returnReason.toLowerCase().includes("switched off") ||
       returnReason.toLowerCase().includes("failed")
     ) {
-      return "text-[#000000]";
+      return "#000000";
     }
-    return "text-[#000000]";
+    return "#000000";
   };
 
   const getPaymentIcon = (isPaid: boolean, paymentMethod: string) => {
@@ -167,28 +171,49 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     return "";
   };
 
-  // Function to get the display text for return reason
   const getReturnReasonDisplay = (returnDetails: ReturnOrder['returnDetails']) => {
-    // Check if the reason is "Other" (case insensitive)
     const isOtherReason = returnDetails.reasonEnglish?.toLowerCase() === "other" || 
                           returnDetails.reason?.toLowerCase() === "other";
     
-    // If it's "Other" and there's a note, display the note
     if (isOtherReason && returnDetails.note && returnDetails.note.trim()) {
-      return returnDetails.note;
+      return returnDetails.note.trim();
     }
     
-    // Otherwise, display the regular reason
-    return returnDetails.reason || "No reason specified";
+    const reason = returnDetails.reasonEnglish || returnDetails.reason || "No reason specified";
+    
+    return reason.replace(/\.{3,}$/, '').trim();
   };
 
   const handleCardPress = (order: ReturnOrder) => {
-    // Navigate to ReturnOrderQR with invoice number and orderId
     navigation.navigate("ReturnOrderQR", {
       invoiceNumber: order.invoiceNumber,
       orderId: order.orderId,
     });
   };
+
+  useEffect(() => {
+    returnOrders.forEach((order, index) => {
+      const displayText = getReturnReasonDisplay(order.returnDetails);
+      console.log(`Order ${index} text: "${displayText}"`);
+      console.log(`Order ${index} text length: ${displayText.length}`);
+    });
+  }, [returnOrders]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Home");
+        return true;
+      };
+      
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+      
+      return () => subscription.remove();
+    }, [navigation])
+  );
 
   if (loading) {
     return (
@@ -267,7 +292,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
             />
           }
         >
-          {/* Orders List */}
           <View>
             {returnOrders.map((order, index) => (
               <TouchableOpacity
@@ -295,44 +319,47 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Status */}
-                <View className="flex-row items-center">
+                {/* Return Reason with Scrolling Text */}
+                <View className="flex-row items-center mb-2">
                   <FontAwesome
                     name="exclamation-circle"
                     size={wp(5)}
                     color="black"
+                    style={{ marginRight: 8 }}
                   />
-
-                  <Text
-                    className={`ml-2 flex-1 text-sm ${getStatusColor(
-                      order.returnDetails.reason
-                    )}`}
-                    numberOfLines={2}
-                  >
-                    {getReturnReasonDisplay(order.returnDetails)}
-                  </Text>
+                  <View style={{ flex: 1, height: 24 }}>
+                    <FixedMarqueeText
+                      text={getReturnReasonDisplay(order.returnDetails)}
+                      style={{ 
+                        fontSize: 14,
+                        color: getStatusColor(order.returnDetails.reason),
+                      }}
+                      speed={50}
+                   //   threshold={25}
+                    />
+                  </View>
                 </View>
 
                 {/* Payment Info */}
                 <View className="flex-row items-center pt-1">
                   <View className="flex-row items-center">
                     {getPaymentIcon(order.isPaid, order.paymentMethod)}
+                    
                     <Text
-                      className={`mx-2 text-sm ${
+                      className={`ml-2 mr-1 text-sm ${
                         order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
                       }`}
                     >
-                      {/* Always show "Already Paid!" if isPaid is true */}
-                      {order.isPaid
-                        ? "Already Paid!"
-                        : order.paymentMethod || "Cash"}{" "}
-                      :
+                      {order.isPaid ? "Already Paid!" : order.paymentMethod || "Cash"}
                     </Text>
+
+                    {!order.isPaid && (
+                      <Text className="text-sm text-[#8A8A8A]">:</Text>
+                    )}
                   </View>
 
-                  {/* Show amount only if not paid */}
                   {!order.isPaid && (
-                    <Text className="text-sm text-[#8A8A8A]">
+                    <Text className="text-sm text-[#8A8A8A] ml-1">
                       {getAmountText(
                         order.isPaid,
                         order.amount,
