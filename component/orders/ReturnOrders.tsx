@@ -5,14 +5,13 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Image,
   ActivityIndicator,
   BackHandler,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
-import { FontAwesome, FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -24,7 +23,6 @@ import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/core";
 import FixedMarqueeText from "@/component/common/MarqueeText";
-
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -103,10 +101,8 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
-
-      console.log("response dataa", response.data);
 
       if (response.data.status === "success") {
         setReturnOrders(response.data.data.returnOrders);
@@ -155,7 +151,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
   const getAmountText = (
     isPaid: boolean,
     amount: string,
-    totalAmount: string
+    totalAmount: string,
   ) => {
     if (!isPaid && amount && parseFloat(amount) > 0) {
       return `Rs. ${parseFloat(amount).toLocaleString("en-US", {
@@ -171,17 +167,23 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     return "";
   };
 
-  const getReturnReasonDisplay = (returnDetails: ReturnOrder['returnDetails']) => {
-    const isOtherReason = returnDetails.reasonEnglish?.toLowerCase() === "other" || 
-                          returnDetails.reason?.toLowerCase() === "other";
-    
+  const getReturnReasonDisplay = (
+    returnDetails: ReturnOrder["returnDetails"],
+  ) => {
+    const isOtherReason =
+      returnDetails.reasonEnglish?.toLowerCase() === "other" ||
+      returnDetails.reason?.toLowerCase() === "other";
+
     if (isOtherReason && returnDetails.note && returnDetails.note.trim()) {
       return returnDetails.note.trim();
     }
-    
-    const reason = returnDetails.reasonEnglish || returnDetails.reason || "No reason specified";
-    
-    return reason.replace(/\.{3,}$/, '').trim();
+
+    const reason =
+      returnDetails.reasonEnglish ||
+      returnDetails.reason ||
+      "No reason specified";
+
+    return reason.replace(/\.{3,}$/, "").trim();
   };
 
   const handleCardPress = (order: ReturnOrder) => {
@@ -194,8 +196,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
   useEffect(() => {
     returnOrders.forEach((order, index) => {
       const displayText = getReturnReasonDisplay(order.returnDetails);
-      console.log(`Order ${index} text: "${displayText}"`);
-      console.log(`Order ${index} text length: ${displayText.length}`);
+      
     });
   }, [returnOrders]);
 
@@ -205,14 +206,14 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         navigation.navigate("Home");
         return true;
       };
-      
+
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
-        onBackPress
+        onBackPress,
       );
-      
+
       return () => subscription.remove();
-    }, [navigation])
+    }, [navigation]),
   );
 
   if (loading) {
@@ -330,12 +331,12 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   <View style={{ flex: 1, height: 24 }}>
                     <FixedMarqueeText
                       text={getReturnReasonDisplay(order.returnDetails)}
-                      style={{ 
+                      style={{
                         fontSize: 14,
                         color: getStatusColor(order.returnDetails.reason),
                       }}
                       speed={50}
-                   //   threshold={25}
+                      //   threshold={25}
                     />
                   </View>
                 </View>
@@ -344,13 +345,15 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                 <View className="flex-row items-center pt-1">
                   <View className="flex-row items-center">
                     {getPaymentIcon(order.isPaid, order.paymentMethod)}
-                    
+
                     <Text
                       className={`ml-2 mr-1 text-sm ${
                         order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
                       }`}
                     >
-                      {order.isPaid ? "Already Paid!" : order.paymentMethod || "Cash"}
+                      {order.isPaid
+                        ? "Already Paid!"
+                        : order.paymentMethod || "Cash"}
                     </Text>
 
                     {!order.isPaid && (
@@ -363,7 +366,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                       {getAmountText(
                         order.isPaid,
                         order.amount,
-                        order.totalAmount
+                        order.totalAmount,
                       )}
                     </Text>
                   )}

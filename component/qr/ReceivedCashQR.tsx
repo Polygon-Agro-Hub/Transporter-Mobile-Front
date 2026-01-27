@@ -4,11 +4,8 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  Platform,
-  PermissionsAndroid,
   StatusBar,
   ActivityIndicator,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -40,61 +37,50 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   route,
 }) => {
   const { amount, selectedCount } = route.params;
-  console.log("amount 000000000000", amount, selectedCount);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
 
-  // Timer states for timeout
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Modal states
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState<string | React.ReactElement>(
-    ""
+    "",
   );
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
-  // Track if screen is focused
   const isFocusedRef = useRef(true);
 
-  // Handle screen focus/blur
   useFocusEffect(
     React.useCallback(() => {
-      // Screen is focused
       isFocusedRef.current = true;
 
-      // Reset all states when screen comes into focus
       setScanned(false);
       setLoading(false);
       setShowTimeoutModal(false);
       setShowErrorModal(false);
       setShowSuccessModal(false);
 
-      // Start the timer
       if (permission?.granted) {
         startTimeoutTimer();
       }
 
       return () => {
-        // Screen is blurred (navigating away)
         isFocusedRef.current = false;
 
-        // Clear the timer when leaving the screen
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
         }
       };
-    }, [permission?.granted])
+    }, [permission?.granted]),
   );
 
   useEffect(() => {
-    // Request permission only if not granted
     if (permission && !permission.granted && permission.canAskAgain) {
       requestPermission();
     }
@@ -109,7 +95,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   }, []);
 
   useEffect(() => {
-    // Start timer ONLY when camera permission is granted and screen is focused
     if (permission?.granted && !scanned && !loading && isFocusedRef.current) {
       startTimeoutTimer();
     }
@@ -121,20 +106,16 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     };
   }, [permission?.granted, scanned, loading]);
 
-  // Start timeout timer
   const startTimeoutTimer = () => {
-    // Clear existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
-    // Set new timer for 15 seconds
     timerRef.current = setTimeout(() => {
-      // Only show timeout if screen is still focused
       if (!scanned && !loading && isFocusedRef.current) {
         setModalTitle("Error!");
         setModalMessage(
-          "The QR code is not identified.\nPlease check and try again."
+          "The QR code is not identified.\nPlease check and try again.",
         );
         setModalType("error");
         setShowTimeoutModal(true);
@@ -174,68 +155,34 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
           duration: 2000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   };
 
   const validateOfficerType = (officerId: string): boolean => {
-  const upperOfficerId = officerId.toUpperCase();
+    const upperOfficerId = officerId.toUpperCase();
 
-  // Only allow DCM or DCH
-  if (upperOfficerId.startsWith("DCM") ) {
-    return true;
-  }
-
-  // Check if it's one of the disallowed types
-  const disallowedTypes = ["DIO", "FIO", "CFO"];
-  for (const type of disallowedTypes) {
-    if (upperOfficerId.startsWith(type)) {
-      console.log(
-        `Officer ID ${officerId} is disallowed (starts with ${type})`
-      );
-      return false;
+    // Only allow DCM or DCH
+    if (upperOfficerId.startsWith("DCM")) {
+      return true;
     }
-  }
 
-  // Any other pattern is also not allowed
-  console.log(`Officer ID ${officerId} is not a DCM/DCH officer`);
-  return false;
-};
-  // Validate if officer ID starts with DCM (ONLY DCM allowed)
-  // const validateOfficerType = (officerId: string): boolean => {
-  //   const upperOfficerId = officerId.toUpperCase();
+    // Check if it's one of the disallowed types
+    const disallowedTypes = ["DIO", "FIO", "CFO"];
+    for (const type of disallowedTypes) {
+      if (upperOfficerId.startsWith(type)) {
+        return false;
+      }
+    }
 
-  //   // Only allow DCM
-  //   if (upperOfficerId.startsWith("DCM")) {
-  //     return true;
-  //   }
+    return false;
+  };
 
-  //   // Check if it's one of the disallowed types
-  //   const disallowedTypes = ["DCH", "DIO", "FIO", "CFO"];
-  //   for (const type of disallowedTypes) {
-  //     if (upperOfficerId.startsWith(type)) {
-  //       console.log(
-  //         `Officer ID ${officerId} is disallowed (starts with ${type})`
-  //       );
-  //       return false;
-  //     }
-  //   }
-
-  //   // Any other pattern is also not allowed
-  //   console.log(`Officer ID ${officerId} is not a DCM officer`);
-  //   return false;
-  // };
-
-  // Extract officer ID from QR data
   const extractOfficerId = (qrData: string): string | null => {
     try {
-      console.log("Raw QR Data:", qrData);
-
-      // Method 1: Check if QR is JSON containing officer ID
       if (qrData.trim().startsWith("{") && qrData.trim().endsWith("}")) {
         try {
           const parsed = JSON.parse(qrData);
-          console.log("Parsed JSON:", parsed);
 
           // Check for various possible field names and get their VALUES
           const possibleFields = [
@@ -253,7 +200,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
           for (const field of possibleFields) {
             if (parsed[field]) {
               const officerId = String(parsed[field]);
-              console.log(`Found officer ID in field '${field}':`, officerId);
+
               return officerId;
             }
           }
@@ -267,7 +214,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       // Method 2: Check if it's just the officer ID (alphanumeric, 3-20 chars)
       const simplePattern = /^[A-Z0-9]{3,20}$/i;
       if (simplePattern.test(qrData.trim())) {
-        console.log("Simple pattern matched:", qrData.trim());
         return qrData.trim();
       }
 
@@ -276,7 +222,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       const match = qrData.match(officerPattern);
       if (match) {
         const officerId = match[2] || match[0];
-        console.log("Found officer pattern:", officerId);
+
         return officerId;
       }
 
@@ -284,11 +230,9 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       const alphanumericPattern = /[A-Z0-9]{3,}/gi;
       const alphanumericMatches = qrData.match(alphanumericPattern);
       if (alphanumericMatches && alphanumericMatches.length > 0) {
-        console.log("Alphanumeric matches:", alphanumericMatches);
-        // Filter out common keywords that aren't officer IDs
         const filtered = alphanumericMatches.filter(
           (match) =>
-            !["empId", "officerId", "userId", "employeeId"].includes(match)
+            !["empId", "officerId", "userId", "employeeId"].includes(match),
         );
         if (filtered.length > 0) {
           return filtered[0];
@@ -296,7 +240,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         return alphanumericMatches[0];
       }
 
-      console.log("No officer ID found in QR data");
       return null;
     } catch (error) {
       console.error("Error extracting officer ID:", error);
@@ -327,26 +270,22 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       if (!officerId) {
         setModalTitle("Error!");
         setModalMessage(
-          "The QR code is not identified.\nPlease check and try again."
+          "The QR code is not identified.\nPlease check and try again.",
         );
         setModalType("error");
         setShowErrorModal(true);
         return;
       }
 
-      console.log("Extracted officer ID:", officerId);
-
-      // Validate if officer is DCM or DCH
       if (!validateOfficerType(officerId)) {
-      // UPDATED: Show specific error message when QR doesn't start with DCM/DCH
-      setModalTitle("Error!");
-      setModalMessage(
-        "Cash can be received only by a Distribution Centre Manager. Please scan a valid Centre Manager's QR code."
-      );
-      setModalType("error");
-      setShowErrorModal(true);
-      return;
-    }
+        setModalTitle("Error!");
+        setModalMessage(
+          "Cash can be received only by a Distribution Centre Manager. Please scan a valid Centre Manager's QR code.",
+        );
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
+      }
 
       // Show loading while making API call
       setLoading(true);
@@ -360,7 +299,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       const selectedItems = JSON.parse(storedItems);
       const totalAmount = selectedItems.reduce(
         (sum: number, item: any) => sum + (item.amount || 0),
-        0
+        0,
       );
 
       const token = await AsyncStorage.getItem("token");
@@ -384,17 +323,12 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
             "Content-Type": "application/json",
           },
           timeout: 10000,
-        }
+        },
       );
 
-      console.log("Hand over response:", response.data);
-
-      // Check if API call was successful
       if (response.data.status === "success") {
-        // Clear stored items
         await AsyncStorage.removeItem("selectedCashItems");
 
-        // Show success modal with data from backend
         const responseData = response.data.data;
         setModalTitle("Successful!");
         setModalMessage(
@@ -409,12 +343,11 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
               </Text>
               .
             </Text>
-          </View>
+          </View>,
         );
         setModalType("success");
         setShowSuccessModal(true);
 
-        // Navigate to ReceivedCash screen after delay
         setTimeout(() => {
           setShowSuccessModal(false);
           navigation.navigate("ReceivedCash");
@@ -429,7 +362,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       setModalMessage(
         error.response?.data?.message ||
           error.message ||
-          "Failed to hand over cash. Please try again."
+          "Failed to hand over cash. Please try again.",
       );
       setModalType("error");
       setShowErrorModal(true);

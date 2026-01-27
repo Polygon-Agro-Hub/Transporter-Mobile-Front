@@ -40,7 +40,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const route = useRoute<RouteProp<RootStackParamList, "ChangePassword">>();
   const { passwordUpdated } = route.params;
   const [loading, setLoading] = useState(false);
-  console.log(passwordUpdated);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -55,7 +54,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const showModal = (
     title: string,
     message: string,
-    type: "success" | "error" = "error"
+    type: "success" | "error" = "error",
   ) => {
     setModalTitle(title);
     setModalMessage(message);
@@ -67,64 +66,57 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const { t } = useTranslation();
 
   const validatePassword = () => {
-    // Check if all fields are filled
     if (!currentPassword || !newPassword || !confirmPassword) {
       showModal("Sorry", "All fields are required", "error");
       return false;
     }
 
-    // Check if current password and new password are the same
     if (currentPassword === newPassword) {
       showModal(
         "Same Password",
         "The current password and new password are the same. Please enter a different new password.",
-        "error"
+        "error",
       );
       return false;
     }
 
-    // Check if new password meets format requirements
     if (newPassword.length < 8) {
       Alert.alert(
         "Sorry",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters."
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
       );
       return false;
     }
 
-    // Check for at least 1 uppercase letter
     if (!/[A-Z]/.test(newPassword)) {
       Alert.alert(
         "Sorry",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters."
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
       );
       return false;
     }
 
-    // Check for at least 1 number
     if (!/[0-9]/.test(newPassword)) {
       Alert.alert(
         "Sorry",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters."
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
       );
       return false;
     }
 
-    // Check for at least 1 special character
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
       Alert.alert(
         "Sorry",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters."
+        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
       );
       return false;
     }
 
-    // Check if new password and confirm password match
     if (newPassword !== confirmPassword) {
       showModal(
         "Do Not Match",
         "The new password and confirm new password does not match.",
-        "error"
+        "error",
       );
       return false;
     }
@@ -143,7 +135,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       showModal(
         "No Internet",
         "Please check your internet connection",
-        "error"
+        "error",
       );
       return;
     }
@@ -161,10 +153,9 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
-      // Navigate to login after a delay
       setTimeout(() => {
         navigation.navigate("Login");
       }, 2000);
@@ -174,7 +165,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
           showModal(
             "Incorrect Password!",
             "Current password is incorrect.",
-            "error"
+            "error",
           );
         } else {
           showModal("Failed!", "Failed to update password", "error");
@@ -183,7 +174,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         showModal(
           "Sorry",
           "Something went wrong. Please try again later.",
-          "error"
+          "error",
         );
       }
     } finally {
@@ -194,21 +185,19 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        // If passwordUpdate is 0, prevent back navigation
         if (passwordUpdated === 0) {
-          console.log("hitt");
-          return true; // Prevent back navigation
+          return true;
         }
-        // If passwordUpdate is 1, allow back navigation
-        return false; // Allow back navigation
+
+        return false;
       };
 
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
-        onBackPress
+        onBackPress,
       );
       return () => subscription.remove();
-    }, [passwordUpdated]) // Added passwordUpdate as dependency
+    }, [passwordUpdated]),
   );
 
   return (
@@ -239,7 +228,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         )}
 
         <View className="flex-1">
-          {/* Form Section */}
           <LinearGradient
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
@@ -329,7 +317,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                   <TextInput
                     className="flex-1 text-base placeholder:ml-2 text-white"
                     secureTextEntry={secureConfirm}
-                    // onChangeText={setConfirmPassword}
                     onChangeText={(text) => {
                       const cleanText = text.replace(/\s/g, "");
                       setConfirmPassword(cleanText);

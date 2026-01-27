@@ -1,12 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Image,
-  Animated,
-  StatusBar,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Image, Animated, StatusBar, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -36,9 +29,7 @@ const Splash: React.FC = () => {
       useNativeDriver: false,
     });
 
-    // Start animation
     animation.start(async () => {
-      // After progress completes, check token
       await handleTokenCheck();
     });
 
@@ -62,12 +53,11 @@ const Splash: React.FC = () => {
         if (currentTime < tokenExpiry) {
           console.log("Token is valid.");
 
-          // Dispatch token and empId to Redux
           dispatch(
             setUser({
               token: userToken,
               empId: empId,
-            })
+            }),
           );
 
           // If we have saved profile data in AsyncStorage, set it in Redux
@@ -98,8 +88,6 @@ const Splash: React.FC = () => {
 
   const fetchUserProfile = async (token: string, empId: string) => {
     try {
-      console.log("Fetching fresh user profile...");
-
       const response = await fetch(
         `${environment.API_BASE_URL}api/auth/get-profile`,
         {
@@ -108,7 +96,7 @@ const Splash: React.FC = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -129,22 +117,19 @@ const Splash: React.FC = () => {
           empId: profileData.empId || empId,
         };
 
-        // Save to Redux
         dispatch(setUserProfile(userProfile));
 
-        // Save to AsyncStorage for future app starts
         await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
-        // Navigate to Home
         navigation.navigate("Home");
       } else {
         console.log("Failed to fetch profile, using cached data if available.");
-        // Even if API fails, navigate with cached data
+
         navigation.navigate("Home");
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      // Even if there's an error, navigate with cached data
+
       navigation.navigate("Home");
     }
   };
