@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  BackHandler,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -17,6 +18,7 @@ import { environment } from "@/environment/environment";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LottieView from "lottie-react-native";
 import MarqueeText from "@/component/common/MarqueeText";
+import { useFocusEffect } from "@react-navigation/native";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
 
@@ -52,7 +54,7 @@ interface DriverOrder {
   processOrderIds?: number[];
   holdReasons?: HoldReason[] | null;
   completeTime?: string | Date;
-  allCompleteTimes?: (string | Date)[]; 
+  allCompleteTimes?: (string | Date)[];
 }
 
 interface OrderStatistics {
@@ -78,33 +80,30 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     // Set current date when component mounts
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
+      now.getMonth() + 1,
     ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     setCurrentDate(todayStr);
-    
+
     fetchDriverOrders(todayStr);
   }, []);
 
-  // Helper function to check if a date is today
- // Simple version that works with both formats
-const isToday = (dateInput: string | Date): boolean => {
-  if (!dateInput) return false;
-  
-  try {
-    const inputDate = new Date(dateInput);
-    const today = new Date();
-    
-    // Compare year, month, and date in local time
-    return (
-      inputDate.getDate() === today.getDate() &&
-      inputDate.getMonth() === today.getMonth() &&
-      inputDate.getFullYear() === today.getFullYear()
-    );
-  } catch (error) {
-    console.error("Error in isToday:", error);
-    return false;
-  }
-};
+  const isToday = (dateInput: string | Date): boolean => {
+    if (!dateInput) return false;
+
+    try {
+      const inputDate = new Date(dateInput);
+      const today = new Date();
+
+      return (
+        inputDate.getDate() === today.getDate() &&
+        inputDate.getMonth() === today.getMonth() &&
+        inputDate.getFullYear() === today.getFullYear()
+      );
+    } catch (error) {
+      console.error("Error in isToday:", error);
+      return false;
+    }
+  };
 
   const fetchDriverOrders = async (dateStr?: string) => {
     try {
@@ -116,43 +115,34 @@ const isToday = (dateInput: string | Date): boolean => {
         throw new Error("Authentication token not found");
       }
 
-      // Use provided date string or get current date
       let todayDate = dateStr;
       if (!todayDate) {
         const now = new Date();
-        todayDate = `${now.getFullYear()}-${String(
-          now.getMonth() + 1
-        ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+          2,
+          "0",
+        )}-${String(now.getDate()).padStart(2, "0")}`;
         setCurrentDate(todayDate);
       }
 
-      console.log("📅 Fetching orders with date:", todayDate);
-
-      // Fetch Todo and Hold orders for "To Do" tab
       const todoHoldResponse = await axios.get(
         `${environment.API_BASE_URL}api/order/get-driver-orders?status=Todo,Hold,On%20the%20way&isHandOver=0`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
-      );
-
-      console.log(
-        "FINAL ORDERS RESPONSE:",
-        JSON.stringify(todoHoldResponse.data.data.orders, null, 2)
+        },
       );
 
       if (todoHoldResponse.data.status === "success") {
         const allOrders = todoHoldResponse.data.data.orders;
 
-        // Separate Todo and Hold orders
         const todo = allOrders.filter(
           (order: DriverOrder) =>
-            order.drvStatus === "Todo" || order.drvStatus === "On the way"
+            order.drvStatus === "Todo" || order.drvStatus === "On the way",
         );
         const hold = allOrders.filter(
-          (order: DriverOrder) => order.drvStatus === "Hold"
+          (order: DriverOrder) => order.drvStatus === "Hold",
         );
 
         setTodoOrders(todo);
@@ -160,45 +150,26 @@ const isToday = (dateInput: string | Date): boolean => {
         setStatistics(todoHoldResponse.data.data.statistics);
       }
 
-      // Fetch Completed orders for "Completed" tab with date parameter
       const completedResponse = await axios.get(
         `${environment.API_BASE_URL}api/order/get-driver-orders?status=Completed&date=${todayDate}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
-
-      console.log("📦 Completed API response:", {
-        status: completedResponse.data.status,
-        dataCount: completedResponse.data.data?.orders?.length || 0,
-        dateUsed: todayDate
-      });
 
       if (completedResponse.data.status === "success") {
         const allCompleted = completedResponse.data.data.orders;
 
-        console.log("=== COMPLETED ORDERS DEBUG ===");
-        console.log("Total completed orders FROM API:", allCompleted.length);
-        console.log("Date parameter sent to backend:", todayDate);
-
-        // Update completed orders directly without filtering
         setCompletedOrders((prevState) => {
-          console.log(
-            "🔄 Setting completedOrders from API:",
-            allCompleted.length
-          );
           return allCompleted;
         });
-
-        console.log("=== END DEBUG ===\n");
       }
     } catch (error: any) {
       console.error("Error fetching driver orders:", error);
       setError("Failed to load jobs. Please try again.");
 
-      // If unauthorized, navigate to login
       if (error.response?.status === 401) {
         navigation.navigate("Login");
       }
@@ -210,36 +181,30 @@ const isToday = (dateInput: string | Date): boolean => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Get current date for refresh
+
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
+      now.getMonth() + 1,
     ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     setCurrentDate(todayStr);
     fetchDriverOrders(todayStr);
   };
 
-  // Helper function to get hold reason text (can be made language-aware)
   const getHoldReasonText = (orderData: DriverOrder): string => {
     if (!orderData.holdReasons || orderData.holdReasons.length === 0) {
       return "Hold reason not specified";
     }
 
-    // Get the first hold reason (or you can concatenate multiple reasons)
     const reason = orderData.holdReasons[0];
 
-    // Return English reason by default
-    // You can make this dynamic based on user's language preference
     return reason.rsnEnglish || "Hold reason not specified";
   };
 
-  // Helper function to get schedule time priority
   const getScheduleTimePriority = (time?: string) => {
     if (!time) return Number.MAX_SAFE_INTEGER;
 
     const lowerTime = time.toLowerCase();
 
-    // Check for "8:00 AM – 2:00 PM" or similar morning/early afternoon slots
     if (
       lowerTime.includes("8:00") ||
       lowerTime.includes("8 am") ||
@@ -248,10 +213,9 @@ const isToday = (dateInput: string | Date): boolean => {
       lowerTime.includes("morning") ||
       lowerTime.includes("early")
     ) {
-      return 1; // Highest priority
+      return 1;
     }
 
-    // Check for "2:00 PM – 8:00 PM" or similar afternoon/evening slots
     if (
       lowerTime.includes("2:00") ||
       lowerTime.includes("2 pm") ||
@@ -261,10 +225,9 @@ const isToday = (dateInput: string | Date): boolean => {
       lowerTime.includes("evening") ||
       lowerTime.includes("late")
     ) {
-      return 2; // Second priority
+      return 2;
     }
 
-    // For other time formats, try to parse and prioritize earlier times
     const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
     if (match) {
       let hour = parseInt(match[1], 10);
@@ -273,17 +236,15 @@ const isToday = (dateInput: string | Date): boolean => {
       if (period === "PM" && hour !== 12) hour += 12;
       if (period === "AM" && hour === 12) hour = 0;
 
-      return hour; // Earlier hours get lower numbers (higher priority)
+      return hour;
     }
 
-    return Number.MAX_SAFE_INTEGER; // Default: put at the end
+    return Number.MAX_SAFE_INTEGER;
   };
 
-  // Combine todo and hold orders for display with proper sorting
   const getTodoDisplayOrders = () => {
     const allOrders = [...todoOrders, ...holdOrders];
 
-    // Sort by schedule time priority first, then by order ID
     const sortedOrders = allOrders.sort((a, b) => {
       const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
       const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
@@ -291,27 +252,13 @@ const isToday = (dateInput: string | Date): boolean => {
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
 
-      // First sort by time priority
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
 
-      // If same priority, sort by order ID as tie-breaker
       return a.processOrderId - b.processOrderId;
     });
 
-    console.log(
-      "Sorted ToDo orders:",
-      sortedOrders.map((order) => ({
-        processOrderId: order.processOrderId,
-        scheduleTime: order.primaryScheduleTime || order.allScheduleTimes?.[0],
-        priority: getScheduleTimePriority(
-          order.primaryScheduleTime || order.allScheduleTimes?.[0]
-        ),
-      }))
-    );
-
-    // Map with correct sequence numbers
     return sortedOrders.map((order, index) => ({
       id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
@@ -319,7 +266,7 @@ const isToday = (dateInput: string | Date): boolean => {
       time: formatScheduleTime(
         order.primaryScheduleTime ||
           order.allScheduleTimes[0] ||
-          "Not Scheduled"
+          "Not Scheduled",
       ),
       count: order.jobCount || 1,
       status: order.drvStatus,
@@ -327,13 +274,9 @@ const isToday = (dateInput: string | Date): boolean => {
     }));
   };
 
-  // Get completed orders for display with proper sorting
   const getCompletedDisplayOrders = () => {
-    console.log("\n🎯 ===== getCompletedDisplayOrders START =====");
-    console.log("🎯 completedOrders state length:", completedOrders.length);
-    console.log("🎯 Current date for filtering:", currentDate);
     console.log(
-      "🎯 completedOrders full data:",
+      "completedOrders full data:",
       JSON.stringify(
         completedOrders.map((o) => ({
           driverOrderId: o.driverOrderId,
@@ -344,32 +287,20 @@ const isToday = (dateInput: string | Date): boolean => {
           drvStatus: o.drvStatus,
         })),
         null,
-        2
-      )
+        2,
+      ),
     );
 
-    // Filter by current date (backend should already do this, but we double-check)
     const todayCompletedOrders = completedOrders.filter((order) => {
       if (!order.completeTime) {
-        console.log(
-          `❌ Order ${order.driverOrderId}: NO completeTime - EXCLUDED`
-        );
         return false;
       }
 
       const isTodayOrder = isToday(order.completeTime);
-      console.log(
-        `${isTodayOrder ? "✅" : "❌"} Order ${
-          order.driverOrderId
-        }: completeTime="${order.completeTime}" isToday=${isTodayOrder}`
-      );
 
       return isTodayOrder;
     });
 
-    console.log("🎯 Today's completed orders after filtering:", todayCompletedOrders.length);
-
-    // Sort by schedule time priority first, then by order ID
     const sortedOrders = [...todayCompletedOrders].sort((a, b) => {
       const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
       const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
@@ -377,20 +308,15 @@ const isToday = (dateInput: string | Date): boolean => {
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
 
-      // First sort by time priority
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
 
-      // If same priority, sort by order ID as tie-breaker
       return a.processOrderId - b.processOrderId;
     });
 
-    console.log("🎯 After sorting, orders count:", sortedOrders.length);
-
     const displayOrders = sortedOrders.map((order, index) => {
-      // Count how many orders in this group were completed today
-      let todayCompletedCount = 1; // Default to 1
+      let todayCompletedCount = 1;
 
       if (order.allCompleteTimes && order.allCompleteTimes.length > 0) {
         todayCompletedCount = order.allCompleteTimes.filter((completeTime) => {
@@ -399,14 +325,6 @@ const isToday = (dateInput: string | Date): boolean => {
         }).length;
       }
 
-      console.log(
-        `📊 Order ${order.driverOrderId}: Total jobs=${
-          order.jobCount
-        }, Completed today=${todayCompletedCount}, allCompleteTimes=${
-          order.allCompleteTimes?.length || 0
-        }`
-      );
-
       return {
         id: (index + 1).toString().padStart(2, "0"),
         title: order.title || "",
@@ -414,25 +332,13 @@ const isToday = (dateInput: string | Date): boolean => {
         time: formatScheduleTime(
           order.primaryScheduleTime ||
             order.allScheduleTimes[0] ||
-            "Not Scheduled"
+            "Not Scheduled",
         ),
-        count: todayCompletedCount, 
+        count: todayCompletedCount,
         status: "Completed",
         orderData: order,
       };
     });
-
-    console.log("🎯 Final display orders count:", displayOrders.length);
-    console.log(
-      "🎯 Display orders with counts:",
-      displayOrders.map((o) => ({
-        id: o.id,
-        name: o.name,
-        count: o.count,
-        driverOrderId: o.orderData.driverOrderId,
-      }))
-    );
-    console.log("🎯 ===== getCompletedDisplayOrders END =====\n");
 
     return displayOrders;
   };
@@ -445,6 +351,22 @@ const isToday = (dateInput: string | Date): boolean => {
     return formatCount(todoOrders.length + holdOrders.length);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Home");
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [navigation]),
+  );
+
   const getCompletedCount = () => {
     return formatCount(completedOrders.length);
   };
@@ -453,27 +375,18 @@ const isToday = (dateInput: string | Date): boolean => {
     activeTab === "todo" ? getTodoDisplayOrders() : getCompletedDisplayOrders();
 
   const navigateToOrderDetails = (orderData: DriverOrder) => {
-    console.log("Navigating with order data:", orderData);
+ 
 
-    // Get processOrderId from the orderData
     const processOrderId = orderData.processOrderId;
 
-    // If processOrderId exists, use it; otherwise fall back to marketOrderId
     const primaryOrderId = processOrderId || orderData.marketOrderId;
 
-    // Get order IDs array
     const orderIds = orderData.allOrderIds || [orderData.marketOrderId];
 
-    // Get process order IDs array if available
     const processOrderIds = orderData.allProcessOrderIds ||
       orderData.processOrderIds || [primaryOrderId];
 
-    console.log("Passing to OrderDetails:", {
-      primaryOrderId,
-      processOrderIds,
-      orderIds,
-      processOrderId: processOrderId,
-    });
+
 
     navigation.navigate("OrderDetails", {
       processOrderIds: processOrderIds,
@@ -514,7 +427,7 @@ const isToday = (dateInput: string | Date): boolean => {
             onPress={() => {
               const now = new Date();
               const todayStr = `${now.getFullYear()}-${String(
-                now.getMonth() + 1
+                now.getMonth() + 1,
               ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
               fetchDriverOrders(todayStr);
             }}
@@ -612,8 +525,8 @@ const isToday = (dateInput: string | Date): boolean => {
                   isOnTheWay && activeTab === "todo"
                     ? "bg-[#FFFBEA] border-[#F7CA21]"
                     : isOnHold
-                    ? "bg-white border-[#FF0000]"
-                    : "bg-white border-[#A4AAB7]"
+                      ? "bg-white border-[#FF0000]"
+                      : "bg-white border-[#A4AAB7]"
                 }`}
                 onPress={() => {
                   if (activeTab === "todo") {
@@ -665,8 +578,8 @@ const isToday = (dateInput: string | Date): boolean => {
                       isOnHold
                         ? "bg-[#FF0000]"
                         : activeTab === "todo"
-                        ? "bg-yellow-400"
-                        : "bg-[#F3F3F3]"
+                          ? "bg-yellow-400"
+                          : "bg-[#F3F3F3]"
                     }`}
                   >
                     <Text

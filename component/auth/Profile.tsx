@@ -21,15 +21,15 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import CustomHeader from "../common/CustomHeader";
 import { useSelector, useDispatch } from "react-redux";
 import { AlertModal } from "../common/AlertModal";
-import { 
-  selectAuthToken, 
-  logoutUser, 
-  updateProfileImage
+import {
+  selectAuthToken,
+  logoutUser,
+  updateProfileImage,
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { MaterialIcons } from "@expo/vector-icons";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
@@ -47,8 +47,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
-  // AlertModal states
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
@@ -56,33 +55,36 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const token = useSelector(selectAuthToken);
   const dispatch = useDispatch();
 
-  // Request permissions based on platform
   const requestPermissions = async () => {
-    if (Platform.OS === 'android') {
-      const platformVersion = typeof Platform.Version === 'string' 
-        ? parseInt(Platform.Version, 10) 
-        : Platform.Version;
-      
+    if (Platform.OS === "android") {
+      const platformVersion =
+        typeof Platform.Version === "string"
+          ? parseInt(Platform.Version, 10)
+          : Platform.Version;
+
       if (platformVersion >= 33) {
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === 'granted';
+        if (status !== "granted") {
+          const { status: newStatus } =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          return newStatus === "granted";
         }
         return true;
       } else {
         const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === 'granted';
+        if (status !== "granted") {
+          const { status: newStatus } =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          return newStatus === "granted";
         }
         return true;
       }
     } else {
       const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        return newStatus === 'granted';
+      if (status !== "granted") {
+        const { status: newStatus } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        return newStatus === "granted";
       }
       return true;
     }
@@ -93,8 +95,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     try {
       const date = new Date(dateString);
       const monthNames = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
       ];
       const month = monthNames[date.getMonth()];
       const day = date.getDate();
@@ -129,7 +141,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -150,14 +162,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const handleImageUpload = async () => {
     try {
       const hasPermission = await requestPermissions();
-      
+
       if (!hasPermission) {
         Alert.alert(
-          'Permission Required',
-          Platform.OS === 'ios' 
-            ? 'Please allow access to your photo library to update your profile picture.'
-            : 'Please allow access to your photos to update your profile picture.',
-          [{ text: 'OK' }]
+          "Permission Required",
+          Platform.OS === "ios"
+            ? "Please allow access to your photo library to update your profile picture."
+            : "Please allow access to your photos to update your profile picture.",
+          [{ text: "OK" }],
         );
         return;
       }
@@ -174,28 +186,28 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
-        
+
         Alert.alert(
           "Update Profile Picture",
           "Do you want to update your profile picture?",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "Upload", 
-              onPress: () => uploadProfileImage(selectedImage) 
-            }
-          ]
+            {
+              text: "Upload",
+              onPress: () => uploadProfileImage(selectedImage),
+            },
+          ],
         );
       }
     } catch (error) {
-      console.error('Image picker error:', error);
+      console.error("Image picker error:", error);
       setModalMessage("Failed to open image picker");
       setShowErrorModal(true);
     }
   };
 
   const handleImageUploadAndroidPicker = async () => {
-    if (Platform.OS !== 'android') {
+    if (Platform.OS !== "android") {
       handleImageUpload();
       return;
     }
@@ -212,27 +224,29 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
-        
+
         Alert.alert(
           "Update Profile Picture",
           "Do you want to update your profile picture?",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "Upload", 
-              onPress: () => uploadProfileImage(selectedImage) 
-            }
-          ]
+            {
+              text: "Upload",
+              onPress: () => uploadProfileImage(selectedImage),
+            },
+          ],
         );
       }
     } catch (error) {
-      console.error('Image picker error:', error);
+      console.error("Image picker error:", error);
       setModalMessage("Failed to open image picker");
       setShowErrorModal(true);
     }
   };
 
-  const uploadProfileImage = async (selectedImage: ImagePicker.ImagePickerAsset) => {
+  const uploadProfileImage = async (
+    selectedImage: ImagePicker.ImagePickerAsset,
+  ) => {
     if (!token) {
       setModalMessage("Authentication required");
       setShowErrorModal(true);
@@ -243,48 +257,41 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setUploading(true);
 
       const formData = new FormData();
-      
-      const uriParts = selectedImage.uri.split('/');
-      const filename = uriParts[uriParts.length - 1];
-      
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-      formData.append('profileImage', {
+      const uriParts = selectedImage.uri.split("/");
+      const filename = uriParts[uriParts.length - 1];
+
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+
+      formData.append("profileImage", {
         uri: selectedImage.uri,
         name: filename,
         type: type,
       } as any);
-
-      console.log('Uploading to:', `${environment.API_BASE_URL}api/auth/update-profile-image`);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/auth/update-profile-image`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
           timeout: 30000,
-        }
+        },
       );
-
-      console.log('Response:', response.data);
 
       if (response.data.success) {
         const newImageUrl = response.data.data.imageUrl;
-        
-        // Update local state
+
         setProfileData((prev: any) => ({
           ...prev,
           image: newImageUrl,
         }));
-        
-        // Update Redux state
+
         dispatch(updateProfileImage(newImageUrl));
-        
-        // Show success modal instead of Alert
+
         setModalMessage("Your profile picture has been updated successfully!");
         setShowSuccessModal(true);
       } else {
@@ -293,15 +300,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       console.error("Upload error details:", error);
-      
+
       let errorMessage = "Failed to upload image";
-      
+
       if (error.response) {
-        console.log("Status:", error.response.status);
-        console.log("Data:", error.response.data);
-        
         if (error.response.status === 404) {
-          errorMessage = "Update profile endpoint not found. Please check the backend route.";
+          errorMessage =
+            "Update profile endpoint not found. Please check the backend route.";
         } else if (error.response.data?.message) {
           errorMessage = error.response.data.message;
         }
@@ -310,7 +315,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       } else {
         errorMessage = error.message || "Unknown error occurred";
       }
-      
+
       setModalMessage(errorMessage);
       setShowErrorModal(true);
     } finally {
@@ -390,18 +395,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <View className="items-center">
             <View style={{ position: "relative" }}>
               {uploading ? (
-                <View style={{
-                  width: wp(30),
-                  height: wp(30),
-                  borderRadius: wp(30) / 2,
-                  borderWidth: 2,
-                  borderColor: "#FFC83D",
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: '#f3f3f3'
-                }}>
+                <View
+                  style={{
+                    width: wp(30),
+                    height: wp(30),
+                    borderRadius: wp(30) / 2,
+                    borderWidth: 2,
+                    borderColor: "#FFC83D",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#f3f3f3",
+                  }}
+                >
                   <ActivityIndicator size="large" color="#FFC83D" />
-                  <Text className="text-xs text-gray-500 mt-2">Uploading...</Text>
+                  <Text className="text-xs text-gray-500 mt-2">
+                    Uploading...
+                  </Text>
                 </View>
               ) : (
                 <Image
@@ -433,10 +442,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 }}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons 
-                  name={uploading ? "loading" : "pencil"} 
-                  size={24} 
-                  color="white" 
+                <MaterialCommunityIcons
+                  name={uploading ? "loading" : "pencil"}
+                  size={24}
+                  color="white"
                 />
               </TouchableOpacity>
             </View>
@@ -467,7 +476,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               label="Phone Number"
               value={formatPhoneNumber(
                 profileData?.phoneCode01,
-                profileData?.phoneNumber01
+                profileData?.phoneNumber01,
               )}
             />
             <InfoCard

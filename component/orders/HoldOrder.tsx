@@ -43,15 +43,12 @@ interface Reason {
 const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } =
     route.params;
-  console.log("Order Hold page orderIds:", orderIds);
-  console.log("All Process Order IDs:", allProcessOrderIds);
-  console.log("Remaining Orders:", remainingOrders);
 
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">(
-    "En"
+    "En",
   );
 
   const [languageCode, setLanguageCode] = useState<"EN" | "SI" | "TA">("EN");
@@ -71,7 +68,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     Tamil: { code: "Ta" as const, key: "rsnTamil" as const },
   };
 
-  // Map language code to your existing selectedLanguage format
   const mapLanguageCode = (code: "EN" | "SI" | "TA"): "En" | "Si" | "Ta" => {
     switch (code) {
       case "EN":
@@ -85,7 +81,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   const languages = ["English", "Sinhala", "Tamil"];
 
-  // Fetch reasons from API
   useEffect(() => {
     fetchReasons();
   }, []);
@@ -101,15 +96,14 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const result = response.data;
 
       if (result.status === "success" && result.data) {
-        // Sort by indexNo to maintain order
         const sortedReasons = result.data.sort(
-          (a: Reason, b: Reason) => a.indexNo - b.indexNo
+          (a: Reason, b: Reason) => a.indexNo - b.indexNo,
         );
         setReasons(sortedReasons);
       } else {
@@ -123,7 +117,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     }
   };
 
-  // Get the current language key for displaying reasons
   const getCurrentLanguageKey = ():
     | "rsnEnglish"
     | "rsnSinhala"
@@ -133,7 +126,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return "rsnTamil";
   };
 
-  // Check if the selected reason is "Other"
   const isOtherReason = (reason: Reason): boolean => {
     return reason.rsnEnglish.toLowerCase() === "other";
   };
@@ -157,7 +149,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         note: isOtherReason(selectedReason) ? otherReason.trim() : null,
       };
 
-      console.log("Submitting hold order:", payload);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/hold/submit`,
@@ -167,18 +158,15 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = response.data;
-      console.log("Hold submit response:", result);
+   
 
       if (result.status === "success") {
-        // Get invoice numbers from the response
         const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-        console.log("Invoice numbers from response:", invoiceNumbers);
 
-        // Create success message with bold invoice numbers
         let message: string | React.ReactNode;
 
         if (invoiceNumbers.length === 0) {
@@ -196,7 +184,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             </View>
           );
         } else {
-          // For multiple orders
           message = (
             <View className="items-center">
               <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
@@ -218,12 +205,10 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         setSuccessMessage(message);
         setShowSuccessModal(true);
 
-        // Notify parent component about order completion
         if (onOrderComplete && orderIds && orderIds.length > 0) {
           onOrderComplete(orderIds[0]);
         }
 
-        // Add backup navigation timeout in case modal doesn't auto-close
         setTimeout(() => {
           if (showSuccessModal) {
             setShowSuccessModal(false);
@@ -236,28 +221,24 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     } catch (error: any) {
       console.error("Error submitting hold order:", error);
 
-      // Get error message from response
       const errorMessage =
         error.response?.data?.message ||
         "Failed to submit hold order. Please try again.";
 
-      // Check if it's an "already on hold" error
       const isAlreadyOnHoldError =
         errorMessage.toLowerCase().includes("already") &&
         errorMessage.toLowerCase().includes("hold");
 
       if (isAlreadyOnHoldError) {
-        // Show error modal for already held orders
         setSuccessMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
               {errorMessage}
             </Text>
-          </View>
+          </View>,
         );
         setShowErrorModal(true);
       } else {
-        // Show regular alert for other errors
         Alert.alert("Error", errorMessage);
       }
     } finally {
@@ -265,30 +246,10 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     }
   };
 
-  // const handleNavigationAfterSuccess = () => {
-  //   // Check if there are remaining orders to process
-  //   if (remainingOrders && remainingOrders.length > 0) {
-  //     // There are more orders, navigate back to OrderDetails
-  //     console.log(
-  //       "Navigating to OrderDetails with remaining orders:",
-  //       remainingOrders
-  //     );
-  //     // navigation.navigate("OrderDetails", {
-  //     //   processOrderIds: allProcessOrderIds || remainingOrders,
-  //     // });
-      
-  //   } else {
-  //     // No more orders, navigate to Home
-  //     console.log("No more orders, navigating to Home");
-  //     navigation.navigate("Home");
-  //   }
-  // };
-
   const handleNavigationAfterSuccess = () => {
-  // Always navigate to Jobs screen after successful hold
-  console.log("Navigating to Jobs screen");
-  navigation.navigate("Jobs");
-};
+    console.log("Navigating to Jobs screen");
+    navigation.navigate("Jobs");
+  };
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
@@ -297,37 +258,14 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     handleNavigationAfterSuccess();
   };
 
-  // const handleErrorModalClose = () => {
-  //   setShowErrorModal(false);
-  //   setSelectedReason(null);
-  //   setOtherReason("");
-
-  //   // Check if there are remaining orders to process
-  //   if (remainingOrders && remainingOrders.length > 0) {
-  //     // There are more orders, navigate back to OrderDetails
-  //     console.log(
-  //       "Error modal closed, navigating to OrderDetails with remaining orders:",
-  //       remainingOrders
-  //     );
-  //     navigation.navigate("OrderDetails", {
-  //       processOrderIds: allProcessOrderIds || remainingOrders,
-  //     });
-  //   } else {
-  //     // No more orders, navigate to Home
-  //     console.log("Error modal closed, no more orders, navigating to Home");
-  //     navigation.navigate("Home");
-  //   }
-  // };
-
   const handleErrorModalClose = () => {
-  setShowErrorModal(false);
-  setSelectedReason(null);
-  setOtherReason("");
-  
-  // Always navigate to Jobs screen
-  console.log("Error modal closed, navigating to Jobs");
-  navigation.navigate("Jobs");
-};
+    setShowErrorModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
+
+    console.log("Error modal closed, navigating to Jobs");
+    navigation.navigate("Jobs");
+  };
 
   const getPlaceholderText = (): string => {
     if (selectedLanguage === "En") return "Please mention the reason here...";
@@ -343,8 +281,8 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           selectedLanguage === "En"
             ? "Hold Order"
             : selectedLanguage === "Si"
-            ? "ඇණවුම රඳවා ගන්න"
-            : "ஆர்டரை வைத்திருங்கள்"
+              ? "ඇණවුම රඳවා ගන්න"
+              : "ஆர்டரை வைத்திருங்கள்"
         }
         navigation={navigation}
         showBackButton={true}
@@ -388,8 +326,8 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             {selectedLanguage === "En"
               ? "Why are you holding the order?"
               : selectedLanguage === "Si"
-              ? "ඔබ ඇණවුම රඳවා තබන්නේ ඇයි?"
-              : "நீங்கள் ஆர்டரை ஏன் வைத்திருக்கிறீர்கள்?"}
+                ? "ඔබ ඇණවුම රඳවා තබන්නේ ඇයි?"
+                : "நீங்கள் ஆர்டரை ஏன் வைத்திருக்கிறீர்கள்?"}
           </Text>
 
           {/* Reason Options */}
@@ -498,8 +436,8 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 {selectedLanguage === "En"
                   ? "Submit"
                   : selectedLanguage === "Si"
-                  ? "ඉදිරිපත් කරන්න"
-                  : "சமர்ப்பிக்கவும்"}
+                    ? "ඉදිරිපත් කරන්න"
+                    : "சமர்ப்பிக்கவும்"}
               </Text>
             )}
           </TouchableOpacity>
@@ -550,7 +488,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 key={index}
                 onPress={() => {
                   setSelectedLanguage(
-                    languageMap[lang as keyof typeof languageMap].code
+                    languageMap[lang as keyof typeof languageMap].code,
                   );
                   setShowLanguageMenu(false);
                 }}

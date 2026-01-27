@@ -1,16 +1,8 @@
 import React, { useEffect } from "react";
-import {
-  View,
-  Text,
-  Image,
-  Modal,
-  Animated,
-  TouchableOpacity,
-} from "react-native";
-import { FontAwesome5, Ionicons, FontAwesome6 } from "@expo/vector-icons";
+import { View, Text, Modal, Animated, TouchableOpacity } from "react-native";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
 
-// Alert Modal with multiple button options
 interface AlertModalProps {
   visible: boolean;
   title: string;
@@ -42,7 +34,6 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 
   useEffect(() => {
     if (visible && autoClose) {
-      // Reset bar to full width
       loadingBarWidth.setValue(300);
 
       Animated.timing(loadingBarWidth, {
@@ -51,16 +42,14 @@ export const AlertModal: React.FC<AlertModalProps> = ({
         useNativeDriver: false,
       }).start();
 
-      // Auto close modal
       const closeTimer = setTimeout(() => {
         onClose();
-      }, duration - 200); // Close slightly before animation ends
+      }, duration - 200);
 
       return () => clearTimeout(closeTimer);
     }
   }, [visible, duration, autoClose]);
 
-  // Get content based on type
   const getContent = () => {
     switch (type) {
       case "success":
@@ -85,7 +74,6 @@ export const AlertModal: React.FC<AlertModalProps> = ({
     }
   };
 
-  // Function to render message (handles both string and ReactNode)
   const renderMessage = () => {
     if (typeof message === "string") {
       return (
@@ -95,7 +83,6 @@ export const AlertModal: React.FC<AlertModalProps> = ({
     return message;
   };
 
-  // Determine which title to show
   const getModalTitle = () => {
     if (showOpenOngoingButton) {
       return "Cannot Proceed!";
@@ -106,9 +93,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View className="flex-1 bg-black/50 justify-center items-center p-4">
-        {/* POPUP CONTAINER */}
         <View className="bg-white p-6 rounded-2xl items-center shadow-lg w-full max-w-md relative">
-          {/* Close Button */}
           <TouchableOpacity
             className="absolute top-5 right-5 z-10 w-8 h-8 rounded-full bg-[#F7FAFF] items-center justify-center"
             onPress={onClose}
@@ -121,15 +106,11 @@ export const AlertModal: React.FC<AlertModalProps> = ({
             {getModalTitle()}
           </Text>
 
-          {/* Icon/Animation - based on type */}
           {getContent()}
 
-          {/* Message - supports rich text */}
           {renderMessage()}
 
-          {/* Button Container */}
           <View className="w-full space-y-3">
-            {/* Re-Scan Button (only shown when showRescanButton is true) */}
             {showRescanButton && onRescan && (
               <TouchableOpacity
                 onPress={onRescan}
