@@ -67,227 +67,196 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setPassword(text);
   };
 
-  const handleLogin = async () => {
-    Keyboard.dismiss();
+ const handleLogin = async () => {
+  Keyboard.dismiss();
 
-    setEmpIdError("");
+  setEmpIdError("");
 
-    if (!empid && !password) {
+  if (!empid && !password) {
+    showModal(
+      "Sorry",
+      "Password & Employee ID are not allowed to be empty",
+      "error",
+    );
+    return false;
+  }
+
+  if (empid && !password) {
+    showModal("Sorry", "Password is not allowed to be empty", "error");
+    return false;
+  }
+
+  if (!empid && password) {
+    showModal("Sorry", "Employee ID is not allowed to be empty", "error");
+    return false;
+  }
+
+  const trimmedEmpId = empid.trim();
+
+  const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
+
+  if (!empIdPatternRegex.test(trimmedEmpId)) {
+    const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
+
+    if (!startsWithDRV) {
       showModal(
-        "Sorry",
-        "Password & Employee ID are not allowed to be empty",
+        "Unauthorized Access",
+        "You are not authorized to access this system. Please use a valid Employee ID.",
         "error",
       );
-      return false;
+    } else {
+      showModal(
+        "Invalid EMP ID",
+        "Please enter a valid Employee ID.",
+        "error",
+      );
     }
+    return false;
+  }
 
-    if (empid && !password) {
-      showModal("Sorry", "Password is not allowed to be empty", "error");
-      return false;
-    }
+  const uppercaseRegex = /^DRV\d{5}$/;
 
-    if (!empid && password) {
-      showModal("Sorry", "Employee ID is not allowed to be empty", "error");
-      return false;
-    }
+  if (!uppercaseRegex.test(trimmedEmpId)) {
+    setEmpIdError("Please enter Employee ID in uppercase letters");
+    return false;
+  }
 
-    const trimmedEmpId = empid.trim();
+  setLoading(true);
 
-    const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
+  await AsyncStorage.removeItem("token");
+  await AsyncStorage.removeItem("empid");
 
-    if (!empIdPatternRegex.test(trimmedEmpId)) {
-      const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
+  try {
+    const response = await fetch(
+      `${environment.API_BASE_URL}api/auth/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          empId: trimmedEmpId,
+          password,
+        }),
+      },
+    );
 
-      if (!startsWithDRV) {
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      setLoading(false);
+
+      const message = data.message?.toLowerCase() || "";
+      const statusCode = response.status;
+
+      if (
+        statusCode === 404 ||
+        message.includes("user not found") ||
+        message.includes("not found") ||
+        message.includes("not registered") ||
+        message.includes("does not exist")
+      ) {
         showModal(
-          "Unauthorized Access",
-          "You are not authorized to access this system. Please use a valid Employee ID.",
-          "error",
-        );
-      } else {
-        showModal(
-          "Invalid EMP ID",
-          "Please enter a valid Employee ID.",
+          "EMP ID Not Registered",
+          "This Employee ID is not registered yet. ",
           "error",
         );
       }
-      return false;
-    }
 
-    const uppercaseRegex = /^DRV\d{5}$/;
-
-    if (!uppercaseRegex.test(trimmedEmpId)) {
-      setEmpIdError("Please enter Employee ID in uppercase letters");
-      return false;
-    }
-
-    if (password.length < 8) {
-      showModal(
-        "Invalid Password",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
-        "error",
-      );
-      return false;
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      showModal(
-        "Invalid Password",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
-        "error",
-      );
-      return false;
-    }
-
-    if (!/[0-9]/.test(password)) {
-      showModal(
-        "Invalid Password",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
-        "error",
-      );
-      return false;
-    }
-
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      showModal(
-        "Invalid Password",
-        "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
-        "error",
-      );
-      return false;
-    }
-
-    setLoading(true);
-
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("empid");
-
-    try {
-      const response = await fetch(
-        `${environment.API_BASE_URL}api/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            empId: trimmedEmpId,
-            password,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setLoading(false);
-
-        const message = data.message?.toLowerCase() || "";
-        const statusCode = response.status;
-
-        
-        if (
+      else if (
         message.includes("rejected") ||
         message.includes("emp id is rejected")
       ) {
+        showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
+      }
+
+      else if (
+        message.includes("not approved") ||
+        message.includes("emp id not approved")
+      ) {
         showModal(
-          "Rejected EMP ID",
-          "This EMP ID is Rejected.",
+          "Not Approved EMP ID",
+          "This EMP ID is not approved.",
           "error",
         );
-      } else if (
-          message.includes("not approved") ||
-          message.includes("emp id not approved")
-        ) {
-          showModal(
-            "Not Approved EMP ID",
-            "This EMP ID is not approved.",
-            "error",
-          );
-        } else if (
-          statusCode === 401 ||
-          message.includes("invalid") ||
-          message.includes("password")
-        ) {
-          showModal(
-            "Invalid Password!",
-            "Please check the Password and retry again.",
-            "error",
-          );
-        } else if (
-          statusCode === 404 ||
-          message.includes("user not found") ||
-          message.includes("not found")
-        ) {
-          showModal(
-            "Invalid Employee ID!",
-            "Please check the Employee ID and retry again.",
-            "error",
-          );
-        } else {
-          showModal(
-            "Sorry",
-            "Something went wrong. Please try again.",
-            "error",
-          );
-        }
-
-        return;
       }
 
-      const {
-        firstNameEnglish,
-        lastNameEnglish,
-        image,
-        token,
-        passwordUpdated,
-        empId,
-      } = data.data;
+      else if (
+        statusCode === 401 ||
+        message.includes("invalid") ||
+        message.includes("password") ||
+        message.includes("incorrect password")
+      ) {
+        showModal(
+          "Invalid Password!",
+          "Please check the Password and retry again.",
+          "error",
+        );
+      }
 
-      await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("empid", empId.toString());
+      else {
+        showModal(
+          "Sorry",
+          "Something went wrong. Please try again.",
+          "error",
+        );
+      }
 
-      dispatch(setUser({ token, empId: empId.toString() }));
+      return;
+    }
 
-      dispatch(
-        setUserProfile({
-          firstName: firstNameEnglish,
-          lastName: lastNameEnglish,
-          profileImg: image,
-          empId: empId.toString(),
-        }),
+    const {
+      firstNameEnglish,
+      lastNameEnglish,
+      image,
+      token,
+      passwordUpdated,
+      empId,
+    } = data.data;
+
+    await AsyncStorage.setItem("token", token);
+    await AsyncStorage.setItem("empid", empId.toString());
+
+    dispatch(setUser({ token, empId: empId.toString() }));
+
+    dispatch(
+      setUserProfile({
+        firstName: firstNameEnglish,
+        lastName: lastNameEnglish,
+        profileImg: image,
+        empId: empId.toString(),
+      }),
+    );
+
+    if (token) {
+      const timestamp = new Date();
+      const expirationTime = new Date(
+        timestamp.getTime() + 8 * 60 * 60 * 1000,
       );
 
-      if (token) {
-        const timestamp = new Date();
-        const expirationTime = new Date(
-          timestamp.getTime() + 8 * 60 * 60 * 1000,
-        );
-
-        await AsyncStorage.multiSet([
-          ["tokenStoredTime", timestamp.toISOString()],
-          ["tokenExpirationTime", expirationTime.toISOString()],
-        ]);
-      }
-
-
-      setTimeout(() => {
-        setLoading(false);
-
-        if (passwordUpdated === 0) {
-          navigation.navigate("ChangePassword", {
-            passwordUpdated: passwordUpdated,
-          });
-        } else {
-          navigation.navigate("Home");
-        }
-      }, 4000);
-    } catch (error) {
-      setLoading(false);
-      console.error("Login error:", error);
-      showModal("Error", "Something went wrong. Please try again.", "error");
+      await AsyncStorage.multiSet([
+        ["tokenStoredTime", timestamp.toISOString()],
+        ["tokenExpirationTime", expirationTime.toISOString()],
+      ]);
     }
-  };
+
+    setTimeout(() => {
+      setLoading(false);
+
+      if (passwordUpdated === 0) {
+        navigation.navigate("ChangePassword", {
+          passwordUpdated: passwordUpdated,
+        });
+      } else {
+        navigation.navigate("Home");
+      }
+    }, 4000);
+  } catch (error) {
+    setLoading(false);
+    console.error("Login error:", error);
+    showModal("Error", "Something went wrong. Please try again.", "error");
+  }
+};
 
   useFocusEffect(
     useCallback(() => {

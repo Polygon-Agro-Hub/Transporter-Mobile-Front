@@ -368,10 +368,14 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 </View>
 
                 {/* Footer Message */}
-                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                <Text className="text-sm text-[#2D2D2D] leading-6">
                   If you have any further concerns or questions, feel free to
-                  reach out. Thank you for your patience and understanding.
-                </Text>
+                  reach out. 
+                   </Text>
+                    <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                  Thank you for your patience and understanding.
+                  </Text>
+               
 
                 {/* Signature */}
                 <View className="mt-4 pt-4 ">

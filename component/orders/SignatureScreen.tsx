@@ -450,18 +450,19 @@ export default function SignatureScreen({
       />
 
       {/* SIGNATURE AREA */}
-      <View className="flex-1 mx-4 mb-4 mt-2">
+      <View className="flex-1 mx-10 mb-4 mt-2 rounded rounded-full">
         <DashedBorder
           style={{
             backgroundColor: "#DFEDFC",
             flex: 1,
-            borderRadius: 16,
+            borderRadius: 12,
             overflow: "hidden",
           }}
           borderColor="#2D7BFF"
-          dashWidth={12}
+          dashWidth={15}
           gapWidth={8}
-          borderWidth={2}
+          borderWidth={3}
+          
         >
           {/* CLEAR BUTTON */}
           <TouchableOpacity

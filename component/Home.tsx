@@ -217,24 +217,28 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
   const buildQuickActions = () => {
     const packsCount = getPacksCount();
+    const showEndShift = shouldShowEndShiftButton();
     const actions = [
       {
         image: scanQRImage,
         label: "Scan",
         color: "#3B82F6",
         action: () => navigation.navigate("AssignOrderQR"),
+        disabled: showEndShift,
       },
       {
         image: packsImage,
         label: `${packsCount} Packs`,
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
+        disabled: false,
       },
       {
         image: myComplaintImage,
         label: "My Complaints",
         color: "#8B5CF6",
         action: () => navigation.navigate("ComplaintsList"),
+        disabled: false,
       },
     ];
 
@@ -254,6 +258,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             navigation.navigate("Jobs");
           }
         },
+        disabled: false,
       });
     }
 
@@ -263,6 +268,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         label: `${amountData?.returnOrders || 0} Return`,
         color: "#F59E0B",
         action: () => navigation.navigate("ReturnOrders"),
+        disabled: false,
       });
     }
 
@@ -490,8 +496,9 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             {row.map((action, index) => (
               <TouchableOpacity
                 key={index}
-                onPress={action.action}
-                activeOpacity={0.7}
+                onPress={action.disabled ? undefined : action.action}
+                activeOpacity={action.disabled ? 1 : 0.7}
+                disabled={action.disabled}
                 style={{
                   width: "48%",
                   backgroundColor:
@@ -506,6 +513,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                   shadowOpacity: 0.1,
                   shadowRadius: 4,
                   elevation: 3,
+                  opacity: action.disabled ? 0.5 : 1,
                 }}
               >
                 <View className="w-32 h-32 rounded-lg justify-center items-center mb-3 overflow-hidden">
@@ -529,7 +537,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                     />
                   )}
 
-                  <Text className="text-sm font-medium text-gray-800">
+                  <Text className="text-sm font-bold text-gray-800 ">
                     {action.label}
                   </Text>
                 </View>
