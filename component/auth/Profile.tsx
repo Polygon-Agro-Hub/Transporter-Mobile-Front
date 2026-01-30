@@ -12,7 +12,7 @@ import {
   Modal,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../types";
+import { RootStackParamList } from "../../types/types";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -424,7 +424,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   if (isLoading) {
-    return <LoadingPage message="Loading profile..." fullScreen={true} />;
+    return (
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="My Profile"
+          showBackButton={true}
+          showLanguageSelector={false}
+          navigation={navigation}
+        />
+        <LoadingPage message="Loading Profile..." fullScreen={true} />
+      </View>
+    );
   }
 
   if (error) {

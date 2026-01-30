@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   Animated,
+  StatusBar,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -21,13 +22,14 @@ import {
 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
+import LoadingPage from "../common/LoadingPage";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -184,11 +186,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     if (orders.length > 0) {
       const timeText = getScheduleTimeDisplay();
       const textLength = timeText.length;
-      
+
       // Only animate if text is long enough
       if (textLength > 15) {
         const scrollDistance = textLength * 8; // Approximate pixel width
-        
+
         Animated.loop(
           Animated.sequence([
             Animated.delay(1000), // Pause before starting
@@ -202,11 +204,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               duration: 0, // Instant reset to start
               useNativeDriver: true,
             }),
-          ])
+          ]),
         ).start();
       }
     }
-    
+
     return () => {
       scrollX.setValue(0);
     };
@@ -460,7 +462,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     if (!orders || orders.length === 0) return "Not Scheduled";
 
     const firstOrder = orders[0];
-      return firstOrder?.sheduleTime || "Not Scheduled";
+    return firstOrder?.sheduleTime || "Not Scheduled";
   };
 
   const getJourneyButtonText = (status: string) => {
@@ -766,16 +768,14 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (loading) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
         />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="mt-4 text-gray-600">Loading order details...</Text>
-        </View>
+        <LoadingPage message="Loading Order Details..." fullScreen={true} />
       </View>
     );
   }
@@ -783,6 +783,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (error) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -808,6 +809,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (!userDetails || orders.length === 0) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -823,6 +825,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Order Details"
         navigation={navigation}
@@ -887,7 +890,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
             <View className="mt-2 max-w-full overflow-hidden">
-              <Animated.Text 
+              <Animated.Text
                 className="text-md font-semibold whitespace-nowrap"
                 style={{
                   transform: [{ translateX: scrollX }],
@@ -1041,8 +1044,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     <Text className="text-base font-bold">{buttonText}</Text>
                   )}
                 </TouchableOpacity>
-
-               
               </View>
             );
           })}

@@ -22,7 +22,7 @@ const LoadingPage: React.FC<LoadingPageProps> = ({
   containerStyle,
   messageStyle,
   size = "large",
-  color = "#FFC83D",
+  color = "#F7CA21",
   fullScreen = false,
 }) => {
   const { t } = useTranslation();
@@ -36,7 +36,7 @@ const LoadingPage: React.FC<LoadingPageProps> = ({
       ]}
     >
       <ActivityIndicator size={size} color={color} />
-      <Text className="mt-4 text-[#FFC83D] text-center" style={messageStyle}>
+      <Text className="mt-4 text-[#F7CA21] text-center" style={messageStyle}>
         {message || t("Common.Loading")}
       </Text>
     </View>

@@ -11,7 +11,7 @@ import {
   BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import {
   AntDesign,
   Feather,
@@ -29,6 +29,7 @@ import axios from "axios";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../../store/authSlice";
 import LottieView from "lottie-react-native";
+import LoadingPage from "../common/LoadingPage";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -188,10 +189,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           navigation={navigation}
           onBackPress={handleBackPress}
         />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#000000" />
-          <Text className="mt-4 text-gray-600">Loading complaints...</Text>
-        </View>
+        <LoadingPage message="Loading Complaints..." fullScreen={true} />
       </View>
     );
   }

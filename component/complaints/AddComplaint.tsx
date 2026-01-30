@@ -11,13 +11,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
-import DropDownPicker from "react-native-dropdown-picker";
+import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertModal } from "../common/AlertModal";
 import { environment } from "@/environment/environment";
 import axios from "axios";
+import GlobalSearchModal from "@/component/common/GlobalSearchModal";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type AddComplaintNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -39,15 +40,14 @@ interface Category {
 interface DropdownItem {
   label: string;
   value: string;
+  originalCategory: Category;
 }
 
 const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<string | null>(null);
-  const [items, setItems] = useState<DropdownItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [description, setDescription] = useState("");
 
   // Modal states
@@ -57,6 +57,12 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     message: "",
     type: "success" as "success" | "error",
   });
+
+  // GlobalSearchModal states
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategoryLabel, setSelectedCategoryLabel] =
+    useState<string>("");
 
   useEffect(() => {
     fetchCategories();
@@ -85,13 +91,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
       );
 
       if (response.data.status === "success" && response.data.data) {
-        const categoryItems: DropdownItem[] = response.data.data.map(
-          (category: Category) => ({
-            label: category.categoryEnglish,
-            value: category.id.toString(),
-          }),
-        );
-        setItems(categoryItems);
+        const categoriesData: Category[] = response.data.data;
+        setCategories(categoriesData);
       } else {
         showModal("Error", "Failed to load categories", "error");
       }
@@ -133,7 +134,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-    if (!value || !description.trim()) {
+    if (!selectedCategory || !description.trim()) {
       showModal(
         "Error",
         "Please select a category and enter description",
@@ -148,7 +149,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
       // Prepare the request data
       const complaintData = {
-        complainCategory: value,
+        complainCategory: selectedCategory,
         complain: description.trim(),
       };
 
@@ -165,7 +166,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
       if (response.data.status === "success") {
         // Reset form
-        setValue(null);
+        setSelectedCategory(null);
+        setSelectedCategoryLabel("");
         setDescription("");
 
         // Show success modal
@@ -202,7 +204,59 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     }
   };
 
-  const isFormValid = value && description.trim().length > 0;
+  const isFormValid = selectedCategory && description.trim().length > 0;
+
+  // Prepare data for GlobalSearchModal
+  const getSearchModalData = () => {
+    return categories.map((category) => ({
+      label: category.categoryEnglish,
+      value: category.id.toString(),
+      originalCategory: category,
+    }));
+  };
+
+  // Handle category selection from GlobalSearchModal
+  const handleCategorySelect = (selectedValues: string[]) => {
+    if (selectedValues.length > 0) {
+      const selectedValue = selectedValues[0];
+      const selectedCategory = categories.find(
+        (cat) => cat.id.toString() === selectedValue,
+      );
+
+      if (selectedCategory) {
+        setSelectedCategory(selectedValue);
+        setSelectedCategoryLabel(selectedCategory.categoryEnglish);
+      }
+    }
+    setSearchModalVisible(false);
+  };
+
+  // Custom render item for GlobalSearchModal
+  const renderCategoryItem = (item: any, isSelected: boolean) => {
+    const category = item.originalCategory;
+
+    return (
+      <TouchableOpacity
+        className="px-4 py-4 border-b border-gray-200 flex-row items-center justify-between"
+        onPress={() => handleCategorySelect([item.value])}
+      >
+        <View className="flex-1">
+          <Text className="text-base text-gray-800 font-medium">
+            {item.label}
+          </Text>
+          {/* You can add additional category info here if needed */}
+          {/* <Text className="text-sm text-gray-500 mt-1">
+            Category ID: {item.value}
+          </Text> */}
+        </View>
+        {isSelected && (
+          <View className="w-6 h-6 rounded-full bg-[#21202B] items-center justify-center ml-2">
+            <Text className="text-white text-xs">✓</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -230,8 +284,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
             />
           </View>
 
-          {/* Category Dropdown */}
-          <View className="mb-6 z-50">
+          {/* Category Selection Button */}
+          <View className="mb-6">
             {categoriesLoading ? (
               <View className="bg-[#F3F3F3] border border-[#A4AAB7] rounded-3xl px-4 py-3 flex-row items-center justify-center min-h-[50px]">
                 <ActivityIndicator size="small" color="#000000" />
@@ -239,75 +293,21 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
                   Loading categories...
                 </Text>
               </View>
-            ) : items.length > 0 ? (
-              <DropDownPicker
-                open={open}
-                value={value}
-                items={items}
-                setOpen={setOpen}
-                setValue={setValue}
-                setItems={setItems}
-                placeholder="--Select Category Here--"
-                placeholderStyle={{
-                  color: "#000000",
-                  fontSize: 16,
-                }}
+            ) : categories.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setSearchModalVisible(true)}
+                className="bg-[#F6F6F6] border border-[#F6F6F6] rounded-full px-5 flex-row items-center justify-between"
                 style={{
-                  backgroundColor: "#F3F3F3",
-                  borderColor: "#A4AAB7",
+                  height: 55,
                   borderRadius: 25,
-                  borderWidth: 1,
-                  minHeight: 50,
                 }}
-                dropDownContainerStyle={{
-                  backgroundColor: "#FFFFFF",
-                  borderColor: "#A4AAB7",
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  marginTop: 2,
-                }}
-                textStyle={{
-                  fontSize: 16,
-                  color: "#000000",
-                }}
-                arrowIconStyle={{
-                  width: 20,
-                  height: 20,
-                }}
-                tickIconStyle={{
-                  width: 18,
-                  height: 18,
-                }}
-                listItemLabelStyle={{
-                  color: "#374151",
-                  fontSize: 16,
-                }}
-                selectedItemLabelStyle={{
-                  fontWeight: "600",
-                }}
-                listMode="SCROLLVIEW"
-                scrollViewProps={{
-                  nestedScrollEnabled: true,
-                }}
-                dropDownDirection="BOTTOM"
-                searchable={true}
-                searchPlaceholder="Search categories..."
-                searchTextInputStyle={{
-                  borderColor: "#A4AAB7",
-                  borderWidth: 1,
-                  borderRadius: 8,
-                  paddingHorizontal: 10,
-                  fontSize: 16,
-                }}
-                showTickIcon={true}
-                modalProps={{
-                  animationType: "fade",
-                }}
-                modalTitle="Select a category"
-                modalTitleStyle={{
-                  fontWeight: "bold",
-                }}
-              />
+                disabled={categoriesLoading}
+              >
+                <Text className={`text-base text-black`}>
+                  {selectedCategoryLabel || "--Select Category Here--"}
+                </Text>
+                <MaterialIcons name="arrow-drop-down" size={24} color="#666" />
+              </TouchableOpacity>
             ) : (
               <View className="bg-[#F3F3F3] border border-[#A4AAB7] rounded-3xl px-4 py-3 min-h-[50px] justify-center">
                 <Text className="text-gray-600">No categories available</Text>
@@ -357,6 +357,22 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Global Search Modal for Categories */}
+      <GlobalSearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+        title="Select Category"
+        data={getSearchModalData()}
+        selectedItems={selectedCategory ? [selectedCategory] : []}
+        onSelect={handleCategorySelect}
+        searchPlaceholder="Search categories..."
+        doneButtonText="Done"
+        noResultsText="No categories found"
+        multiSelect={false}
+        renderItem={renderCategoryItem}
+        searchKeys={["label"]}
+      />
 
       {/* Alert Modal */}
       <AlertModal

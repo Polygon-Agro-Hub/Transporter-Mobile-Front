@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { View, Image, Animated, StatusBar, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types";
+import { RootStackParamList } from "../../types/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
 import { useDispatch } from "react-redux";

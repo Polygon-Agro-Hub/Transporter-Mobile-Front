@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { MaterialIcons } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
@@ -126,7 +126,6 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
 
   return (
     <View className="flex-1 bg-white">
-      {/* Fixed Header Section - No Scroll */}
       <CustomHeader
         title={headerTitle}
         showBackButton={true}
@@ -144,7 +143,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
         <View className="items-center mt-6">
           <Image
             source={locationImage}
-            className="w-32 h-32" // Reduced from w-40 h-40 to w-32 h-32
+            className="w-32 h-32" 
             resizeMode="contain"
           />
         </View>
