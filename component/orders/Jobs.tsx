@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
   BackHandler,
+  StatusBar,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -19,6 +19,7 @@ import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LottieView from "lottie-react-native";
 import MarqueeText from "@/component/common/MarqueeText";
 import { useFocusEffect } from "@react-navigation/native";
+import LoadingPage from "../common/LoadingPage";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
 
@@ -375,8 +376,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     activeTab === "todo" ? getTodoDisplayOrders() : getCompletedDisplayOrders();
 
   const navigateToOrderDetails = (orderData: DriverOrder) => {
- 
-
     const processOrderId = orderData.processOrderId;
 
     const primaryOrderId = processOrderId || orderData.marketOrderId;
@@ -385,8 +384,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     const processOrderIds = orderData.allProcessOrderIds ||
       orderData.processOrderIds || [primaryOrderId];
-
-
 
     navigation.navigate("OrderDetails", {
       processOrderIds: processOrderIds,
@@ -401,17 +398,16 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
+          onBackPress={() => navigation.navigate("Home")}
         />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="mt-4 text-gray-600">Loading jobs...</Text>
-        </View>
+        <LoadingPage message="Loading Jobs..." fullScreen={true} />
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-white">
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Jobs"
         navigation={navigation}

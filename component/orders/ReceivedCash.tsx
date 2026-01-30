@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { AntDesign } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +20,7 @@ import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import LottieView from "lottie-react-native";
+import LoadingPage from "../common/LoadingPage";
 
 type ReceivedCashNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -173,9 +174,13 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
 
   if (loading && !refreshing) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#000" />
-        <Text className="mt-4 text-gray-600">Loading received cash...</Text>
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="Received Cash"
+          navigation={navigation}
+          onBackPress={() => navigation.navigate("Home")}
+        />
+        <LoadingPage message="Loading Received Cash..." fullScreen={true} />
       </View>
     );
   }

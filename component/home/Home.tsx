@@ -7,17 +7,19 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { Feather } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
-import { selectUserProfile } from "../store/authSlice";
+import { selectUserProfile } from "../../store/authSlice";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
+import LoadingPage from "../common/LoadingPage";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -95,7 +97,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.data.status === "success" && response.data.data) {
@@ -168,18 +170,16 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     }
   };
 
-
-
   const getMotivationalMessage = () => {
     if (shouldShowEndShiftButton()) {
       return null;
     }
 
     const pendingLocations = amountData?.pendingLocationsCount || 0;
-    const todayCompletedLocations = amountData?.todayCompletedLocationsCount || 0;
+    const todayCompletedLocations =
+      amountData?.todayCompletedLocationsCount || 0;
     const todayReturns = amountData?.todayReturnOrders || 0;
 
-   
     if (pendingLocations === 0) {
       return {
         title: "Have a nice Day!",
@@ -191,18 +191,15 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       };
     }
 
-   
-    const todayFinished = todayCompletedLocations ;
-    
-    
-    const totalWork = pendingLocations + todayFinished;
-    
-   
-    const completionRate = totalWork > 0 
-      ? Math.round((todayCompletedLocations / totalWork) * 100) 
-      : 0;
+    const todayFinished = todayCompletedLocations;
 
-   
+    const totalWork = pendingLocations + todayFinished;
+
+    const completionRate =
+      totalWork > 0
+        ? Math.round((todayCompletedLocations / totalWork) * 100)
+        : 0;
+
     return {
       title: "Way more to go!",
       subtitle: `${pendingLocations} Location${pendingLocations !== 1 ? "s" : ""} to go..`,
@@ -295,12 +292,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   };
 
   if (loading) {
-    return (
-      <View className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#FFC83D" />
-        <Text className="mt-4 text-gray-600">Loading data...</Text>
-      </View>
-    );
+    return <LoadingPage message="Loading Data..." fullScreen={true} />;
   }
 
   if (error && !loading) {
@@ -341,6 +333,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       {/* Header */}
       <View className="bg-white px-4 shadow-sm mt-4">
         <TouchableOpacity
