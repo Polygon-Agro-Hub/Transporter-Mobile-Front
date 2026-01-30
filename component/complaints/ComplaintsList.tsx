@@ -8,10 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  Dimensions,
   BackHandler,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import {
@@ -57,7 +55,7 @@ interface Complaint {
   categoryTamil: string;
 }
 
-const NodataAnimation = require("@/assets/json/no-data.json")
+const NodataAnimation = require("@/assets/json/no-data.json");
 
 const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -65,10 +63,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(
-    null
+    null,
   );
 
-  // Get user profile from Redux
   const userProfile = useSelector(selectUserProfile);
 
   useEffect(() => {
@@ -86,7 +83,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.data.status === "success") {
@@ -108,20 +105,21 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-        useEffect(() => {
-      const backAction = () => {
-        navigation.navigate('Home') 
-        return true;
-      };
-  
-      // Add the back handler listener
-      const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
-  
-      // Cleanup listener on component unmount
-      return () => {
-        backHandler.remove();
-      };
-    }, [ navigation]);
+  useEffect(() => {
+    const backAction = () => {
+      navigation.navigate("Home");
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction,
+    );
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [navigation]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -170,12 +168,10 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
     setSelectedComplaint(null);
   };
 
-  // Handler for back button - always navigate to Home
   const handleBackPress = () => {
     navigation.navigate("Home");
   };
 
-  // Get user's full name
   const getUserName = () => {
     const firstName = userProfile?.firstName || "User";
     const lastName = userProfile?.lastName || "";
@@ -221,12 +217,12 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
               transform: [{ translateY: -50 }],
             }}
           >
-              <LottieView
-          source={NodataAnimation}
-          autoPlay
-          loop={true}
-          style={{ width: 200, height: 200 }}
-        />
+            <LottieView
+              source={NodataAnimation}
+              autoPlay
+              loop={true}
+              style={{ width: 200, height: 200 }}
+            />
             <Text className="text-[#495D86] text-base mb-2">
               -- No Complaints Yet --
             </Text>
@@ -372,10 +368,14 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 </View>
 
                 {/* Footer Message */}
-                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                <Text className="text-sm text-[#2D2D2D] leading-6">
                   If you have any further concerns or questions, feel free to
-                  reach out. Thank you for your patience and understanding.
-                </Text>
+                  reach out. 
+                   </Text>
+                    <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                  Thank you for your patience and understanding.
+                  </Text>
+               
 
                 {/* Signature */}
                 <View className="mt-4 pt-4 ">

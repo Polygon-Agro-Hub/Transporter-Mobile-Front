@@ -49,7 +49,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   const [value, setValue] = useState<string | null>(null);
   const [items, setItems] = useState<DropdownItem[]>([]);
   const [description, setDescription] = useState("");
-  
+
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({
@@ -62,10 +62,8 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     fetchCategories();
   }, []);
 
-  // Handle description change with auto-capitalization
   const handleDescriptionChange = (text: string) => {
     if (text.length > 0 && description.length === 0) {
-      // Capitalize first letter when starting to type
       setDescription(text.charAt(0).toUpperCase() + text.slice(1));
     } else {
       setDescription(text);
@@ -83,16 +81,15 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.data.status === "success" && response.data.data) {
-        // Transform backend data to dropdown format
         const categoryItems: DropdownItem[] = response.data.data.map(
           (category: Category) => ({
             label: category.categoryEnglish,
             value: category.id.toString(),
-          })
+          }),
         );
         setItems(categoryItems);
       } else {
@@ -100,7 +97,11 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       console.error("Error fetching categories:", error);
-      showModal("Error", "Failed to load categories. Please try again later.", "error");
+      showModal(
+        "Error",
+        "Failed to load categories. Please try again later.",
+        "error",
+      );
     } finally {
       setCategoriesLoading(false);
     }
@@ -114,21 +115,18 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     }, 2000);
   };
 
-  // Show custom modal
-  const showModal = (title: string, message: string, type: "success" | "error") => {
+  const showModal = (
+    title: string,
+    message: string,
+    type: "success" | "error",
+  ) => {
     setModalConfig({ title, message, type });
     setModalVisible(true);
   };
 
-  // For backward compatibility with existing Alert.alert calls
-  const showAlert = (title: string, message: string) => {
-    Alert.alert(title, message, [{ text: "OK" }]);
-  };
-
   const handleModalClose = () => {
     setModalVisible(false);
-    
-    // If it was a success modal, navigate to ComplaintsList after closing
+
     if (modalConfig.type === "success") {
       navigation.navigate("ComplaintsList");
     }
@@ -136,7 +134,11 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
 
   const handleSubmit = async () => {
     if (!value || !description.trim()) {
-      showModal("Error", "Please select a category and enter description", "error");
+      showModal(
+        "Error",
+        "Please select a category and enter description",
+        "error",
+      );
       return;
     }
 
@@ -158,25 +160,25 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.data.status === "success") {
         // Reset form
         setValue(null);
         setDescription("");
-        
+
         // Show success modal
         showModal(
-          "Success!", 
+          "Success!",
           "Your complaint has been submitted successfully. We'll review it shortly.",
-          "success"
+          "success",
         );
       } else {
         showModal(
           "Error",
           response.data.message || "Failed to submit complaint",
-          "error"
+          "error",
         );
       }
     } catch (error: any) {
@@ -186,10 +188,14 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         showModal(
           "Error",
           error.response.data?.message || "Failed to submit complaint",
-          "error"
+          "error",
         );
       } else {
-        showModal("Error", "Something went wrong. Please try again later.", "error");
+        showModal(
+          "Error",
+          "Something went wrong. Please try again later.",
+          "error",
+        );
       }
     } finally {
       setLoading(false);

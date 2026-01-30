@@ -8,11 +8,7 @@ import {
 } from "react-native";
 import Signature from "react-native-signature-canvas";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
-import {
-  useNavigation,
-  useFocusEffect,
-  RouteProp,
-} from "@react-navigation/native";
+import { useFocusEffect, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/component/types";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -37,7 +33,6 @@ interface SignatureScreenProps {
   route: SignatureScreenRouteProp;
 }
 
-// Custom DashedBorder component
 interface DashedBorderProps {
   children: React.ReactNode;
   style?: any;
@@ -79,7 +74,7 @@ const DashedBorder = ({
                 marginRight: gapWidth,
               }}
             />
-          )
+          ),
         )}
       </View>
 
@@ -105,7 +100,7 @@ const DashedBorder = ({
                 marginBottom: gapWidth,
               }}
             />
-          )
+          ),
         )}
       </View>
 
@@ -131,7 +126,7 @@ const DashedBorder = ({
                 marginRight: gapWidth,
               }}
             />
-          )
+          ),
         )}
       </View>
 
@@ -157,7 +152,7 @@ const DashedBorder = ({
                 marginBottom: gapWidth,
               }}
             />
-          )
+          ),
         )}
       </View>
 
@@ -179,7 +174,6 @@ export default function SignatureScreen({
     string | React.ReactNode
   >("");
 
-  // Get processOrderIds from route params
   const {
     processOrderIds = [],
     allProcessOrderIds = [],
@@ -187,7 +181,6 @@ export default function SignatureScreen({
     onOrderComplete,
   } = route.params;
 
-  // Handle back navigation to EndJourneyConfirmation
   const handleBackPress = () => {
     navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: processOrderIds,
@@ -197,7 +190,6 @@ export default function SignatureScreen({
     });
   };
 
-  // Use useFocusEffect to handle orientation changes
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
@@ -205,31 +197,27 @@ export default function SignatureScreen({
       const setupOrientation = async () => {
         if (!isActive) return;
 
-        // Lock to landscape when screen is focused
         await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
+          ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
         );
       };
 
       setupOrientation();
 
-      // Cleanup function when screen loses focus
       return () => {
         isActive = false;
-        // Unlock orientation when leaving this screen
+
         ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.PORTRAIT_UP
+          ScreenOrientation.OrientationLock.PORTRAIT_UP,
         );
       };
-    }, [])
+    }, []),
   );
 
-  // Also handle with useEffect as backup
   useEffect(() => {
     return () => {
-      // Ensure we return to portrait when component unmounts
       ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT_UP
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
       );
     };
   }, []);
@@ -256,32 +244,25 @@ export default function SignatureScreen({
         return;
       }
 
-      // Create FormData
       const formData = new FormData();
 
-      // Prepare the signature file
       const base64Data = signatureBase64.includes(",")
         ? signatureBase64.split(",")[1]
         : signatureBase64;
 
       const fileName = `signature_${Date.now()}.png`;
 
-      // Create file object for React Native
       const file = {
         uri: `data:image/png;base64,${base64Data}`,
         type: "image/png",
         name: fileName,
       };
 
-      // Append the file to FormData
       formData.append("signature", file as any);
 
-      // Append each processOrderId individually
       processOrderIds.forEach((id, index) => {
         formData.append(`processOrderIds[${index}]`, id.toString());
       });
-
-      console.log("Saving signature for order:", processOrderIds[0]);
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/order/save-signature`,
@@ -292,23 +273,17 @@ export default function SignatureScreen({
             "Content-Type": "multipart/form-data",
           },
           timeout: 30000,
-        }
+        },
       );
 
       if (response.data.status === "success") {
-        console.log("Signature saved successfully:", response.data);
-
-        // Call onOrderComplete if provided
         if (onOrderComplete) {
           onOrderComplete(processOrderIds[0]);
         }
 
-        // Get invoice numbers from the response
         const invoiceNumbers: string[] =
           response.data.data?.invoiceNumbers || [];
-        console.log("Invoice numbers from response:", invoiceNumbers);
 
-        // Create success message with bold invoice numbers
         let message: string | React.ReactNode;
 
         if (invoiceNumbers.length === 0) {
@@ -348,7 +323,6 @@ export default function SignatureScreen({
         setSuccessMessage(message);
         setShowSuccessModal(true);
 
-        // Add backup navigation timeout in case modal doesn't auto-close
         setTimeout(() => {
           if (showSuccessModal) {
             setShowSuccessModal(false);
@@ -379,27 +353,8 @@ export default function SignatureScreen({
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("=== Navigation Decision ===");
-    console.log("Current order completed:", processOrderIds[0]);
-    console.log("All process order IDs:", allProcessOrderIds);
-    console.log("Remaining orders from params:", remainingOrders);
+    console.log("Navigating back to OrderDetails");
 
-    // Filter out the current completed order from remaining orders
-    const actualRemainingOrders =
-      remainingOrders?.filter((orderId) => orderId !== processOrderIds[0]) ||
-      [];
-
-    console.log(
-      "Actual remaining orders after filtering:",
-      actualRemainingOrders
-    );
-    console.log("Remaining count:", actualRemainingOrders.length);
-
-    // ALWAYS navigate back to OrderDetails, never to Home
-    console.log("✓ Navigating back to OrderDetails");
-    // navigation.navigate("OrderDetails", {
-    //   processOrderIds: allProcessOrderIds,
-    // });
     navigation.navigate("Jobs");
   };
 
@@ -433,16 +388,14 @@ export default function SignatureScreen({
             await saveSignature(signature);
           },
         },
-      ]
+      ],
     );
   };
 
-  // Handle signature change (when user starts drawing)
   const handleSignatureChange = () => {
     setSignatureDrawn(true);
   };
 
-  // CSS style for full canvas in landscape
   const signatureStyle = `
     .m-signature-pad {
       position: absolute;
@@ -493,22 +446,23 @@ export default function SignatureScreen({
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
-        onBackPress={handleBackPress} 
+        onBackPress={handleBackPress}
       />
 
       {/* SIGNATURE AREA */}
-      <View className="flex-1 mx-4 mb-4 mt-2">
+      <View className="flex-1 mx-10 mb-4 mt-2 rounded rounded-full">
         <DashedBorder
           style={{
             backgroundColor: "#DFEDFC",
             flex: 1,
-            borderRadius: 16,
+            borderRadius: 12,
             overflow: "hidden",
           }}
           borderColor="#2D7BFF"
-          dashWidth={12}
+          dashWidth={15}
           gapWidth={8}
-          borderWidth={2}
+          borderWidth={3}
+          
         >
           {/* CLEAR BUTTON */}
           <TouchableOpacity
@@ -548,7 +502,7 @@ export default function SignatureScreen({
       {/* BOTTOM BUTTONS */}
       <View className="flex-row justify-between items-center px-4 pb-4">
         <TouchableOpacity
-          onPress={handleBackPress} 
+          onPress={handleBackPress}
           className="flex-row items-center bg-white border border-gray-300 px-6 py-3 rounded-full"
           disabled={loading}
         >
@@ -567,7 +521,7 @@ export default function SignatureScreen({
               if (!signatureDrawn) {
                 Alert.alert(
                   "Warning",
-                  "Please draw a signature before submitting"
+                  "Please draw a signature before submitting",
                 );
                 return;
               }

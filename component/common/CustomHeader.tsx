@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Alert,
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import { AntDesign, MaterialIcons } from "@expo/vector-icons";
@@ -43,7 +42,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
     { code: "TA", name: "தமிழ்" },
   ];
 
-  // Add this function to get display text for language button
   const getLanguageButtonText = (langCode: string): string => {
     switch (langCode) {
       case "EN":
@@ -75,7 +73,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
         dark ? "bg-black" : "bg-white"
       }`}
     >
-      {/* LEFT - BACK BUTTON */}
       <View style={{ width: wp(15) }}>
         {showBackButton && navigation && (
           <TouchableOpacity
@@ -96,7 +93,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
         )}
       </View>
 
-      {/* CENTER - TITLE */}
       <View className="flex-1 items-center">
         <Text
           className={`text-xl font-semibold text-center ${
@@ -107,7 +103,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
         </Text>
       </View>
 
-      {/* RIGHT - LANGUAGE OR LOGOUT */}
       <View style={{ width: wp(15) }} className="items-end">
         {showLanguageSelector && (
           <View className="relative">
@@ -132,7 +127,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
               />
             </TouchableOpacity>
 
-            {/* Dropdown */}
             {dropdownVisible && (
               <>
                 <TouchableWithoutFeedback
@@ -170,7 +164,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
           </View>
         )}
 
-        {/* LOGOUT BUTTON */}
         {showLogoutButton && (
           <TouchableOpacity onPress={handleLogoutPress}>
             <MaterialIcons name="logout" size={24} color="#FF0000" />
