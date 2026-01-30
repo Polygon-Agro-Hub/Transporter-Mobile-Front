@@ -100,8 +100,6 @@ const Splash: React.FC = () => {
       );
 
       const data = await response.json();
-      console.log("Profile API response:", data);
-
       if (response.ok && data.success) {
         const profileData = data.data;
 
