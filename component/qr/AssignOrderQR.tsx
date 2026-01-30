@@ -336,11 +336,24 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const errorMessage =
         error.response?.data?.message || error.message || message;
       const statusCode = error.response?.status || error.status;
+      const currentStatus =
+        error.response?.data?.currentStatus || error.data?.currentStatus;
 
-      console.log("Error details:", { errorMessage, statusCode });
+      console.log("Error details:", { errorMessage, statusCode, currentStatus });
 
-      // PRIORITY 1: Check if order already assigned to SAME driver (409 status)
-      if (
+      // PRIORITY 1: Handle "Return Received" status (works for both 400 and 409)
+      if (currentStatus === "Return Received") {
+        title = "Already Returned!";
+        message = "This order was already returned to the centre.";
+      }
+      // PRIORITY 2: Handle "Ready to Pickup" status  
+      else if (currentStatus === "Ready to Pickup") {
+        title = "Cannot Proceed!";
+        message =
+          "This order is designated for customer pickup. Kindly hand it over to the officers to proceed further.";
+      }
+      // PRIORITY 3: Handle 409 - already in target list
+      else if (
         statusCode === 409 &&
         (errorMessage.includes("already in your target list") ||
           errorMessage.toLowerCase().includes("already got"))
@@ -348,7 +361,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         title = "Already got this!";
         message = errorMessage;
       }
-      // PRIORITY 2: Check if order assigned to ANOTHER driver (409 status)
+      // PRIORITY 4: Handle 409 - assigned to another driver
       else if (
         statusCode === 409 &&
         (errorMessage.includes("already been collected") ||
@@ -358,12 +371,11 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           errorMessage.toLowerCase().includes("Driver id:"))
       ) {
         title = "Order Unavailable!";
-        // Replace "officer" with "Driver" in the error message
         message = errorMessage
           .replace(/officer/gi, "Driver")
           .replace(/Officer ID:/gi, "Driver ID:");
       }
-      // PRIORITY 3: Check for "Order Not Ready" (400 status with processing message)
+      // PRIORITY 5: Handle 400 - order not ready
       else if (
         statusCode === 400 &&
         (errorMessage.includes("Still processing this order") ||
@@ -376,7 +388,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           ? errorMessage
           : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
       }
-      // Check for invalid invoice (404 status)
+      // PRIORITY 6: Handle 404 - not found
       else if (
         statusCode === 404 ||
         errorMessage.includes("not found") ||
@@ -384,7 +396,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         errorMessage.toLowerCase().includes("invalid invoice")
       ) {
         title = "Error!";
-        message = "The QR code is not identified.Please check and try again.";
+        message = "The QR code is not identified. Please check and try again.";
       }
       // Network errors
       else if (

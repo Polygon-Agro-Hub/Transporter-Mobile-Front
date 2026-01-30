@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "@/component/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Entypo, Ionicons } from "@expo/vector-icons";
@@ -24,11 +25,16 @@ type ReturnOrderQRNavigationProp = StackNavigationProp<
   "ReturnOrderQR"
 >;
 
+type ReturnOrderQRRouteProp = RouteProp<RootStackParamList, "ReturnOrderQR">;
+
 interface ReturnOrderQRProps {
   navigation: ReturnOrderQRNavigationProp;
+  route: ReturnOrderQRRouteProp;
 }
 
-const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
+const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
+  const { orderId } = route.params;
+  
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
@@ -46,6 +52,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
   const [scannedInvoices, setScannedInvoices] = useState<string[]>([]);
+  const [orderInvoiceNumber, setOrderInvoiceNumber] = useState<string>("");
 
   const isFocusedRef = useRef(true);
 
@@ -75,6 +82,11 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
   );
 
   useEffect(() => {
+    // Fetch order details to get invoice number
+    fetchOrderDetails();
+  }, [orderId]);
+
+  useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
       requestPermission();
     }
@@ -99,6 +111,47 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
       }
     };
   }, [permission?.granted, scanned, loading]);
+
+  // Fetch order details to get the invoice number
+  const fetchOrderDetails = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        navigation.navigate("Login");
+        return;
+      }
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/return/get-driver-return-orders`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (response.data.status === "success") {
+        const orders = response.data.data.returnOrders;
+        const currentOrder = orders.find((order: any) => order.orderId === orderId);
+        
+        if (currentOrder) {
+          setOrderInvoiceNumber(currentOrder.invoiceNumber);
+        } else {
+          setModalTitle("Order Not Found");
+          setModalMessage("Unable to find the order details.");
+          setModalType("error");
+          setShowErrorModal(true);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error fetching order details:", error);
+      setModalTitle("Error");
+      setModalMessage("Failed to load order details. Please try again.");
+      setModalType("error");
+      setShowErrorModal(true);
+    }
+  };
 
   const startTimeoutTimer = () => {
     if (timerRef.current) {
@@ -277,9 +330,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
     }
 
     try {
-      const invoiceNo = extractInvoiceNumber(data);
+      const scannedInvoiceNo = extractInvoiceNumber(data);
 
-      if (!invoiceNo) {
+      if (!scannedInvoiceNo) {
         setModalTitle("Invalid QR Code");
         setModalMessage(
           "The scanned QR code does not contain a valid invoice number.",
@@ -289,11 +342,27 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
         return;
       }
 
-      const updatedInvoices = [...scannedInvoices, invoiceNo];
+      // CRITICAL VALIDATION: Check if scanned invoice matches the order's invoice
+      if (scannedInvoiceNo.toUpperCase() !== orderInvoiceNumber.toUpperCase()) {
+        setModalTitle("QR Code Mismatch");
+        setModalMessage(
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-2">
+              The scanned QR code does not match this order.Please scan the correct QR code for this order.
+            </Text>
+        
+          </View>
+        );
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
+      }
+
+      const updatedInvoices = [...scannedInvoices, scannedInvoiceNo];
       setScannedInvoices(updatedInvoices);
 
       // Call API to update return order
-      const result = await updateReturnOrder([invoiceNo]);
+      const result = await updateReturnOrder([scannedInvoiceNo]);
 
       if (result.status === "success") {
         const updatedCount = result.data.driverOrdersUpdated || 0;
@@ -303,7 +372,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
               Order :{" "}
-              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
+              <Text className="font-bold text-[#000000]">{scannedInvoiceNo}</Text> has
               been successfully returned to the centre.
             </Text>
           </View>,
@@ -515,6 +584,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation }) => {
 
           {/* Scan Frame Container */}
           <View className="flex-1 justify-center items-center">
+            
+
             {/* Scan Frame with Camera */}
             <View
               style={{
