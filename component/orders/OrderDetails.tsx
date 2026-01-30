@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Animated,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -156,6 +157,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   });
 
   const prevProcessOrderIdsRef = useRef<number[]>([]);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const hasParamsChanged =
@@ -175,6 +178,39 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
     return unsubscribe;
   }, [navigation]);
+
+  // Auto-scroll animation for time slot (left to right only)
+  useEffect(() => {
+    if (orders.length > 0) {
+      const timeText = getScheduleTimeDisplay();
+      const textLength = timeText.length;
+      
+      // Only animate if text is long enough
+      if (textLength > 15) {
+        const scrollDistance = textLength * 8; // Approximate pixel width
+        
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(1000), // Pause before starting
+            Animated.timing(scrollX, {
+              toValue: -scrollDistance,
+              duration: textLength * 200, // Scroll speed
+              useNativeDriver: true,
+            }),
+            Animated.timing(scrollX, {
+              toValue: 0,
+              duration: 0, // Instant reset to start
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }
+    }
+    
+    return () => {
+      scrollX.setValue(0);
+    };
+  }, [orders]);
 
   const fetchOrderUserDetails = async () => {
     try {
@@ -424,7 +460,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     if (!orders || orders.length === 0) return "Not Scheduled";
 
     const firstOrder = orders[0];
-    return firstOrder?.sheduleTime || "Not Scheduled";
+      return firstOrder?.sheduleTime || "Not Scheduled";
   };
 
   const getJourneyButtonText = (status: string) => {
@@ -513,13 +549,14 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const longitude = currentOrder.longitude;
       const address = currentOrder.address;
 
-      if (latitude && longitude) {
-        setTimeout(() => {
-          openGoogleMapsNavigation(latitude, longitude, address);
-        }, 300);
-      }
-
+      // Only open map and navigate if current order is "on the way" (Continue button)
       if (currentStatus === "on the way") {
+        if (latitude && longitude) {
+          setTimeout(() => {
+            openGoogleMapsNavigation(latitude, longitude, address);
+          }, 300);
+        }
+
         const remainingOrders = orders
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
@@ -538,6 +575,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
+      // For "hold" status - restart journey
       if (currentStatus === "hold") {
         const payload = {
           orderIds: processOrderId.toString(),
@@ -556,6 +594,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         );
 
         if (response.data.status === "success") {
+          // Open map after successful restart
+          if (latitude && longitude) {
+            setTimeout(() => {
+              openGoogleMapsNavigation(latitude, longitude, address);
+            }, 300);
+          }
+
           setOrders((prevOrders) =>
             prevOrders.map((order) => {
               if (order.processOrder.id === processOrderId) {
@@ -609,6 +654,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
+        if (latitude && longitude) {
+          setTimeout(() => {
+            openGoogleMapsNavigation(latitude, longitude, address);
+          }, 300);
+        }
+
         setOrders((prevOrders) =>
           prevOrders.map((order) => {
             if (order.processOrder.id === processOrderId) {
@@ -827,7 +878,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         <View className="flex-row justify-between mt-6">
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
-            <Text className="mt-2 text-md font-semibold">
+            <Text className="mt-2 text-md font-semibold text-center">
               {getTotalPackCount()}{" "}
               {getTotalPackCount() === 1 ? "Pack" : "Packs"}
             </Text>
@@ -835,9 +886,17 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
-            <Text className="mt-2 text-md font-semibold">
-              {formatScheduleTime(getScheduleTimeDisplay())}
-            </Text>
+            <View className="mt-2 max-w-full overflow-hidden">
+              <Animated.Text 
+                className="text-md font-semibold whitespace-nowrap"
+                style={{
+                  transform: [{ translateX: scrollX }],
+                }}
+                numberOfLines={1}
+              >
+                {formatScheduleTime(getScheduleTimeDisplay())}
+              </Animated.Text>
+            </View>
           </View>
         </View>
 
@@ -882,7 +941,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
                 {/* Schedule Time */}
                 <View className="flex-row justify-between">
-                  <View className="flex-row items-center mb-2">
+                  <View className="flex-row items-center mb-4">
                     <Ionicons name="time" size={16} color="#000" />
                     <Text className="ml-2 text-sm text-black">
                       {formatScheduleTime(order.sheduleTime)}
@@ -983,12 +1042,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   )}
                 </TouchableOpacity>
 
-                {/* Info Text for same location orders */}
-                {findOrdersWithSameLocation(order.orderId).length > 1 && (
-                  <Text className="text-xs text-gray-500 text-center mt-2">
-                    All orders are for exact same location
-                  </Text>
-                )}
+               
               </View>
             );
           })}

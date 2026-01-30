@@ -81,33 +81,37 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }
 
     if (newPassword.length < 8) {
-      Alert.alert(
+        showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error",
       );
       return false;
     }
 
     if (!/[A-Z]/.test(newPassword)) {
-      Alert.alert(
+       showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error",
       );
       return false;
     }
 
     if (!/[0-9]/.test(newPassword)) {
-      Alert.alert(
+      showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error",
       );
       return false;
     }
 
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
-      Alert.alert(
+      showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
+        "error",
       );
       return false;
     }
@@ -239,7 +243,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 Update Password
               </Text>
               <Text className="text-center text-white mb-6 ">
-                Please update your password to continue
+                Password must be at least 8 characters
               </Text>
             </View>
 

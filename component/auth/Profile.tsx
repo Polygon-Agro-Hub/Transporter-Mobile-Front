@@ -31,6 +31,8 @@ import { environment } from "@/environment/environment";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import { RefreshControl } from "react-native";
+import LoadingPage from "../common/LoadingPage";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -47,10 +49,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-
+  const [refreshing, setRefreshing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [showAuthErrorModal, setShowAuthErrorModal] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState("");
 
   const token = useSelector(selectAuthToken);
   const dispatch = useDispatch();
@@ -149,14 +153,94 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (response.ok && data.success) {
         setProfileData(data.data);
       } else {
-        setError(data.message || "Failed to fetch profile data");
+        const errorMessage = data.message || "Failed to fetch profile data";
+
+        // Check for 404 - User not found or not approved
+        if (
+          response.status === 404 ||
+          errorMessage.includes("User not found") ||
+          errorMessage.includes("account not approved")
+        ) {
+          // Clear storage first
+          await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
+          dispatch(logoutUser());
+
+          // Set error for UI (this will show on screen temporarily)
+          setError("Account not found or not approved");
+
+          // Show modal with auto-navigation
+          setAuthErrorMessage(
+            "Your account is not found or not approved. Redirecting to login...",
+          );
+          setShowAuthErrorModal(true);
+
+          // Auto navigate after 3 seconds
+          setTimeout(() => {
+            setShowAuthErrorModal(false);
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          }, 3000);
+
+          return; // Exit early
+        }
+
+        // For other errors
+        setError(errorMessage);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching profile:", error);
-      setError("Network error. Please try again.");
+
+      // Type guard to check error type
+      const isErrorWithMessage = (
+        err: unknown,
+      ): err is { message?: string } => {
+        return typeof err === "object" && err !== null;
+      };
+
+      let errorMessage = "Network error. Please try again.";
+
+      if (isErrorWithMessage(error)) {
+        errorMessage = error.message || errorMessage;
+
+        // Check for network errors that might indicate auth issues
+        if (
+          errorMessage.includes("Network") ||
+          errorMessage.includes("Failed to fetch")
+        ) {
+          // Try to clear storage and navigate to login
+          try {
+            await AsyncStorage.multiRemove([
+              "token",
+              "refreshToken",
+              "userData",
+            ]);
+            dispatch(logoutUser());
+          } catch (storageError) {
+            console.error("Error clearing storage:", storageError);
+          }
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfileData();
+    setRefreshing(false);
+  };
+
+  const handleAuthErrorModalClose = () => {
+    setShowAuthErrorModal(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
   };
 
   const handleImageUpload = async () => {
@@ -164,13 +248,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       const hasPermission = await requestPermissions();
 
       if (!hasPermission) {
-        Alert.alert(
-          "Permission Required",
+        setModalMessage(
           Platform.OS === "ios"
             ? "Please allow access to your photo library to update your profile picture."
             : "Please allow access to your photos to update your profile picture.",
-          [{ text: "OK" }],
         );
+        setShowErrorModal(true);
         return;
       }
 
@@ -187,17 +270,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
 
-        Alert.alert(
-          "Update Profile Picture",
-          "Do you want to update your profile picture?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Upload",
-              onPress: () => uploadProfileImage(selectedImage),
-            },
-          ],
-        );
+        // Show confirmation using AlertModal
+        setModalMessage("Do you want to update your profile picture?");
+        setShowErrorModal(true);
+        uploadProfileImage(selectedImage);
       }
     } catch (error) {
       console.error("Image picker error:", error);
@@ -225,17 +301,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
 
-        Alert.alert(
-          "Update Profile Picture",
-          "Do you want to update your profile picture?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Upload",
-              onPress: () => uploadProfileImage(selectedImage),
-            },
-          ],
-        );
+        // Show confirmation using AlertModal
+        setModalMessage("Do you want to update your profile picture?");
+        setShowErrorModal(true);
+        uploadProfileImage(selectedImage);
       }
     } catch (error) {
       console.error("Image picker error:", error);
@@ -335,7 +404,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       setShowLogoutModal(false);
     } catch (error) {
       console.error("Error during logout:", error);
-      Alert.alert("Error", "Failed to logout. Please try again.");
+      setModalMessage("Failed to logout. Please try again.");
+      setShowErrorModal(true);
     }
   };
 
@@ -354,24 +424,48 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   if (isLoading) {
-    return (
-      <View className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#FFC83D" />
-        <Text className="mt-4 text-gray-600">Loading profile...</Text>
-      </View>
-    );
+    return <LoadingPage message="Loading profile..." fullScreen={true} />;
   }
 
   if (error) {
     return (
       <View className="flex-1 bg-white justify-center items-center px-6">
         <Text className="text-red-500 text-center mb-4">{error}</Text>
-        <TouchableOpacity
-          onPress={fetchProfileData}
-          className="bg-[#FFC83D] px-6 py-3 rounded-full"
-        >
-          <Text className="font-semibold">Retry</Text>
-        </TouchableOpacity>
+
+        {/* Show retry button only if it's not an auth error */}
+        {!error.includes("Account not found") &&
+        !error.includes("No authentication token") ? (
+          <TouchableOpacity
+            onPress={fetchProfileData}
+            className="bg-[#FFC83D] px-6 py-3 rounded-full"
+          >
+            <Text className="font-semibold">Retry</Text>
+          </TouchableOpacity>
+        ) : (
+          // Show login button for auth errors
+          <TouchableOpacity
+            onPress={() => {
+              // Clear storage and navigate to login
+              AsyncStorage.multiRemove(["token", "refreshToken", "userData"])
+                .then(() => {
+                  dispatch(logoutUser());
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Login" }],
+                  });
+                })
+                .catch(() => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Login" }],
+                  });
+                });
+            }}
+            className="bg-[#FFC83D] px-6 py-3 rounded-full"
+          >
+            <Text className="font-semibold">Go to Login</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -382,7 +476,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#FFC83D"]}
+              tintColor="#FFC83D"
+            />
+          }
+        >
           <CustomHeader
             title="My Profile"
             showBackButton={true}
@@ -495,6 +598,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Authentication Error Alert Modal */}
+      <AlertModal
+        visible={showAuthErrorModal}
+        title="Session Expired"
+        message={authErrorMessage}
+        type="error"
+        onClose={handleAuthErrorModalClose}
+        autoClose={true}
+        duration={4000}
+      />
+
       {/* Success Alert Modal */}
       <AlertModal
         visible={showSuccessModal}
@@ -509,7 +623,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       {/* Error Alert Modal */}
       <AlertModal
         visible={showErrorModal}
-        title="Upload Failed"
+        title="Error"
         message={modalMessage}
         type="error"
         onClose={() => setShowErrorModal(false)}
