@@ -15,13 +15,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RouteProp } from "@react-navigation/native";
 import { AlertModal } from "../common/AlertModal";
 import CustomHeader from "../common/CustomHeader";
+import LoadingPage from "../common/LoadingPage";
 
 type OrderReturnNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -46,16 +47,13 @@ interface Reason {
 const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const { orderIds, allProcessOrderIds, remainingOrders, onOrderComplete } =
     route.params;
-  console.log("Order Return page orderIds:", orderIds);
-  console.log("All Process Order IDs:", allProcessOrderIds);
-  console.log("Remaining Orders:", remainingOrders);
 
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [otherReason, setOtherReason] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<"En" | "Si" | "Ta">(
-    "En"
+    "En",
   );
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +63,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     string | React.ReactNode
   >("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  
+
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
@@ -75,7 +73,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     Tamil: { code: "Ta" as const, key: "rsnTamil" as const },
   };
 
-  // Map language code to your existing selectedLanguage format
   const mapLanguageCode = (code: "EN" | "SI" | "TA"): "En" | "Si" | "Ta" => {
     switch (code) {
       case "EN":
@@ -91,19 +88,18 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchReasons();
-    
-    // Keyboard event listeners
+
     const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
+      "keyboardDidShow",
       () => {
         setKeyboardVisible(true);
-      }
+      },
     );
     const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
+      "keyboardDidHide",
       () => {
         setKeyboardVisible(false);
-      }
+      },
     );
 
     return () => {
@@ -123,17 +119,16 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const result = response.data;
 
       if (result.status === "success" && result.data) {
-        // Sort reasons by indexNo, but always put "Other" at the end
         const sortedReasons = result.data.sort((a: Reason, b: Reason) => {
           const aIsOther = a.rsnEnglish.toLowerCase() === "other";
           const bIsOther = b.rsnEnglish.toLowerCase() === "other";
-          
+
           // If a is "Other", it should come after b
           if (aIsOther && !bIsOther) return 1;
           // If b is "Other", it should come after a
@@ -166,7 +161,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return reason.rsnEnglish.toLowerCase() === "other";
   };
 
-  // Handle back navigation to EndJourneyConfirmation
   const handleBackPress = () => {
     navigation.navigate("EndJourneyConfirmation", {
       processOrderIds: orderIds,
@@ -195,8 +189,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         note: isOtherReason(selectedReason) ? otherReason.trim() : null,
       };
 
-      console.log("Submitting return order:", payload);
-
       const response = await axios.post(
         `${environment.API_BASE_URL}api/return/submit`,
         payload,
@@ -205,18 +197,14 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = response.data;
-      console.log("Return submit response:", result);
 
       if (result.status === "success") {
-        // Get invoice numbers from the response - ensure it's an array of strings
         const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
-        console.log("Invoice numbers from response:", invoiceNumbers);
 
-        // Create success message with bold invoice numbers
         let message: string | React.ReactNode;
 
         if (invoiceNumbers.length === 0) {
@@ -256,12 +244,10 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         setSuccessMessage(message);
         setShowSuccessModal(true);
 
-        // Notify parent component about order completion
         if (onOrderComplete && orderIds && orderIds.length > 0) {
           onOrderComplete(orderIds[0]);
         }
 
-        // Add backup navigation timeout in case modal doesn't auto-close
         setTimeout(() => {
           if (showSuccessModal) {
             setShowSuccessModal(false);
@@ -274,28 +260,24 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     } catch (error: any) {
       console.error("Error submitting return order:", error);
 
-      // Get error message from response
       const errorMessage =
         error.response?.data?.message ||
         "Failed to submit return order. Please try again.";
 
-      // Check if it's an "already returned" error
       const isAlreadyReturnedError =
         errorMessage.toLowerCase().includes("already") &&
         errorMessage.toLowerCase().includes("return");
 
       if (isAlreadyReturnedError) {
-        // Show error modal for already returned orders
         setSuccessMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
               {errorMessage}
             </Text>
-          </View>
+          </View>,
         );
         setShowErrorModal(true);
       } else {
-        // Show regular alert for other errors
         Alert.alert("Error", errorMessage);
       }
     } finally {
@@ -303,28 +285,10 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     }
   };
 
-  // const handleNavigationAfterSuccess = () => {
-  //   // Check if there are remaining orders to process
-  //   if (remainingOrders && remainingOrders.length > 0) {
-  //     // There are more orders, navigate back to OrderDetails
-  //     console.log(
-  //       "Navigating to OrderDetails with remaining orders:",
-  //       remainingOrders
-  //     );
-  //     navigation.navigate("OrderDetails", {
-  //       processOrderIds: allProcessOrderIds || remainingOrders,
-  //     });
-  //   } else {
-  //     // No more orders, navigate to Home
-  //     console.log("No more orders, navigating to Home");
-  //     navigation.navigate("Home");
-  //   }
-  // };
-    const handleNavigationAfterSuccess = () => {
-  // Always navigate to Jobs screen after successful hold
-  console.log("Navigating to Jobs screen");
-  navigation.navigate("Jobs");
-};
+  const handleNavigationAfterSuccess = () => {
+    console.log("Navigating to Jobs screen");
+    navigation.navigate("Jobs");
+  };
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
@@ -333,36 +297,14 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     handleNavigationAfterSuccess();
   };
 
-  // const handleErrorModalClose = () => {
-  //   setShowErrorModal(false);
-  //   setSelectedReason(null);
-  //   setOtherReason("");
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
+    setSelectedReason(null);
+    setOtherReason("");
 
-  //   // Check if there are remaining orders to process
-  //   if (remainingOrders && remainingOrders.length > 0) {
-  //     // There are more orders, navigate back to OrderDetails
-  //     console.log(
-  //       "Error modal closed, navigating to OrderDetails with remaining orders:",
-  //       remainingOrders
-  //     );
-  //     navigation.navigate("OrderDetails", {
-  //       processOrderIds: allProcessOrderIds || remainingOrders,
-  //     });
-  //   } else {
-  //     // No more orders, navigate to Home
-  //     console.log("Error modal closed, no more orders, navigating to Home");
-  //     navigation.navigate("Home");
-  //   }
-  // };
-    const handleErrorModalClose = () => {
-  setShowErrorModal(false);
-  setSelectedReason(null);
-  setOtherReason("");
-  
-  // Always navigate to Jobs screen
-  console.log("Error modal closed, navigating to Jobs");
-  navigation.navigate("Jobs");
-};
+    console.log("Error modal closed, navigating to Jobs");
+    navigation.navigate("Jobs");
+  };
 
   const getPlaceholderText = (): string => {
     if (selectedLanguage === "En") return "Please mention the reason here...";
@@ -371,14 +313,13 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleTextInputFocus = () => {
-    // Scroll to bottom when text input is focused with more delay to ensure keyboard is shown
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 300);
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       className="flex-1 bg-white"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
@@ -389,8 +330,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           selectedLanguage === "En"
             ? "Return Order"
             : selectedLanguage === "Si"
-            ? "ඇණවුම ආපසු"
-            : "ஆர்டரைத் திருப்பி"
+              ? "ඇණවුම ආපසු"
+              : "ஆர்டரைத் திருப்பி"
         }
         navigation={navigation}
         showBackButton={true}
@@ -403,18 +344,15 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       />
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="text-gray-600 mt-4">Loading reasons...</Text>
-        </View>
+        <LoadingPage message="Loading Reasons..." fullScreen={true} />
       ) : (
         <ScrollView
           ref={scrollViewRef}
           className="flex-1"
-          contentContainerStyle={{ 
-            paddingHorizontal: 20, 
+          contentContainerStyle={{
+            paddingHorizontal: 20,
             paddingVertical: 24,
-            paddingBottom: keyboardVisible ? 400 : 24 
+            paddingBottom: keyboardVisible ? 400 : 24,
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -433,8 +371,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
             {selectedLanguage === "En"
               ? "Why are you returning the order?"
               : selectedLanguage === "Si"
-              ? "ඔබ ඇණවුම ආපසු යවන්නේ ඇයි?"
-              : "நீங்கள் ஆர்டரை ஏன் திருப்பி அனுப்புகிறீர்கள்?"}
+                ? "ඔබ ඇණවුම ආපසු යවන්නේ ඇයි?"
+                : "நீங்கள் ஆர்டரை ஏன் திருப்பி அனுப்புகிறீர்கள்?"}
           </Text>
 
           {/* Reason Options */}
@@ -559,8 +497,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 {selectedLanguage === "En"
                   ? "Submit"
                   : selectedLanguage === "Si"
-                  ? "ඉදිරිපත් කරන්න"
-                  : "சமர்ப்பிக்கவும்"}
+                    ? "ඉදිරිපත් කරන්න"
+                    : "சமர்ப்பிக்கவும்"}
               </Text>
             )}
           </TouchableOpacity>
@@ -611,7 +549,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                 key={index}
                 onPress={() => {
                   setSelectedLanguage(
-                    languageMap[lang as keyof typeof languageMap].code
+                    languageMap[lang as keyof typeof languageMap].code,
                   );
                   setShowLanguageMenu(false);
                 }}

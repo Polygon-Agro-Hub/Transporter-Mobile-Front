@@ -1,34 +1,21 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  BackHandler,
-  Text,
-  Dimensions,
-  TextInput,
-} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import {
-  SafeAreaProvider,
-  SafeAreaView,
-} from "react-native-safe-area-context";
-import { createDrawerNavigator } from "@react-navigation/drawer";
+import { Alert, BackHandler, Text, TextInput } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Provider, useSelector } from "react-redux";
-import store, { RootState } from "@/services/store";
-import NetInfo from "@react-native-community/netinfo";
+import { Provider } from "react-redux";
 import { navigationRef } from "../navigationRef";
-import CustomDrawerContent from "@/Items/CustomDrawerContent";
-
 import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
+import { RootStackParamList } from "@/types/types";
+import store from "@/services/store";
+import NetInfo from "@react-native-community/netinfo";
 import Splash from "@/component/common/Splash";
-import Home from "@/component/Home";
 import ComplaintsList from "@/component/complaints/ComplaintsList";
 import AddComplaint from "@/component/complaints/AddComplaint";
 import LoginScreen from "@/component/auth/LoginScreen";
 import ChangePassword from "@/component/auth/ChangePassword";
-import ProfileScreen from "@/component/auth/Profile";
 import ReturnOrders from "@/component/orders/ReturnOrders";
 import AssignOrderQR from "@/component/qr/AssignOrderQR";
 import Jobs from "@/component/orders/Jobs";
@@ -36,12 +23,13 @@ import OrderDetails from "@/component/orders/OrderDetails";
 import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
 import SignatureScreen from "@/component/orders/SignatureScreen";
 import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
-import { RootStackParamList } from "@/component/types";
 import OrderReturn from "@/component/orders/OrderReturn";
 import HoldOrder from "@/component/orders/HoldOrder";
 import ReturnOrderQR from "@/component/qr/ReturnOrderQR";
 import ReceivedCash from "@/component/orders/ReceivedCash";
 import ReceivedCashQR from "@/component/qr/ReceivedCashQR";
+import Home from "@/component/home/Home";
+import ProfileScreen from "@/component/auth/Profile";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -59,28 +47,8 @@ NativeWindStyleSheet.setOutput({
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-const Drawer = createDrawerNavigator();
-
-function HomeDrawer() {
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        headerShown: false,
-        drawerType: "front",
-        drawerStyle: {
-          width: "80%",
-        },
-      }}
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-    >
-      <Drawer.Screen name="Home" component={Home} />
-      <Drawer.Screen name="Profile" component={ProfileScreen} />
-    </Drawer.Navigator>
-  );
-}
 
 function AppContent() {
-
   const [isOfflineAlertShown, setIsOfflineAlertShown] = useState(false);
 
   useEffect(() => {
@@ -98,7 +66,7 @@ function AppContent() {
                 setIsOfflineAlertShown(false);
               },
             },
-          ]
+          ],
         );
       }
     });
@@ -129,7 +97,7 @@ function AppContent() {
 
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
-      backAction
+      backAction,
     );
     return () => backHandler.remove();
   }, []);
@@ -145,7 +113,8 @@ function AppContent() {
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Home" component={HomeDrawer} />
+            <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen} />

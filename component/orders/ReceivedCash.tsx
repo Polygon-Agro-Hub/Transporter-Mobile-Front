@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { AntDesign } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +20,7 @@ import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import LottieView from "lottie-react-native";
+import LoadingPage from "../common/LoadingPage";
 
 type ReceivedCashNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -45,11 +46,10 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchReceivedCash();
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -72,10 +72,8 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
-
-      console.log("API Response:", JSON.stringify(response.data, null, 2));
 
       if (response.data.status === "success") {
         // Filter and format items
@@ -85,9 +83,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
               item.amount != null &&
               !isNaN(parseFloat(item.amount)) &&
               parseFloat(item.amount) > 0;
-            console.log(
-              `Item ${item.id}: amount=${item.amount}, valid=${hasValidAmount}`
-            );
+
             return hasValidAmount;
           })
           .map((item: any) => ({
@@ -99,7 +95,6 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             createdAt: item.createdAt,
           }));
 
-        console.log("Valid items:", validItems);
         setCashItems(validItems);
       } else {
         Alert.alert("Error", "Failed to fetch received cash");
@@ -108,7 +103,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       console.error("Error fetching received cash:", error);
       Alert.alert(
         "Error",
-        error.response?.data?.message || "Failed to fetch data"
+        error.response?.data?.message || "Failed to fetch data",
       );
     } finally {
       setLoading(false);
@@ -124,19 +119,18 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
   const toggleSelectAll = () => {
     const allSelected = cashItems.every((item) => item.selected);
     setCashItems(
-      cashItems.map((item) => ({ ...item, selected: !allSelected }))
+      cashItems.map((item) => ({ ...item, selected: !allSelected })),
     );
   };
 
   const toggleItem = (id: string) => {
     setCashItems(
       cashItems.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
+        item.id === id ? { ...item, selected: !item.selected } : item,
+      ),
     );
   };
 
-  // Navigate to QR scanner when Hand Over is clicked
   const handleHandOverClick = () => {
     const selectedItems = cashItems.filter((item) => item.selected);
 
@@ -145,37 +139,34 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       return;
     }
 
-    // Calculate total amount from selected items
     const totalAmount = selectedItems.reduce(
       (sum, item) => sum + (item.amount || 0),
-      0
+      0,
     );
 
-    // Store selected items in AsyncStorage
     AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
 
-    // Navigate to QR scanner
     navigation.navigate("ReceivedCashQR", {
       amount: totalAmount,
       selectedCount: selectedItems.length,
     });
   };
 
-useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      navigation.navigate("Home");
-      return true; // Prevent default behavior
-    };
-    
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      onBackPress
-    );
-    
-    return () => subscription.remove();
-  }, [navigation])
-);
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Home");
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [navigation]),
+  );
 
   const allSelected =
     cashItems.length > 0 && cashItems.every((item) => item.selected);
@@ -183,9 +174,13 @@ useFocusEffect(
 
   if (loading && !refreshing) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#000" />
-        <Text className="mt-4 text-gray-600">Loading received cash...</Text>
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="Received Cash"
+          navigation={navigation}
+          onBackPress={() => navigation.navigate("Home")}
+        />
+        <LoadingPage message="Loading Received Cash..." fullScreen={true} />
       </View>
     );
   }

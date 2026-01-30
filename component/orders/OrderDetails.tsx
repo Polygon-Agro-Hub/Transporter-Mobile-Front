@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Animated,
+  StatusBar,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -20,13 +22,14 @@ import {
 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
+import LoadingPage from "../common/LoadingPage";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -89,35 +92,28 @@ interface OrderDetailsResponse {
   orders: OrderItem[];
 }
 
-// Helper function to format address with colored labels
 const formatAddressWithLabels = (address: string) => {
   if (!address || address === "Address not specified") {
     return address;
   }
 
-  // Split the address by comma
   const parts = address.split(", ");
 
-  // Define label mappings
   const labelMappings: { [key: string]: string } = {
     "B.No": "B.No :",
     "B.Name": "B.Name :",
-    "Unit.No": "F.No :", // Changed from Unit.No to F.No based on your requirement
+    "Unit.No": "F.No :",
     "Floor.No": "Floor.No :",
     "House.No": "House.No :",
     Street: "Street :",
     City: "City :",
   };
 
-  // Process each part
   return parts.map((part, index) => {
-    // Find the label in the part
     for (const [key, label] of Object.entries(labelMappings)) {
       if (part.startsWith(key)) {
-        // Extract the value after the label
         const value = part.substring(key.length).trim();
 
-        // Check if value starts with ":" and remove it
         const cleanValue = value.startsWith(":")
           ? value.substring(1).trim()
           : value;
@@ -162,32 +158,61 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     ongoingProcessOrderIds: [] as number[],
   });
 
-  // Add a ref to track previous processOrderIds
   const prevProcessOrderIdsRef = useRef<number[]>([]);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Fetch data when component mounts or when route params change
   useEffect(() => {
-    // Check if processOrderIds have changed
     const hasParamsChanged =
       JSON.stringify(processOrderIds) !==
       JSON.stringify(prevProcessOrderIdsRef.current);
 
     if (hasParamsChanged) {
-      console.log("Process order IDs changed, fetching new data...");
       fetchOrderUserDetails();
       prevProcessOrderIdsRef.current = processOrderIds;
     }
   }, [processOrderIds]);
 
-  // Also listen for screen focus to refresh data
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
-      console.log("Screen focused, refreshing data...");
       fetchOrderUserDetails();
     });
 
     return unsubscribe;
   }, [navigation]);
+
+  // Auto-scroll animation for time slot (left to right only)
+  useEffect(() => {
+    if (orders.length > 0) {
+      const timeText = getScheduleTimeDisplay();
+      const textLength = timeText.length;
+
+      // Only animate if text is long enough
+      if (textLength > 15) {
+        const scrollDistance = textLength * 8; // Approximate pixel width
+
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(1000), // Pause before starting
+            Animated.timing(scrollX, {
+              toValue: -scrollDistance,
+              duration: textLength * 200, // Scroll speed
+              useNativeDriver: true,
+            }),
+            Animated.timing(scrollX, {
+              toValue: 0,
+              duration: 0, // Instant reset to start
+              useNativeDriver: true,
+            }),
+          ]),
+        ).start();
+      }
+    }
+
+    return () => {
+      scrollX.setValue(0);
+    };
+  }, [orders]);
 
   const fetchOrderUserDetails = async () => {
     try {
@@ -209,11 +234,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         ? processOrderIds.join(",")
         : String(processOrderIds);
 
-      console.log(
-        "Fetching order details with Process Order IDs:",
-        processOrderIdsString
-      );
-
       const response = await axios.get(
         `${environment.API_BASE_URL}api/order/get-order-user-details`,
         {
@@ -224,12 +244,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
-      );
-
-      console.log(
-        "Order details response:",
-        JSON.stringify(response.data, null, 2)
+        },
       );
 
       if (response.data.status === "success") {
@@ -239,13 +254,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           throw new Error("No data found");
         }
 
-        // Helper function to get sort priority for schedule time
         const getScheduleTimePriority = (time: string) => {
-          if (!time) return 999; // Put undefined times at the end
+          if (!time) return 999;
 
           const lowerTime = time.toLowerCase();
 
-          // Check for "8:00 AM – 2:00 PM" or similar morning/early afternoon slots
           if (
             lowerTime.includes("8:00") ||
             lowerTime.includes("8 am") ||
@@ -254,10 +267,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             lowerTime.includes("morning") ||
             lowerTime.includes("early")
           ) {
-            return 1; // Highest priority
+            return 1;
           }
 
-          // Check for "2:00 PM – 8:00 PM" or similar afternoon/evening slots
           if (
             lowerTime.includes("2:00") ||
             lowerTime.includes("2 pm") ||
@@ -267,10 +279,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             lowerTime.includes("evening") ||
             lowerTime.includes("late")
           ) {
-            return 2; // Second priority
+            return 2;
           }
 
-          // For other time formats, try to parse and prioritize earlier times
           const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
           if (match) {
             let hour = parseInt(match[1], 10);
@@ -279,67 +290,39 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             if (period === "PM" && hour !== 12) hour += 12;
             if (period === "AM" && hour === 12) hour = 0;
 
-            return hour; // Earlier hours get lower numbers (higher priority)
+            return hour;
           }
 
-          return 999; // Default: put at the end
+          return 999;
         };
 
-        // Sort orders by schedule time priority
         const sortedOrders = [...data.orders].sort((a, b) => {
           const priorityA = getScheduleTimePriority(a.sheduleTime);
           const priorityB = getScheduleTimePriority(b.sheduleTime);
 
-          // First sort by time priority
           if (priorityA !== priorityB) {
             return priorityA - priorityB;
           }
 
-          // If same priority, sort by order ID as tie-breaker
           return a.orderId - b.orderId;
         });
 
-        console.log(
-          "Sorted orders by schedule time:",
-          sortedOrders.map((order) => ({
-            orderId: order.orderId,
-            scheduleTime: order.sheduleTime,
-            priority: getScheduleTimePriority(order.sheduleTime),
-          }))
-        );
-
         setUserDetails(data.user);
-        setOrders(sortedOrders); // Use sorted orders instead of original
+        setOrders(sortedOrders);
 
-        // Debug: Log each order's status
-        console.log("Orders with status:");
-        sortedOrders.forEach((order, index) => {
-          console.log(
-            `Order ${index + 1}: ID=${order.processOrder.id}, Status=${
-              order.processOrder.status
-            }, Time=${order.sheduleTime}`
-          );
-        });
-
-        // Initialize completed orders based on status
         const completed = sortedOrders
           .filter(
             (order) =>
               order.processOrder.status.toLowerCase() === "completed" ||
-              order.processOrder.status.toLowerCase() === "return"
+              order.processOrder.status.toLowerCase() === "return",
           )
           .map((order) => order.processOrder.id);
 
-        console.log("Completed orders IDs:", completed);
         setCompletedOrders(completed);
 
-        // Show continue button if there are pending orders
         const pendingOrders = sortedOrders.filter(
-          (order) => !completed.includes(order.processOrder.id)
+          (order) => !completed.includes(order.processOrder.id),
         );
-
-        console.log("Pending orders count:", pendingOrders.length);
-        console.log("Completed orders count:", completed.length);
 
         if (pendingOrders.length > 0 && completed.length > 0) {
           setShowContinueButton(true);
@@ -348,7 +331,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         }
       } else {
         throw new Error(
-          response.data.message || "Failed to fetch order details"
+          response.data.message || "Failed to fetch order details",
         );
       }
     } catch (error: any) {
@@ -364,32 +347,19 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     }
   };
 
-  // Update the handleOpenOngoingActivity function to use navigation.replace instead of navigate
   const handleOpenOngoingActivity = () => {
-    console.log("DEBUG - handleOpenOngoingActivity called");
-    console.log("  Current alertModal state:", alertModal);
-    console.log("  ongoingProcessOrderIds:", alertModal.ongoingProcessOrderIds);
-
     setAlertModal({
       ...alertModal,
       visible: false,
     });
 
-    // Use ongoing process order IDs from the alert modal state
     const ongoingIds = alertModal.ongoingProcessOrderIds;
 
     if (ongoingIds && ongoingIds.length > 0) {
-      console.log("DEBUG - Navigating to OrderDetails with IDs:", ongoingIds);
-
-      // Use navigation.replace instead of navigate to force a fresh instance
       navigation.replace("OrderDetails", {
         processOrderIds: ongoingIds,
       });
     } else {
-      console.log(
-        "DEBUG - No ongoing IDs, navigating to EndJourneyConfirmation"
-      );
-      // Fallback: Navigate to EndJourneyConfirmation with the current process order IDs
       navigation.navigate("EndJourneyConfirmation", {
         processOrderIds: processOrderIds,
       });
@@ -411,12 +381,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const handleOpenLocation = (
     latitude: string | null,
     longitude: string | null,
-    address?: string
+    address?: string,
   ) => {
     if (!latitude || !longitude) {
       Alert.alert(
         "Location Not Available",
-        "Location coordinates are not available for this order."
+        "Location coordinates are not available for this order.",
       );
       return;
     }
@@ -425,7 +395,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     Linking.openURL(url).catch(() => {
       Alert.alert(
         "Error",
-        "Could not open Google Maps. Please make sure it is installed."
+        "Could not open Google Maps. Please make sure it is installed.",
       );
     });
   };
@@ -434,21 +404,20 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const openGoogleMapsNavigation = (
     latitude: string | null,
     longitude: string | null,
-    address?: string
+    address?: string,
   ) => {
     if (!latitude || !longitude) {
       Alert.alert(
         "Location Not Available",
-        "Location coordinates are not available for navigation."
+        "Location coordinates are not available for navigation.",
       );
       return;
     }
 
     // Construct the Google Maps navigation URL
-    // Using "daddr" for destination address
+
     const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving&dir_action=navigate`;
 
-    // Alternative URL format that directly opens in Google Maps app
     const urlAlt = `https://maps.google.com/?q=${latitude},${longitude}`;
 
     // Check if we can open Google Maps
@@ -457,14 +426,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         if (supported) {
           return Linking.openURL(url);
         } else {
-          // Try alternative URL
           return Linking.openURL(urlAlt);
         }
       })
       .catch(() => {
         Alert.alert(
           "Error",
-          "Could not open Google Maps. Please make sure Google Maps is installed on your device."
+          "Could not open Google Maps. Please make sure Google Maps is installed on your device.",
         );
       });
   };
@@ -512,7 +480,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       return "Restart Journey";
     }
 
-    // completed / return / others
     return "Start Journey";
   };
 
@@ -529,7 +496,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const getCardStyle = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
 
-    // WHITE THEME
     if (
       normalizedStatus === "todo" ||
       normalizedStatus === "completed" ||
@@ -542,7 +508,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       };
     }
 
-    // YELLOW THEME (on the way, others)
     return {
       backgroundColor: "#FFF2BF",
       borderColor: "#F7CA21",
@@ -559,92 +524,144 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     return orders.filter(
       (order) =>
         order.longitude === currentOrder.longitude &&
-        order.latitude === currentOrder.latitude
+        order.latitude === currentOrder.latitude,
     );
   };
 
   const handleStartJourneyForOrder = async (orderId: number) => {
-  try {
-    setStartingJourney(orderId.toString());
-    setError(null);
+    try {
+      setStartingJourney(orderId.toString());
+      setError(null);
 
-    const token = await AsyncStorage.getItem("token");
+      const token = await AsyncStorage.getItem("token");
 
-    if (!token) {
-      navigation.navigate("Login");
-      return;
-    }
+      if (!token) {
+        navigation.navigate("Login");
+        return;
+      }
 
-    const currentOrder = orders.find((order) => order.orderId === orderId);
-    if (!currentOrder || !currentOrder.processOrder?.id) {
-      throw new Error("Order not found");
-    }
+      const currentOrder = orders.find((order) => order.orderId === orderId);
+      if (!currentOrder || !currentOrder.processOrder?.id) {
+        throw new Error("Order not found");
+      }
 
-    const processOrderId = currentOrder.processOrder.id;
-    const currentStatus = currentOrder.processOrder.status.toLowerCase();
-    const latitude = currentOrder.latitude;
-    const longitude = currentOrder.longitude;
-    const address = currentOrder.address;
+      const processOrderId = currentOrder.processOrder.id;
+      const currentStatus = currentOrder.processOrder.status.toLowerCase();
+      const latitude = currentOrder.latitude;
+      const longitude = currentOrder.longitude;
+      const address = currentOrder.address;
 
-    console.log(
-      `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
-    );
+      // Only open map and navigate if current order is "on the way" (Continue button)
+      if (currentStatus === "on the way") {
+        if (latitude && longitude) {
+          setTimeout(() => {
+            openGoogleMapsNavigation(latitude, longitude, address);
+          }, 300);
+        }
 
-    // OPEN GOOGLE MAPS FOR "Start Journey", "Continue", and "Restart Journey"
-    if (latitude && longitude) {
-      console.log("Opening Google Maps navigation to destination");
-      setTimeout(() => {
-        openGoogleMapsNavigation(latitude, longitude, address);
-      }, 300);
-    }
+        const remainingOrders = orders
+          .filter((order) => order.processOrder.id !== processOrderId)
+          .map((order) => order.processOrder.id);
 
-    // If status is "On the way", navigate directly to EndJourneyConfirmation (no API call)
-    if (currentStatus === "on the way") {
-      console.log("Status is on the way, navigating directly");
-      const remainingOrders = orders
-        .filter((order) => order.processOrder.id !== processOrderId)
-        .map((order) => order.processOrder.id);
+        setTimeout(() => {
+          navigation.navigate("EndJourneyConfirmation", {
+            processOrderIds: [processOrderId],
+            allProcessOrderIds: processOrderIds,
+            remainingOrders: remainingOrders,
+            orderData: currentOrder,
+            onOrderComplete: (completedId: number) => {
+              handleOrderComplete(completedId);
+            },
+          });
+        }, 500);
+        return;
+      }
 
-      setTimeout(() => {
-        navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: [processOrderId],
-          allProcessOrderIds: processOrderIds,
-          remainingOrders: remainingOrders,
-          orderData: currentOrder,
-          onOrderComplete: (completedId: number) => {
-            handleOrderComplete(completedId);
+      // For "hold" status - restart journey
+      if (currentStatus === "hold") {
+        const payload = {
+          orderIds: processOrderId.toString(),
+          isProcessOrderIds: 1,
+        };
+
+        const response = await axios.post(
+          `${environment.API_BASE_URL}api/order/re-start-journey`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           },
-        });
-      }, 500);
-      return;
-    }
+        );
 
-    // For "Hold" status: Call re-start-journey endpoint
-    if (currentStatus === "hold") {
-      console.log("Restarting journey for hold order:", processOrderId);
+        if (response.data.status === "success") {
+          // Open map after successful restart
+          if (latitude && longitude) {
+            setTimeout(() => {
+              openGoogleMapsNavigation(latitude, longitude, address);
+            }, 300);
+          }
+
+          setOrders((prevOrders) =>
+            prevOrders.map((order) => {
+              if (order.processOrder.id === processOrderId) {
+                return {
+                  ...order,
+                  processOrder: {
+                    ...order.processOrder,
+                    status: "On the Way",
+                  },
+                };
+              }
+              return order;
+            }),
+          );
+
+          const remainingOrders = orders
+            .filter((order) => order.processOrder.id !== processOrderId)
+            .map((order) => order.processOrder.id);
+
+          setTimeout(() => {
+            navigation.navigate("EndJourneyConfirmation", {
+              processOrderIds: [processOrderId],
+              allProcessOrderIds: processOrderIds,
+              remainingOrders: remainingOrders,
+              orderData: currentOrder,
+              onOrderComplete: (completedId: number) => {
+                handleOrderComplete(completedId);
+              },
+            });
+          }, 500);
+        } else {
+          throw new Error(response.data.message || "Failed to restart journey");
+        }
+        return;
+      }
 
       const payload = {
         orderIds: processOrderId.toString(),
         isProcessOrderIds: 1,
       };
 
-      console.log("Sending restart payload:", payload);
-
       const response = await axios.post(
-        `${environment.API_BASE_URL}api/order/re-start-journey`,
+        `${environment.API_BASE_URL}api/order/start-journey`,
         payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
-      console.log("Restart journey response:", response.data);
-
       if (response.data.status === "success") {
-        // Update local state to "On the Way"
+        if (latitude && longitude) {
+          setTimeout(() => {
+            openGoogleMapsNavigation(latitude, longitude, address);
+          }, 300);
+        }
+
         setOrders((prevOrders) =>
           prevOrders.map((order) => {
             if (order.processOrder.id === processOrderId) {
@@ -657,7 +674,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               };
             }
             return order;
-          })
+          }),
         );
 
         const remainingOrders = orders
@@ -676,295 +693,55 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           });
         }, 500);
       } else {
-        throw new Error(response.data.message || "Failed to restart journey");
+        throw new Error(response.data.message || "Failed to start journey");
       }
-      return;
-    }
-
-    // For "Todo" status: Call start-journey endpoint
-    console.log("Starting journey for todo order:", processOrderId);
-
-    const payload = {
-      orderIds: processOrderId.toString(),
-      isProcessOrderIds: 1,
-    };
-
-    console.log("Sending payload:", payload);
-
-    const response = await axios.post(
-      `${environment.API_BASE_URL}api/order/start-journey`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+    } catch (error: any) {
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+        console.log(
+          "Full error response:",
+          JSON.stringify(error.response.data, null, 2),
+        );
       }
-    );
 
-    console.log("Start journey response:", response.data);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to start journey";
+      const hasOngoingActivity =
+        errorMessage.includes("ongoing activity") ||
+        errorMessage.includes("ongoing") ||
+        errorMessage.includes("Ongoing");
 
-    if (response.data.status === "success") {
-      setOrders((prevOrders) =>
-        prevOrders.map((order) => {
-          if (order.processOrder.id === processOrderId) {
-            return {
-              ...order,
-              processOrder: {
-                ...order.processOrder,
-                status: "On the Way",
-              },
-            };
-          }
-          return order;
-        })
-      );
+      const ongoingProcessOrderIds =
+        error.response?.data?.ongoingProcessOrderIds || [];
 
-      const remainingOrders = orders
-        .filter((order) => order.processOrder.id !== processOrderId)
-        .map((order) => order.processOrder.id);
-
-      setTimeout(() => {
-        navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: [processOrderId],
-          allProcessOrderIds: processOrderIds,
-          remainingOrders: remainingOrders,
-          orderData: currentOrder,
-          onOrderComplete: (completedId: number) => {
-            handleOrderComplete(completedId);
-          },
+      if (hasOngoingActivity) {
+        setAlertModal({
+          visible: true,
+          title: "Already Have Active Journey",
+          message: errorMessage,
+          type: "error",
+          showOpenOngoingButton: true,
+          ongoingProcessOrderIds: ongoingProcessOrderIds,
         });
-      }, 500);
-    } else {
-      throw new Error(response.data.message || "Failed to start journey");
+      } else {
+        setAlertModal({
+          visible: true,
+          title: "Error",
+          message: errorMessage,
+          type: "error",
+          showOpenOngoingButton: false,
+          ongoingProcessOrderIds: [],
+        });
+      }
+    } finally {
+      setStartingJourney(null);
     }
-  } catch (error: any) {
-    console.error("Error starting/restarting journey:", error);
-
-    if (error.response) {
-      console.error("Error response data:", error.response.data);
-      console.error("Error response status:", error.response.status);
-      console.log(
-        "Full error response:",
-        JSON.stringify(error.response.data, null, 2)
-      );
-    }
-
-    const errorMessage =
-      error.response?.data?.message ||
-      error.message ||
-      "Failed to start journey";
-    const hasOngoingActivity =
-      errorMessage.includes("ongoing activity") ||
-      errorMessage.includes("ongoing") ||
-      errorMessage.includes("Ongoing");
-
-    const ongoingProcessOrderIds =
-      error.response?.data?.ongoingProcessOrderIds || [];
-
-    console.log("DEBUG - Setting alert modal with:");
-    console.log("  hasOngoingActivity:", hasOngoingActivity);
-    console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
-    console.log("  errorMessage:", errorMessage);
-
-    if (hasOngoingActivity) {
-      setAlertModal({
-        visible: true,
-        title: "Already Have Active Journey",
-        message: errorMessage,
-        type: "error",
-        showOpenOngoingButton: true,
-        ongoingProcessOrderIds: ongoingProcessOrderIds,
-      });
-    } else {
-      setAlertModal({
-        visible: true,
-        title: "Error",
-        message: errorMessage,
-        type: "error",
-        showOpenOngoingButton: false,
-        ongoingProcessOrderIds: [],
-      });
-    }
-  } finally {
-    setStartingJourney(null);
-  }
-};
-  // const handleStartJourneyForOrder = async (orderId: number) => {
-  //   try {
-  //     setStartingJourney(orderId.toString());
-  //     setError(null);
-
-  //     const token = await AsyncStorage.getItem("token");
-
-  //     if (!token) {
-  //       navigation.navigate("Login");
-  //       return;
-  //     }
-
-  //     const currentOrder = orders.find((order) => order.orderId === orderId);
-  //     if (!currentOrder || !currentOrder.processOrder?.id) {
-  //       throw new Error("Order not found");
-  //     }
-
-  //     const processOrderId = currentOrder.processOrder.id;
-  //     const currentStatus = currentOrder.processOrder.status.toLowerCase();
-  //     const latitude = currentOrder.latitude;
-  //     const longitude = currentOrder.longitude;
-  //     const address = currentOrder.address;
-
-  //     console.log(
-  //       `handleStartJourneyForOrder: orderId=${orderId}, processOrderId=${processOrderId}, status=${currentStatus}`
-  //     );
-
-  //     // OPEN GOOGLE MAPS FOR BOTH "Start Journey" AND "Continue"
-  //     if (latitude && longitude) {
-  //       console.log("Opening Google Maps navigation to destination");
-  //       setTimeout(() => {
-  //         openGoogleMapsNavigation(latitude, longitude, address);
-  //       }, 300);
-  //     }
-
-  //     // If status is already "On the way" or "Hold", navigate directly to EndJourneyConfirmation
-  //     if (currentStatus === "on the way" || currentStatus === "hold") {
-  //       console.log(
-  //         "Status is already on the way or hold, navigating directly"
-  //       );
-  //       const remainingOrders = orders
-  //         .filter((order) => order.processOrder.id !== processOrderId)
-  //         .map((order) => order.processOrder.id);
-
-  //       // Add a small delay to ensure maps opens before navigation
-  //       setTimeout(() => {
-  //         navigation.navigate("EndJourneyConfirmation", {
-  //           processOrderIds: [processOrderId],
-  //           allProcessOrderIds: processOrderIds,
-  //           remainingOrders: remainingOrders,
-  //           orderData: currentOrder, // Pass the entire order data
-  //           onOrderComplete: (completedId: number) => {
-  //             handleOrderComplete(completedId);
-  //           },
-  //         });
-  //       }, 500);
-  //       return;
-  //     }
-
-  //     // Only start journey for "Todo" status (API call)
-  //     console.log("Starting journey for process order:", processOrderId);
-
-  //     const payload = {
-  //       orderIds: processOrderId.toString(),
-  //       isProcessOrderIds: 1,
-  //     };
-
-  //     console.log("Sending payload:", payload);
-
-  //     const response = await axios.post(
-  //       `${environment.API_BASE_URL}api/order/start-journey`,
-  //       payload,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     console.log("Start journey response:", response.data);
-
-  //     if (response.data.status === "success") {
-  //       setOrders((prevOrders) =>
-  //         prevOrders.map((order) => {
-  //           if (order.processOrder.id === processOrderId) {
-  //             return {
-  //               ...order,
-  //               processOrder: {
-  //                 ...order.processOrder,
-  //                 status: "On the Way",
-  //               },
-  //             };
-  //           }
-  //           return order;
-  //         })
-  //       );
-
-  //       const remainingOrders = orders
-  //         .filter((order) => order.processOrder.id !== processOrderId)
-  //         .map((order) => order.processOrder.id);
-
-  //       // Navigate after a delay to ensure maps opens
-  //       setTimeout(() => {
-  //         navigation.navigate("EndJourneyConfirmation", {
-  //           processOrderIds: [processOrderId],
-  //           allProcessOrderIds: processOrderIds,
-  //           remainingOrders: remainingOrders,
-  //           orderData: currentOrder, // Pass the entire order data
-  //           onOrderComplete: (completedId: number) => {
-  //             handleOrderComplete(completedId);
-  //           },
-  //         });
-  //       }, 500);
-  //     } else {
-  //       throw new Error(response.data.message || "Failed to start journey");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("Error starting journey:", error);
-
-  //     if (error.response) {
-  //       console.error("Error response data:", error.response.data);
-  //       console.error("Error response status:", error.response.status);
-
-  //       // DEBUG: Log the exact response structure
-  //       console.log(
-  //         "Full error response:",
-  //         JSON.stringify(error.response.data, null, 2)
-  //       );
-  //     }
-
-  //     const errorMessage =
-  //       error.response?.data?.message ||
-  //       error.message ||
-  //       "Failed to start journey";
-  //     const hasOngoingActivity =
-  //       errorMessage.includes("ongoing activity") ||
-  //       errorMessage.includes("ongoing") ||
-  //       errorMessage.includes("Ongoing");
-
-  //     // Get ongoing process order IDs from response (if available)
-  //     const ongoingProcessOrderIds =
-  //       error.response?.data?.ongoingProcessOrderIds || [];
-
-  //     console.log("DEBUG - Setting alert modal with:");
-  //     console.log("  hasOngoingActivity:", hasOngoingActivity);
-  //     console.log("  ongoingProcessOrderIds:", ongoingProcessOrderIds);
-  //     console.log("  errorMessage:", errorMessage);
-
-  //     if (hasOngoingActivity) {
-  //       setAlertModal({
-  //         visible: true,
-  //         title: "Already Have Active Journey",
-  //         message: errorMessage,
-  //         type: "error",
-  //         showOpenOngoingButton: true,
-  //         ongoingProcessOrderIds: ongoingProcessOrderIds,
-  //       });
-  //     } else {
-  //       setAlertModal({
-  //         visible: true,
-  //         title: "Error",
-  //         message: errorMessage,
-  //         type: "error",
-  //         showOpenOngoingButton: false,
-  //         ongoingProcessOrderIds: [],
-  //       });
-  //     }
-  //   } finally {
-  //     setStartingJourney(null);
-  //   }
-  // };
+  };
 
   const handleOrderComplete = (completedId: number) => {
-    console.log(`handleOrderComplete: completedId=${completedId}`);
     setCompletedOrders((prev) => {
       const newCompleted = [...prev, completedId];
 
@@ -972,12 +749,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const allOrderIds = orders.map((order) => order.processOrder.id);
       const allCompleted = allOrderIds.every((id) => newCompleted.includes(id));
 
-      console.log(`All orders completed: ${allCompleted}`);
-
-      // Even if all orders are completed, DO NOT navigate to Home
-      // Stay on OrderDetails screen
       if (allCompleted) {
-        console.log("✓ All orders completed - Staying on OrderDetails screen");
+        console.log("All orders completed - Staying on OrderDetails screen");
       } else {
         setShowContinueButton(true);
       }
@@ -988,23 +761,21 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   const hasOnTheWayOrder = () => {
     return orders.some(
-      (order) => order.processOrder.status.toLowerCase() === "on the way"
+      (order) => order.processOrder.status.toLowerCase() === "on the way",
     );
   };
 
   if (loading) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
         />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="mt-4 text-gray-600">Loading order details...</Text>
-        </View>
+        <LoadingPage message="Loading Order Details..." fullScreen={true} />
       </View>
     );
   }
@@ -1012,6 +783,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (error) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -1037,6 +809,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (!userDetails || orders.length === 0) {
     return (
       <View className="flex-1 bg-white">
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -1052,6 +825,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Order Details"
         navigation={navigation}
@@ -1107,7 +881,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         <View className="flex-row justify-between mt-6">
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <FontAwesome6 name="bag-shopping" size={30} color="black" />
-            <Text className="mt-2 text-md font-semibold">
+            <Text className="mt-2 text-md font-semibold text-center">
               {getTotalPackCount()}{" "}
               {getTotalPackCount() === 1 ? "Pack" : "Packs"}
             </Text>
@@ -1115,9 +889,17 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
-            <Text className="mt-2 text-md font-semibold">
-              {formatScheduleTime(getScheduleTimeDisplay())}
-            </Text>
+            <View className="mt-2 max-w-full overflow-hidden">
+              <Animated.Text
+                className="text-md font-semibold whitespace-nowrap"
+                style={{
+                  transform: [{ translateX: scrollX }],
+                }}
+                numberOfLines={1}
+              >
+                {formatScheduleTime(getScheduleTimeDisplay())}
+              </Animated.Text>
+            </View>
           </View>
         </View>
 
@@ -1137,25 +919,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             const buttonText = getJourneyButtonText(status);
             const isButtonActive = isButtonEnabled(status);
 
-            // Check if we should disable this button
-            // Disable if:
-            // 1. This is not the "On the way" order AND there is an "On the way" order
-            // 2. OR if this is already completed
-            // 3. OR if button is not active for other reasons
             const shouldDisableButton =
               (!isOnTheWay && hasOnTheWayOrder()) ||
               isCompleted ||
               !isButtonActive;
-
-            console.log(`Rendering order ${index + 1}:`);
-            console.log(`  Status: ${status}`);
-            console.log(`  Normalized: ${normalizedStatus}`);
-            console.log(`  Is On the way: ${isOnTheWay}`);
-            console.log(
-              `  Has On the way order in list: ${hasOnTheWayOrder()}`
-            );
-            console.log(`  Button Text: "${buttonText}"`);
-            console.log(`  Should Disable: ${shouldDisableButton}`);
 
             return (
               <View
@@ -1177,7 +944,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
                 {/* Schedule Time */}
                 <View className="flex-row justify-between">
-                  <View className="flex-row items-center mb-2">
+                  <View className="flex-row items-center mb-4">
                     <Ionicons name="time" size={16} color="#000" />
                     <Text className="ml-2 text-sm text-black">
                       {formatScheduleTime(order.sheduleTime)}
@@ -1268,7 +1035,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   onPress={() => handleStartJourneyForOrder(order.orderId)}
                   disabled={
                     startingJourney === order.orderId.toString() ||
-                    shouldDisableButton // Use shouldDisableButton here
+                    shouldDisableButton
                   }
                 >
                   {startingJourney === order.orderId.toString() ? (
@@ -1277,13 +1044,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     <Text className="text-base font-bold">{buttonText}</Text>
                   )}
                 </TouchableOpacity>
-
-                {/* Info Text for same location orders */}
-                {findOrdersWithSameLocation(order.orderId).length > 1 && (
-                  <Text className="text-xs text-gray-500 text-center mt-2">
-                    All orders are for exact same location
-                  </Text>
-                )}
               </View>
             );
           })}
