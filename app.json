@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 14,
+      "versionCode": 15,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 24,
@@ -79,7 +79,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "c9f4ff0f-d092-40cc-99d8-42e8f377ba72"
+        "projectId": "6d22eb8f-4643-4640-bbad-3bbe69cc5a41"
       }
     }
   }
