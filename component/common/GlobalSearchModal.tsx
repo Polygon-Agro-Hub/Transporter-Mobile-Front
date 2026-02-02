@@ -8,7 +8,6 @@ import {
   Modal,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
 
 interface GlobalSearchModalProps {
   visible: boolean;
@@ -39,7 +38,6 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   renderItem,
   searchKeys = ["label"],
 }) => {
-  const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState("");
   const [filteredData, setFilteredData] = useState(data);
   const [selectedValues, setSelectedValues] = useState<string[]>(selectedItems);

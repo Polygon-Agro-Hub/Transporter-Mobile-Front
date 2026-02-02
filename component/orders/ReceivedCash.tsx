@@ -292,7 +292,14 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                   />
                 </View>
                 <Text className="text-base font-semibold text-black">
-                  Hand Over
+                  Hand Over (Rs.{" "}
+                  {formatNumberWithCommas(
+                    cashItems
+                      .filter((item) => item.selected)
+                      .reduce((sum, item) => sum + (item.amount || 0), 0)
+                      .toFixed(2),
+                  )}
+                  )
                 </Text>
               </TouchableOpacity>
             </View>
