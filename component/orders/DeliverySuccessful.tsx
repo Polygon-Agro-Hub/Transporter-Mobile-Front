@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import LottieView from "lottie-react-native";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 
 const successAnimation = require("@/assets/json/delivery-successful.json");
 

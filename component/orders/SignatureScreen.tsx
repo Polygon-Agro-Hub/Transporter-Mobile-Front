@@ -10,7 +10,7 @@ import Signature from "react-native-signature-canvas";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import * as ScreenOrientation from "expo-screen-orientation";
 import CustomHeader from "../common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -450,7 +450,7 @@ export default function SignatureScreen({
       />
 
       {/* SIGNATURE AREA */}
-      <View className="flex-1 mx-10 mb-4 mt-2 rounded rounded-full">
+      <View className="flex-1 mx-10 mb-4 mt-2 rounded-full">
         <DashedBorder
           style={{
             backgroundColor: "#DFEDFC",

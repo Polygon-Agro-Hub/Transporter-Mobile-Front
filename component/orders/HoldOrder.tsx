@@ -14,11 +14,12 @@ import { AlertModal } from "../common/AlertModal";
 import { Ionicons } from "@expo/vector-icons";
 import CustomHeader from "../common/CustomHeader";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RouteProp } from "@react-navigation/native";
+import LoadingPage from "../common/LoadingPage";
 
 type OrderReturnNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -302,10 +303,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       />
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="text-gray-600 mt-4">Loading reasons...</Text>
-        </View>
+        <LoadingPage message="Loading Reasons..." fullScreen={true} />
       ) : (
         <ScrollView
           className="flex-1"

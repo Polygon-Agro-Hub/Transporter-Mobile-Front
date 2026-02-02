@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import {
   widthPercentageToDP as wp,
@@ -23,6 +23,7 @@ import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/core";
 import FixedMarqueeText from "@/component/common/MarqueeText";
+import LoadingPage from "../common/LoadingPage";
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -196,7 +197,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
   useEffect(() => {
     returnOrders.forEach((order, index) => {
       const displayText = getReturnReasonDisplay(order.returnDetails);
-      
     });
   }, [returnOrders]);
 
@@ -225,10 +225,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
           showLanguageSelector={false}
           navigation={navigation}
         />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F7CA21" />
-          <Text className="mt-4 text-gray-600">Loading return orders...</Text>
-        </View>
+        <LoadingPage message="Loading Return Orders..." fullScreen={true} />
       </View>
     );
   }

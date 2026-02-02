@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "@/component/types";
+import { RootStackParamList } from "@/types/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Entypo, Ionicons } from "@expo/vector-icons";
 import { widthPercentageToDP as wp } from "react-native-responsive-screen";
