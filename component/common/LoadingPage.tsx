@@ -6,7 +6,6 @@ import {
   StyleProp,
   ViewStyle,
 } from "react-native";
-import { useTranslation } from "react-i18next";
 
 interface LoadingPageProps {
   message?: string;
@@ -25,8 +24,6 @@ const LoadingPage: React.FC<LoadingPageProps> = ({
   color = "#F7CA21",
   fullScreen = false,
 }) => {
-  const { t } = useTranslation();
-
   return (
     <View
       className={`${fullScreen ? "flex-1" : ""} justify-center items-center bg-white`}
@@ -37,7 +34,7 @@ const LoadingPage: React.FC<LoadingPageProps> = ({
     >
       <ActivityIndicator size={size} color={color} />
       <Text className="mt-4 text-[#F7CA21] text-center" style={messageStyle}>
-        {message || t("Common.Loading")}
+        {message || "Loading..."}
       </Text>
     </View>
   );
