@@ -11,8 +11,9 @@ import {
   Platform,
   Animated,
   StatusBar,
+  BackHandler,
 } from "react-native";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Ionicons,
   MaterialIcons,
@@ -21,7 +22,7 @@ import {
   FontAwesome,
 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RouteProp } from "@react-navigation/native";
+import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -552,28 +553,54 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const address = currentOrder.address;
 
       // Only open map and navigate if current order is "on the way" (Continue button)
-      if (currentStatus === "on the way") {
-        if (latitude && longitude) {
-          setTimeout(() => {
-            openGoogleMapsNavigation(latitude, longitude, address);
-          }, 300);
-        }
+      // if (currentStatus === "on the way") {
+      //   if (latitude && longitude) {
+      //     setTimeout(() => {
+      //       openGoogleMapsNavigation(latitude, longitude, address);
+      //     }, 300);
+      //   }
 
+      //   const remainingOrders = orders
+      //     .filter((order) => order.processOrder.id !== processOrderId)
+      //     .map((order) => order.processOrder.id);
+
+      //   setTimeout(() => {
+      //     navigation.navigate("EndJourneyConfirmation", {
+      //       processOrderIds: [processOrderId],
+      //       allProcessOrderIds: processOrderIds,
+      //       remainingOrders: remainingOrders,
+      //       orderData: currentOrder,
+      //       onOrderComplete: (completedId: number) => {
+      //         handleOrderComplete(completedId);
+      //       },
+      //     });
+      //   }, 500);
+      //   return;
+      // }
+
+      if (currentStatus === "on the way") {
         const remainingOrders = orders
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
 
-        setTimeout(() => {
-          navigation.navigate("EndJourneyConfirmation", {
-            processOrderIds: [processOrderId],
-            allProcessOrderIds: processOrderIds,
-            remainingOrders: remainingOrders,
-            orderData: currentOrder,
-            onOrderComplete: (completedId: number) => {
-              handleOrderComplete(completedId);
-            },
-          });
-        }, 500);
+        // Navigate first so EndJourneyConfirmation is in the stack before Maps opens.
+        // When the user presses back from Maps, they land here instead of OrderDetails.
+        navigation.navigate("EndJourneyConfirmation", {
+          processOrderIds: [processOrderId],
+          allProcessOrderIds: processOrderIds,
+          remainingOrders: remainingOrders,
+          orderData: currentOrder,
+          onOrderComplete: (completedId: number) => {
+            handleOrderComplete(completedId);
+          },
+        });
+
+        if (latitude && longitude) {
+          setTimeout(() => {
+            openGoogleMapsNavigation(latitude, longitude, address);
+          }, 500);
+        }
+
         return;
       }
 
@@ -759,6 +786,22 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     });
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Jobs");
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [navigation]),
+  );
+
   const hasOnTheWayOrder = () => {
     return orders.some(
       (order) => order.processOrder.status.toLowerCase() === "on the way",
@@ -924,6 +967,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               isCompleted ||
               !isButtonActive;
 
+            // ✅ Must be inside the map callback where `order` is in scope
+            const sameLocationOrders = findOrdersWithSameLocation(
+              order.orderId,
+            );
+            const showSameLocationNotice = sameLocationOrders.length > 1;
+
             return (
               <View
                 key={`${order.orderId}-${index}`}
@@ -1044,6 +1093,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     <Text className="text-base font-bold">{buttonText}</Text>
                   )}
                 </TouchableOpacity>
+                {showSameLocationNotice && (
+                  <View className="w-full items-center mt-2 mb-1">
+                    <Text className="text-xs text-[#898989] font-medium text-center">
+                      All orders are for exact same location
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
