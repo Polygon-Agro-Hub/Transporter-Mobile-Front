@@ -228,7 +228,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         label: `${packsCount} Packs`,
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
-        disabled: false,
+        disabled: packsCount === 0 && (amountData?.completedOrders || 0) === 0,
       },
       {
         image: myComplaintImage,

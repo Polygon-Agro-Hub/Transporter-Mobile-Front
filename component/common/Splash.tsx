@@ -100,10 +100,11 @@ const Splash: React.FC = () => {
       );
 
       const data = await response.json();
+      console.log("dataaa", data);
+
       if (response.ok && data.success) {
         const profileData = data.data;
 
-        // Create ProfileData object for Redux
         const userProfile = {
           firstName: profileData.firstNameEnglish || "",
           lastName: profileData.lastNameEnglish || "",
@@ -113,21 +114,28 @@ const Splash: React.FC = () => {
           firstNameTamil: profileData.firstNameTamil || "",
           lastNameTamil: profileData.lastNameTamil || "",
           empId: profileData.empId || empId,
+          passwordUpdated: profileData.passwordUpdated ?? 0,
         };
 
         dispatch(setUserProfile(userProfile));
-
         await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
-        navigation.navigate("Home");
+        if (
+          profileData.passwordUpdated === 0 ||
+          profileData.passwordUpdated === "0"
+        ) {
+          navigation.navigate("ChangePassword", {
+            passwordUpdated: Number(profileData.passwordUpdated),
+          });
+        } else {
+          navigation.navigate("Home");
+        }
       } else {
         console.log("Failed to fetch profile, using cached data if available.");
-
         navigation.navigate("Home");
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-
       navigation.navigate("Home");
     }
   };

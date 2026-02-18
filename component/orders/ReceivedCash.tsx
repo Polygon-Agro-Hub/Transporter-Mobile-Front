@@ -56,60 +56,133 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
     fetchReceivedCash();
   }, []);
 
-  const fetchReceivedCash = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
+  // const fetchReceivedCash = async () => {
+  //   try {
+  //     const token = await AsyncStorage.getItem("token");
 
-      if (!token) {
-        Alert.alert("Error", "Please login again");
-        setLoading(false);
-        return;
-      }
+  //     if (!token) {
+  //       Alert.alert("Error", "Please login again");
+  //       setLoading(false);
+  //       return;
+  //     }
 
-      const response = await axios.get(
-        `${environment.API_BASE_URL}api/home/get-received-cash`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+  //     const response = await axios.get(
+  //       `${environment.API_BASE_URL}api/home/get-received-cash`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       },
+  //     );
 
-      if (response.data.status === "success") {
-        // Filter and format items
-        const validItems = (response.data.data || [])
-          .filter((item: any) => {
-            const hasValidAmount =
-              item.amount != null &&
-              !isNaN(parseFloat(item.amount)) &&
-              parseFloat(item.amount) > 0;
+  //     if (response.data.status === "success") {
+  //       // Filter and format items
+  //       const validItems = (response.data.data || [])
+  //         .filter((item: any) => {
+  //           const hasValidAmount =
+  //             item.amount != null &&
+  //             !isNaN(parseFloat(item.amount)) &&
+  //             parseFloat(item.amount) > 0;
 
-            return hasValidAmount;
-          })
-          .map((item: any) => ({
-            id: String(item.id),
-            orderId: item.orderId,
-            invoNo: item.invoNo || `#${item.orderId}`,
-            amount: parseFloat(item.amount),
-            selected: false,
-            createdAt: item.createdAt,
-          }));
+  //           return hasValidAmount;
+  //         })
+  //         .map((item: any) => ({
+  //           id: String(item.id),
+  //           orderId: item.orderId,
+  //           invoNo: item.invoNo || `#${item.orderId}`,
+  //           amount: parseFloat(item.amount),
+  //           selected: false,
+  //           createdAt: item.createdAt,
+  //         }));
 
-        setCashItems(validItems);
-      } else {
-        Alert.alert("Error", "Failed to fetch received cash");
-      }
-    } catch (error: any) {
-      console.error("Error fetching received cash:", error);
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to fetch data",
-      );
-    } finally {
+  //       setCashItems(validItems);
+  //     } else {
+  //       Alert.alert("Error", "Failed to fetch received cash");
+  //     }
+  //   } catch (error: any) {
+  //     console.error("Error fetching received cash:", error);
+  //     Alert.alert(
+  //       "Error",
+  //       error.response?.data?.message || "Failed to fetch data",
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //     setRefreshing(false);
+  //   }
+  // };
+
+const fetchReceivedCash = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert("Error", "Please login again");
       setLoading(false);
-      setRefreshing(false);
+      return;
     }
-  };
+
+    // ✅ Check if user is returning from QR screen
+    const isNavigatingToQR = await AsyncStorage.getItem("isNavigatingToQR");
+    const isReturningFromQR = isNavigatingToQR === "true";
+
+    let selectedIds: Set<string> = new Set();
+
+    if (isReturningFromQR) {
+      // Restore selections and clear the flag
+      const storedSelected = await AsyncStorage.getItem("selectedCashItems");
+      if (storedSelected) {
+        selectedIds = new Set(
+          JSON.parse(storedSelected).map((i: any) => String(i.id)),
+        );
+      }
+      await AsyncStorage.removeItem("isNavigatingToQR"); // ← clear flag
+    } else {
+      // Not returning from QR — clear any leftover selected items
+      await AsyncStorage.removeItem("selectedCashItems");
+    }
+
+    const response = await axios.get(
+      `${environment.API_BASE_URL}api/home/get-received-cash`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (response.data.status === "success") {
+      const validItems = (response.data.data || [])
+        .filter((item: any) => {
+          const hasValidAmount =
+            item.amount != null &&
+            !isNaN(parseFloat(item.amount)) &&
+            parseFloat(item.amount) > 0;
+          return hasValidAmount;
+        })
+        .map((item: any) => ({
+          id: String(item.id),
+          orderId: item.orderId,
+          invoNo: item.invoNo || `#${item.orderId}`,
+          amount: parseFloat(item.amount),
+          selected: selectedIds.has(String(item.id)), // ✅ only restored if from QR
+          createdAt: item.createdAt,
+        }));
+
+      setCashItems(validItems);
+    } else {
+      Alert.alert("Error", "Failed to fetch received cash");
+    }
+  } catch (error: any) {
+    console.error("Error fetching received cash:", error);
+    Alert.alert(
+      "Error",
+      error.response?.data?.message || "Failed to fetch data",
+    );
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -131,26 +204,28 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
     );
   };
 
-  const handleHandOverClick = () => {
-    const selectedItems = cashItems.filter((item) => item.selected);
+const handleHandOverClick = () => {
+  const selectedItems = cashItems.filter((item) => item.selected);
 
-    if (selectedItems.length === 0) {
-      Alert.alert("Error", "Please select at least one order");
-      return;
-    }
+  if (selectedItems.length === 0) {
+    Alert.alert("Error", "Please select at least one order");
+    return;
+  }
 
-    const totalAmount = selectedItems.reduce(
-      (sum, item) => sum + (item.amount || 0),
-      0,
-    );
+  const totalAmount = selectedItems.reduce(
+    (sum, item) => sum + (item.amount || 0),
+    0,
+  );
 
-    AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
+  // ✅ Save selected items AND set the navigation flag
+  AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
+  AsyncStorage.setItem("isNavigatingToQR", "true"); // ← NEW
 
-    navigation.navigate("ReceivedCashQR", {
-      amount: totalAmount,
-      selectedCount: selectedItems.length,
-    });
-  };
+  navigation.navigate("ReceivedCashQR", {
+    amount: totalAmount,
+    selectedCount: selectedItems.length,
+  });
+};
 
   useFocusEffect(
     useCallback(() => {
@@ -283,6 +358,13 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
                 onPress={handleHandOverClick}
                 className="bg-[#F7CA21] py-3 mx-5 rounded-full flex-row items-center justify-center"
                 activeOpacity={0.8}
+                style={{
+                  shadowColor: "#000000",
+                  shadowOffset: { width: 2, height: 2 },
+                  shadowOpacity: 0.18,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }}
               >
                 <View className="w-6 h-6 items-center justify-center mr-2">
                   <Image
