@@ -10,6 +10,7 @@ export interface ProfileData {
   lastNameTamil?: string;
   empId: string;
   image?: string;
+  passwordUpdated: number;
 }
 
 interface AuthState {

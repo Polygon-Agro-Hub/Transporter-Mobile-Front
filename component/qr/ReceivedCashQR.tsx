@@ -358,12 +358,13 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     } catch (error: any) {
       console.error("Error processing QR scan:", error);
 
-      setModalTitle("Error");
-      setModalMessage(
+      const errorMessage =
         error.response?.data?.message ||
-          error.message ||
-          "Failed to hand over cash. Please try again.",
-      );
+        error.message ||
+        "Failed to hand over cash. Please try again.";
+
+      setModalTitle("Error!");
+      setModalMessage(errorMessage);
       setModalType("error");
       setShowErrorModal(true);
     } finally {
@@ -469,7 +470,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       <AlertModal
         visible={showErrorModal}
         title="Error!"
-        message="The QR code is not identified.Please check and try again."
+        //  message="The QR code is not identified.Please check and try again."
+        message={modalMessage}
         type="error"
         onClose={handleErrorModalClose}
         onRescan={handleTimeoutRescan}

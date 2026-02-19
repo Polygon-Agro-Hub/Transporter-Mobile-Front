@@ -19,7 +19,6 @@ import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
 import { environment } from "@/environment/environment";
 import { AntDesign, FontAwesome5 } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -62,9 +61,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     setModalVisible(true);
   };
 
-  console.log(passwordUpdated);
-  const { t } = useTranslation();
-
   const validatePassword = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       showModal("Sorry", "All fields are required", "error");
@@ -81,7 +77,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }
 
     if (newPassword.length < 8) {
-        showModal(
+      showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
         "error",
@@ -90,7 +86,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }
 
     if (!/[A-Z]/.test(newPassword)) {
-       showModal(
+      showModal(
         "Sorry",
         "Your password must contain a minimum of 8 characters with 1 Uppercase, Numbers & Special characters.",
         "error",
