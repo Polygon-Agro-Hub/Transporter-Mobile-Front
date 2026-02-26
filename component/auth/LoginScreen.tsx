@@ -225,6 +225,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         lastName: lastNameEnglish,
         profileImg: image,
         empId: empId.toString(),
+        passwordUpdated: passwordUpdated,
       }),
     );
 
