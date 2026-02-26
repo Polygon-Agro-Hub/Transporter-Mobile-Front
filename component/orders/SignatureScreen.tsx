@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Signature from "react-native-signature-canvas";
+import { Svg, Rect } from "react-native-svg";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -40,6 +41,8 @@ interface DashedBorderProps {
   dashWidth?: number;
   gapWidth?: number;
   borderWidth?: number;
+  borderRadius?: number;
+  backgroundColor?: string;
 }
 
 const DashedBorder = ({
@@ -49,115 +52,51 @@ const DashedBorder = ({
   dashWidth = 10,
   gapWidth = 5,
   borderWidth = 2,
+  borderRadius = 12,
+  backgroundColor = "#DFEDFC",
 }: DashedBorderProps) => {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
   return (
-    <View style={[style, { position: "relative" }]}>
-      {/* Top border */}
+    <View
+      style={[style, { position: "relative" }]}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setSize({ width, height });
+      }}
+    >
+      {size.width > 0 && size.height > 0 && (
+        <Svg
+          width={size.width}
+          height={size.height}
+          style={{ position: "absolute", top: 0, left: 0 }}
+        >
+          <Rect
+            x={borderWidth / 2}
+            y={borderWidth / 2}
+            width={size.width - borderWidth}
+            height={size.height - borderWidth}
+            rx={borderRadius}
+            ry={borderRadius}
+            fill="none"
+            stroke={borderColor}
+            strokeWidth={borderWidth}
+            strokeDasharray={`${dashWidth}, ${gapWidth}`}
+          />
+        </Svg>
+      )}
+
       <View
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: borderWidth,
-          flexDirection: "row",
+          flex: 1,
+          margin: borderWidth,
+          backgroundColor,
+          borderRadius: borderRadius - borderWidth,
+          overflow: "hidden",
         }}
       >
-        {Array.from({ length: Math.ceil(1000 / (dashWidth + gapWidth)) }).map(
-          (_, i) => (
-            <View
-              key={`top-${i}`}
-              style={{
-                width: dashWidth,
-                height: borderWidth,
-                backgroundColor: borderColor,
-                marginRight: gapWidth,
-              }}
-            />
-          ),
-        )}
+        {children}
       </View>
-
-      {/* Right border */}
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: borderWidth,
-          alignItems: "center",
-        }}
-      >
-        {Array.from({ length: Math.ceil(1000 / (dashWidth + gapWidth)) }).map(
-          (_, i) => (
-            <View
-              key={`right-${i}`}
-              style={{
-                width: borderWidth,
-                height: dashWidth,
-                backgroundColor: borderColor,
-                marginBottom: gapWidth,
-              }}
-            />
-          ),
-        )}
-      </View>
-
-      {/* Bottom border */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: borderWidth,
-          flexDirection: "row",
-        }}
-      >
-        {Array.from({ length: Math.ceil(1000 / (dashWidth + gapWidth)) }).map(
-          (_, i) => (
-            <View
-              key={`bottom-${i}`}
-              style={{
-                width: dashWidth,
-                height: borderWidth,
-                backgroundColor: borderColor,
-                marginRight: gapWidth,
-              }}
-            />
-          ),
-        )}
-      </View>
-
-      {/* Left border */}
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: borderWidth,
-          alignItems: "center",
-        }}
-      >
-        {Array.from({ length: Math.ceil(1000 / (dashWidth + gapWidth)) }).map(
-          (_, i) => (
-            <View
-              key={`left-${i}`}
-              style={{
-                width: borderWidth,
-                height: dashWidth,
-                backgroundColor: borderColor,
-                marginBottom: gapWidth,
-              }}
-            />
-          ),
-        )}
-      </View>
-
-      {/* Content */}
-      <View style={{ flex: 1, margin: borderWidth }}>{children}</View>
     </View>
   );
 };
@@ -301,7 +240,6 @@ export default function SignatureScreen({
             </View>
           );
         } else {
-          // For multiple orders
           message = (
             <View className="items-center">
               <Text className="text-center text-[#4E4E4E] mb-2">Orders:</Text>
@@ -450,60 +388,58 @@ export default function SignatureScreen({
       />
 
       {/* SIGNATURE AREA */}
-      <View className="flex-1 mx-10 mb-4 mt-2 rounded-full">
-        <DashedBorder
-          style={{
-            backgroundColor: "#DFEDFC",
-            flex: 1,
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-          borderColor="#2D7BFF"
-          dashWidth={15}
-          gapWidth={8}
-          borderWidth={3}
-          
-        >
-          {/* CLEAR BUTTON */}
-          <TouchableOpacity
-            onPress={handleClear}
-            className="absolute top-4 right-4 bg-white px-4 py-2 rounded-lg flex-row items-center z-10"
-            style={{
-              elevation: 10,
-              shadowColor: "#000",
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              shadowOffset: { width: 0, height: 2 },
-            }}
-            disabled={loading}
+      <View className="flex-1 mx-10 mb-4 mt-2">
+        <View style={{ flex: 1, borderRadius: 12, overflow: "hidden" }}>
+          <DashedBorder
+            style={{ flex: 1 }}
+            backgroundColor="#DFEDFC"
+            borderColor="#2D7BFF"
+            dashWidth={15}
+            gapWidth={8}
+            borderWidth={3}
+            borderRadius={12}
           >
-            <FontAwesome6 name="eraser" size={16} color="#2D7BFF" />
-            <Text className="ml-2 text-[#2D7BFF] font-semibold">Clear</Text>
-          </TouchableOpacity>
-
-          {/* SIGNATURE CANVAS */}
-          <View style={{ flex: 1 }}>
-            <Signature
-              ref={signatureRef}
-              onOK={handleOK}
-              onEnd={handleSignatureChange}
-              webStyle={signatureStyle}
-              autoClear={false}
-              descriptionText=""
+            {/* CLEAR BUTTON */}
+            <TouchableOpacity
+              onPress={handleClear}
+              className="absolute top-4 right-4 bg-white px-4 py-2 rounded-lg flex-row items-center z-10"
               style={{
-                flex: 1,
-                backgroundColor: "#DFEDFC",
+                elevation: 10,
+                shadowColor: "#000",
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
               }}
-            />
-          </View>
-        </DashedBorder>
+              disabled={loading}
+            >
+              <FontAwesome6 name="eraser" size={16} color="#2D7BFF" />
+              <Text className="ml-2 text-[#2D7BFF] font-semibold">Clear</Text>
+            </TouchableOpacity>
+
+            {/* SIGNATURE CANVAS */}
+            <View style={{ flex: 1 }}>
+              <Signature
+                ref={signatureRef}
+                onOK={handleOK}
+                onEnd={handleSignatureChange}
+                webStyle={signatureStyle}
+                autoClear={false}
+                descriptionText=""
+                style={{
+                  flex: 1,
+                  backgroundColor: "#DFEDFC",
+                }}
+              />
+            </View>
+          </DashedBorder>
+        </View>
       </View>
 
       {/* BOTTOM BUTTONS */}
       <View className="flex-row justify-between items-center px-4 pb-4">
         <TouchableOpacity
           onPress={handleBackPress}
-          className="flex-row items-center bg-white border border-gray-300 px-6 py-3 rounded-full"
+          className="flex-row items-center bg-[#DFE5F2] border border-[#DFE5F2] px-6 py-3 rounded-full"
           disabled={loading}
         >
           <Ionicons name="close" size={20} color="black" />

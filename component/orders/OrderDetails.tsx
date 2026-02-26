@@ -552,39 +552,11 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const longitude = currentOrder.longitude;
       const address = currentOrder.address;
 
-      // Only open map and navigate if current order is "on the way" (Continue button)
-      // if (currentStatus === "on the way") {
-      //   if (latitude && longitude) {
-      //     setTimeout(() => {
-      //       openGoogleMapsNavigation(latitude, longitude, address);
-      //     }, 300);
-      //   }
-
-      //   const remainingOrders = orders
-      //     .filter((order) => order.processOrder.id !== processOrderId)
-      //     .map((order) => order.processOrder.id);
-
-      //   setTimeout(() => {
-      //     navigation.navigate("EndJourneyConfirmation", {
-      //       processOrderIds: [processOrderId],
-      //       allProcessOrderIds: processOrderIds,
-      //       remainingOrders: remainingOrders,
-      //       orderData: currentOrder,
-      //       onOrderComplete: (completedId: number) => {
-      //         handleOrderComplete(completedId);
-      //       },
-      //     });
-      //   }, 500);
-      //   return;
-      // }
-
       if (currentStatus === "on the way") {
         const remainingOrders = orders
           .filter((order) => order.processOrder.id !== processOrderId)
           .map((order) => order.processOrder.id);
 
-        // Navigate first so EndJourneyConfirmation is in the stack before Maps opens.
-        // When the user presses back from Maps, they land here instead of OrderDetails.
         navigation.navigate("EndJourneyConfirmation", {
           processOrderIds: [processOrderId],
           allProcessOrderIds: processOrderIds,

@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   RefreshControl,
   BackHandler,
   Image,
@@ -56,133 +55,77 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
     fetchReceivedCash();
   }, []);
 
-  // const fetchReceivedCash = async () => {
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
+  const fetchReceivedCash = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
 
-  //     if (!token) {
-  //       Alert.alert("Error", "Please login again");
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     const response = await axios.get(
-  //       `${environment.API_BASE_URL}api/home/get-received-cash`,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       },
-  //     );
-
-  //     if (response.data.status === "success") {
-  //       // Filter and format items
-  //       const validItems = (response.data.data || [])
-  //         .filter((item: any) => {
-  //           const hasValidAmount =
-  //             item.amount != null &&
-  //             !isNaN(parseFloat(item.amount)) &&
-  //             parseFloat(item.amount) > 0;
-
-  //           return hasValidAmount;
-  //         })
-  //         .map((item: any) => ({
-  //           id: String(item.id),
-  //           orderId: item.orderId,
-  //           invoNo: item.invoNo || `#${item.orderId}`,
-  //           amount: parseFloat(item.amount),
-  //           selected: false,
-  //           createdAt: item.createdAt,
-  //         }));
-
-  //       setCashItems(validItems);
-  //     } else {
-  //       Alert.alert("Error", "Failed to fetch received cash");
-  //     }
-  //   } catch (error: any) {
-  //     console.error("Error fetching received cash:", error);
-  //     Alert.alert(
-  //       "Error",
-  //       error.response?.data?.message || "Failed to fetch data",
-  //     );
-  //   } finally {
-  //     setLoading(false);
-  //     setRefreshing(false);
-  //   }
-  // };
-
-const fetchReceivedCash = async () => {
-  try {
-    const token = await AsyncStorage.getItem("token");
-
-    if (!token) {
-      Alert.alert("Error", "Please login again");
-      setLoading(false);
-      return;
-    }
-
-    // ✅ Check if user is returning from QR screen
-    const isNavigatingToQR = await AsyncStorage.getItem("isNavigatingToQR");
-    const isReturningFromQR = isNavigatingToQR === "true";
-
-    let selectedIds: Set<string> = new Set();
-
-    if (isReturningFromQR) {
-      // Restore selections and clear the flag
-      const storedSelected = await AsyncStorage.getItem("selectedCashItems");
-      if (storedSelected) {
-        selectedIds = new Set(
-          JSON.parse(storedSelected).map((i: any) => String(i.id)),
-        );
+      if (!token) {
+        Alert.alert("Error", "Please login again");
+        setLoading(false);
+        return;
       }
-      await AsyncStorage.removeItem("isNavigatingToQR"); // ← clear flag
-    } else {
-      // Not returning from QR — clear any leftover selected items
-      await AsyncStorage.removeItem("selectedCashItems");
-    }
 
-    const response = await axios.get(
-      `${environment.API_BASE_URL}api/home/get-received-cash`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const isNavigatingToQR = await AsyncStorage.getItem("isNavigatingToQR");
+      const isReturningFromQR = isNavigatingToQR === "true";
+
+      let selectedIds: Set<string> = new Set();
+
+      if (isReturningFromQR) {
+        // Restore selections and clear the flag
+        const storedSelected = await AsyncStorage.getItem("selectedCashItems");
+        if (storedSelected) {
+          selectedIds = new Set(
+            JSON.parse(storedSelected).map((i: any) => String(i.id)),
+          );
+        }
+        await AsyncStorage.removeItem("isNavigatingToQR"); // ← clear flag
+      } else {
+        // Not returning from QR — clear any leftover selected items
+        await AsyncStorage.removeItem("selectedCashItems");
+      }
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-received-cash`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-    );
+      );
 
-    if (response.data.status === "success") {
-      const validItems = (response.data.data || [])
-        .filter((item: any) => {
-          const hasValidAmount =
-            item.amount != null &&
-            !isNaN(parseFloat(item.amount)) &&
-            parseFloat(item.amount) > 0;
-          return hasValidAmount;
-        })
-        .map((item: any) => ({
-          id: String(item.id),
-          orderId: item.orderId,
-          invoNo: item.invoNo || `#${item.orderId}`,
-          amount: parseFloat(item.amount),
-          selected: selectedIds.has(String(item.id)), // ✅ only restored if from QR
-          createdAt: item.createdAt,
-        }));
+      if (response.data.status === "success") {
+        const validItems = (response.data.data || [])
+          .filter((item: any) => {
+            const hasValidAmount =
+              item.amount != null &&
+              !isNaN(parseFloat(item.amount)) &&
+              parseFloat(item.amount) > 0;
+            return hasValidAmount;
+          })
+          .map((item: any) => ({
+            id: String(item.id),
+            orderId: item.orderId,
+            invoNo: item.invoNo || `#${item.orderId}`,
+            amount: parseFloat(item.amount),
+            selected: selectedIds.has(String(item.id)), // ✅ only restored if from QR
+            createdAt: item.createdAt,
+          }));
 
-      setCashItems(validItems);
-    } else {
-      Alert.alert("Error", "Failed to fetch received cash");
+        setCashItems(validItems);
+      } else {
+        Alert.alert("Error", "Failed to fetch received cash");
+      }
+    } catch (error: any) {
+      console.error("Error fetching received cash:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Failed to fetch data",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  } catch (error: any) {
-    console.error("Error fetching received cash:", error);
-    Alert.alert(
-      "Error",
-      error.response?.data?.message || "Failed to fetch data",
-    );
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -204,28 +147,28 @@ const fetchReceivedCash = async () => {
     );
   };
 
-const handleHandOverClick = () => {
-  const selectedItems = cashItems.filter((item) => item.selected);
+  const handleHandOverClick = () => {
+    const selectedItems = cashItems.filter((item) => item.selected);
 
-  if (selectedItems.length === 0) {
-    Alert.alert("Error", "Please select at least one order");
-    return;
-  }
+    if (selectedItems.length === 0) {
+      Alert.alert("Error", "Please select at least one order");
+      return;
+    }
 
-  const totalAmount = selectedItems.reduce(
-    (sum, item) => sum + (item.amount || 0),
-    0,
-  );
+    const totalAmount = selectedItems.reduce(
+      (sum, item) => sum + (item.amount || 0),
+      0,
+    );
 
-  // ✅ Save selected items AND set the navigation flag
-  AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
-  AsyncStorage.setItem("isNavigatingToQR", "true"); // ← NEW
+    // ✅ Save selected items AND set the navigation flag
+    AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
+    AsyncStorage.setItem("isNavigatingToQR", "true"); // ← NEW
 
-  navigation.navigate("ReceivedCashQR", {
-    amount: totalAmount,
-    selectedCount: selectedItems.length,
-  });
-};
+    navigation.navigate("ReceivedCashQR", {
+      amount: totalAmount,
+      selectedCount: selectedItems.length,
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -320,11 +263,11 @@ const handleHandOverClick = () => {
                   className="flex-row items-center px-4 py-4 bg-white border border-[#A4AAB7] rounded-lg mb-3"
                   activeOpacity={0.7}
                   style={{
-                    shadowColor: "#0000001A",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
-                    elevation: 3, // For Android
+                    shadowColor: "#000000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 6,
+                    elevation: 6,
                   }}
                 >
                   <View
