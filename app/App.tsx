@@ -30,6 +30,7 @@ import ReceivedCash from "@/component/orders/ReceivedCash";
 import ReceivedCashQR from "@/component/qr/ReceivedCashQR";
 import Home from "@/component/home/Home";
 import ProfileScreen from "@/component/auth/Profile";
+import OrderDetailsLoadingScreen from "@/component/orders/OrderDetailsLoadingScreen";
 
 LogBox.ignoreAllLogs(true);
 NativeWindStyleSheet.setOutput({
@@ -137,6 +138,7 @@ function AppContent() {
             <Stack.Screen name="OrderReturn" component={OrderReturn} />
             <Stack.Screen name="HoldOrder" component={HoldOrder} />
             <Stack.Screen name="ReceivedCash" component={ReceivedCash} />
+            <Stack.Screen name="OrderDetailsLoadingScreen" component={OrderDetailsLoadingScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

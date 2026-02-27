@@ -182,27 +182,25 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     return unsubscribe;
   }, [navigation]);
 
-  // Auto-scroll animation for time slot (left to right only)
   useEffect(() => {
     if (orders.length > 0) {
       const timeText = getScheduleTimeDisplay();
       const textLength = timeText.length;
 
-      // Only animate if text is long enough
       if (textLength > 15) {
-        const scrollDistance = textLength * 8; // Approximate pixel width
+        const scrollDistance = textLength * 8;
 
         Animated.loop(
           Animated.sequence([
-            Animated.delay(1000), // Pause before starting
+            Animated.delay(1000),
             Animated.timing(scrollX, {
               toValue: -scrollDistance,
-              duration: textLength * 200, // Scroll speed
+              duration: textLength * 200,
               useNativeDriver: true,
             }),
             Animated.timing(scrollX, {
               toValue: 0,
-              duration: 0, // Instant reset to start
+              duration: 0,
               useNativeDriver: true,
             }),
           ]),
@@ -401,43 +399,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     });
   };
 
-  // NEW FUNCTION: Open Google Maps Navigation
-  const openGoogleMapsNavigation = (
-    latitude: string | null,
-    longitude: string | null,
-    address?: string,
-  ) => {
-    if (!latitude || !longitude) {
-      Alert.alert(
-        "Location Not Available",
-        "Location coordinates are not available for navigation.",
-      );
-      return;
-    }
-
-    // Construct the Google Maps navigation URL
-
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving&dir_action=navigate`;
-
-    const urlAlt = `https://maps.google.com/?q=${latitude},${longitude}`;
-
-    // Check if we can open Google Maps
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          return Linking.openURL(urlAlt);
-        }
-      })
-      .catch(() => {
-        Alert.alert(
-          "Error",
-          "Could not open Google Maps. Please make sure Google Maps is installed on your device.",
-        );
-      });
-  };
-
   const formatCurrency = (amount: string) => {
     if (!amount) return "Rs. 0.00";
     const numAmount = parseFloat(amount);
@@ -529,6 +490,25 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     );
   };
 
+  const goToLoadingAndMap = (targetOrder: OrderItem) => {
+    const remainingOrders = orders
+      .filter((o) => o.processOrder.id !== targetOrder.processOrder.id)
+      .map((o) => o.processOrder.id);
+
+    navigation.navigate("OrderDetailsLoadingScreen", {
+      processOrderIds: [targetOrder.processOrder.id],
+      allProcessOrderIds: processOrderIds,
+      remainingOrders,
+      orderData: targetOrder,
+      onOrderComplete: (completedId: number) => {
+        handleOrderComplete(completedId);
+      },
+      latitude: targetOrder.latitude,
+      longitude: targetOrder.longitude,
+      address: targetOrder.address,
+    });
+  };
+
   const handleStartJourneyForOrder = async (orderId: number) => {
     try {
       setStartingJourney(orderId.toString());
@@ -553,30 +533,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const address = currentOrder.address;
 
       if (currentStatus === "on the way") {
-        const remainingOrders = orders
-          .filter((order) => order.processOrder.id !== processOrderId)
-          .map((order) => order.processOrder.id);
-
-        navigation.navigate("EndJourneyConfirmation", {
-          processOrderIds: [processOrderId],
-          allProcessOrderIds: processOrderIds,
-          remainingOrders: remainingOrders,
-          orderData: currentOrder,
-          onOrderComplete: (completedId: number) => {
-            handleOrderComplete(completedId);
-          },
-        });
-
-        if (latitude && longitude) {
-          setTimeout(() => {
-            openGoogleMapsNavigation(latitude, longitude, address);
-          }, 500);
-        }
-
+        goToLoadingAndMap(currentOrder);
         return;
       }
 
-      // For "hold" status - restart journey
       if (currentStatus === "hold") {
         const payload = {
           orderIds: processOrderId.toString(),
@@ -595,43 +555,27 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         );
 
         if (response.data.status === "success") {
-          // Open map after successful restart
-          if (latitude && longitude) {
-            setTimeout(() => {
-              openGoogleMapsNavigation(latitude, longitude, address);
-            }, 300);
-          }
-
           setOrders((prevOrders) =>
             prevOrders.map((order) => {
               if (order.processOrder.id === processOrderId) {
                 return {
                   ...order,
-                  processOrder: {
-                    ...order.processOrder,
-                    status: "On the Way",
-                  },
+                  processOrder: { ...order.processOrder, status: "On the Way" },
                 };
               }
               return order;
             }),
           );
 
-          const remainingOrders = orders
-            .filter((order) => order.processOrder.id !== processOrderId)
-            .map((order) => order.processOrder.id);
-
-          setTimeout(() => {
-            navigation.navigate("EndJourneyConfirmation", {
-              processOrderIds: [processOrderId],
-              allProcessOrderIds: processOrderIds,
-              remainingOrders: remainingOrders,
-              orderData: currentOrder,
-              onOrderComplete: (completedId: number) => {
-                handleOrderComplete(completedId);
-              },
-            });
-          }, 500);
+          const updatedOrder = {
+            ...currentOrder,
+            processOrder: {
+              ...currentOrder.processOrder,
+              status: "On the Way",
+            },
+          };
+          goToLoadingAndMap(updatedOrder);
+          return;
         } else {
           throw new Error(response.data.message || "Failed to restart journey");
         }
@@ -655,42 +599,23 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        if (latitude && longitude) {
-          setTimeout(() => {
-            openGoogleMapsNavigation(latitude, longitude, address);
-          }, 300);
-        }
-
         setOrders((prevOrders) =>
           prevOrders.map((order) => {
             if (order.processOrder.id === processOrderId) {
               return {
                 ...order,
-                processOrder: {
-                  ...order.processOrder,
-                  status: "On the Way",
-                },
+                processOrder: { ...order.processOrder, status: "On the Way" },
               };
             }
             return order;
           }),
         );
 
-        const remainingOrders = orders
-          .filter((order) => order.processOrder.id !== processOrderId)
-          .map((order) => order.processOrder.id);
-
-        setTimeout(() => {
-          navigation.navigate("EndJourneyConfirmation", {
-            processOrderIds: [processOrderId],
-            allProcessOrderIds: processOrderIds,
-            remainingOrders: remainingOrders,
-            orderData: currentOrder,
-            onOrderComplete: (completedId: number) => {
-              handleOrderComplete(completedId);
-            },
-          });
-        }, 500);
+        const updatedOrder = {
+          ...currentOrder,
+          processOrder: { ...currentOrder.processOrder, status: "On the Way" },
+        };
+        goToLoadingAndMap(updatedOrder);
       } else {
         throw new Error(response.data.message || "Failed to start journey");
       }
