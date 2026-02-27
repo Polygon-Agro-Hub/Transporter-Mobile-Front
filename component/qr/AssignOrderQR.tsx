@@ -339,12 +339,20 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       });
 
       if (currentStatus === "Return" || currentStatus === "Return Received") {
-        title = "Already Returned!";
-        message = "This order was already returned to the centre.";
+        title = "Order Already Returned!";
+        message =
+          "This order has already been returned to the centre and cannot be delivered again.";
       } else if (currentStatus === "Ready to Pickup") {
         title = "Cannot Proceed!";
         message =
           "This order is designated for customer pickup. Kindly hand it over to the officers to proceed further.";
+      } else if (
+        currentStatus === "Delivered" ||
+        currentStatus === "Picked up"
+      ) {
+        title = "Cannot Proceed!";
+        message =
+          "This order has already been successfully handed over to the customer. Please scan an active order to proceed.";
       } else if (
         statusCode === 409 &&
         (errorMessage.includes("already in your target list") ||
