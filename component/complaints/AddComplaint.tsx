@@ -335,11 +335,21 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={!isFormValid || loading || categoriesLoading}
-            className={`rounded-full py-3 mx-10 items-center ${
+            className={`rounded-full py-3 mx-3 items-center ${
               isFormValid && !loading && !categoriesLoading
                 ? "bg-[#F7CA21]"
                 : "bg-[#DCDCDC]"
             }`}
+            style={{
+              shadowColor: "#000000",
+              shadowOffset: {
+                width: 2,
+                height: 2,
+              },
+              shadowOpacity: 0.18,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
           >
             {loading ? (
               <Text className="text-base font-semibold text-[#000000]">
