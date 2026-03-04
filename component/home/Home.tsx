@@ -385,6 +385,13 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
               className="bg-[#F7CA21] px-14 py-3 rounded-full mt-2"
               onPress={handleEndShiftPress}
               activeOpacity={0.7}
+              style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
             >
               <View className="flex-row items-center">
                 <Text className="font-bold text-black">End My Shift</Text>
@@ -452,6 +459,17 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       {/* Box 2: Cash Received box */}
       <TouchableOpacity
         className="mx-4 mb-2 bg-white rounded-2xl px-5 py-1 border border-[#EBEBEB] flex-row items-center"
+        style={
+          cashAmount > 0
+            ? {
+                shadowColor: "#000",
+                shadowOffset: { width: 4, height: 0 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }
+            : {}
+        }
         onPress={handleCashReceivedPress}
         activeOpacity={cashAmount > 0 ? 0.7 : 1}
         disabled={cashAmount === 0}

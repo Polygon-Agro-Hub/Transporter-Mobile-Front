@@ -281,6 +281,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         <ScrollView
           className="flex-1 px-4 pt-4"
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

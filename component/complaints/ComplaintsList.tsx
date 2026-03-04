@@ -236,8 +236,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           {/* Complaints List */}
           <View className="px-4 py-4">
             {complaints.map((complaint) => {
-              const isWaiting = complaint.status === "Opened";
-              const isAnswered = complaint.status === "Closed";
+              // Check if reply exists to determine if it's answered or waiting
+              const hasReply =
+                complaint.reply !== null && complaint.reply !== undefined;
+              const isWaiting = !hasReply; // No reply means waiting
+              const isAnswered = hasReply; // Has reply means answered
 
               return (
                 <View
@@ -263,24 +266,18 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   <View className="flex-row items-center justify-between">
                     {/* Status Badge */}
                     <View
-                      className={`flex-row items-center px-4 py-2 rounded-lg ${
-                        isWaiting ? "bg-[#FFF3BF]" : "bg-[#FFF3BF]"
-                      }`}
+                      className={`flex-row items-center px-4 py-2 rounded-lg bg-[#FFF3BF] `}
                     >
                       {isWaiting ? (
-                        <AntDesign name="hourglass" size={14} color="black" />
+                        <AntDesign name="hourglass" size={14} color="#000000" />
                       ) : (
                         <FontAwesome6
                           name="circle-check"
                           size={14}
-                          color="black"
+                          color="#000000"
                         />
                       )}
-                      <Text
-                        className={`ml-1.5 text-xs font-medium ${
-                          isWaiting ? "text-black" : "text-black"
-                        }`}
-                      >
+                      <Text className={`ml-1.5 text-xs font-medium `}>
                         {isWaiting ? "Waiting.." : "Answered"}
                       </Text>
                     </View>
@@ -288,7 +285,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                     {/* Reply Button */}
                     <TouchableOpacity
                       className={`flex-row items-center px-4 py-1.5 rounded-lg ${
-                        isWaiting ? "bg-[#CBD7E8]" : "bg-black"
+                        isWaiting ? "bg-[#CBD7E8] " : "bg-black"
                       }`}
                       disabled={isWaiting}
                       onPress={() => handleReply(complaint)}
@@ -368,12 +365,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 {/* Footer Message */}
                 <Text className="text-sm text-[#2D2D2D] leading-6">
                   If you have any further concerns or questions, feel free to
-                  reach out. 
-                   </Text>
-                    <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                  reach out.
+                </Text>
+                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
                   Thank you for your patience and understanding.
-                  </Text>
-               
+                </Text>
 
                 {/* Signature */}
                 <View className="mt-4 pt-4 ">

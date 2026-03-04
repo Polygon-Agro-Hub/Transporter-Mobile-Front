@@ -195,6 +195,13 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           <TouchableOpacity
             onPress={handleGetSignature}
             className="w-full py-4 rounded-full bg-[#F7CA21] flex-row items-center justify-center"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
           >
             <MaterialIcons name="draw" size={24} color="black" />
             <Text className="ml-2 text-base font-semibold text-black">
