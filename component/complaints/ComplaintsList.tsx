@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  ActivityIndicator,
   Modal,
   BackHandler,
 } from "react-native";
@@ -153,10 +152,15 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const formatReplyDate = (dateString: string | null) => {
     if (!dateString) return "";
     const date = new Date(dateString);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes.toString().padStart(2, "0");
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `${year}/${month}/${day}`;
+    return `At ${formattedHours}:${formattedMinutes} ${ampm} on ${year}/${month}/${day}`;
   };
 
   const handleReply = (complaint: Complaint) => {
@@ -205,7 +209,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       />
 
       {complaints.length === 0 ? (
-        // Centered empty state
         <View className="flex-1 items-center justify-center">
           <View
             className="items-center justify-center"
@@ -236,11 +239,10 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           {/* Complaints List */}
           <View className="px-4 py-4">
             {complaints.map((complaint) => {
-              // Check if reply exists to determine if it's answered or waiting
               const hasReply =
                 complaint.reply !== null && complaint.reply !== undefined;
-              const isWaiting = !hasReply; // No reply means waiting
-              const isAnswered = hasReply; // Has reply means answered
+              const isWaiting = !hasReply;
+              const isAnswered = hasReply;
 
               return (
                 <View
@@ -377,7 +379,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   <Text className="text-sm text-[#2D2D2D] mt-1">
                     Polygon Customer Support Team
                   </Text>
-                  <Text className="text-xs text-[#2D2D2D] mt-2">
+                  <Text className="text-sm text-[#2D2D2D] mt-2">
                     {formatReplyDate(selectedComplaint?.replyTime || null)}
                   </Text>
                 </View>
