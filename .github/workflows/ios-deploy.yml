@@ -1,0 +1,75 @@
+# .github/workflows/ios-deploy.yml
+
+name: iOS Deploy
+
+on:
+  push:
+    branches:
+      - dev      # Triggers TestFlight upload
+      - main     # Triggers App Store submission
+
+jobs:
+  deploy:
+    name: Deploy iOS App
+    runs-on: macos-latest  # MUST be macOS — only Macs can build iOS apps
+
+    steps:
+      # ── Step 1: Check out the code ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Step 2: Set up the correct Ruby version ──
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.2'
+          bundler-cache: true  # Caches gems to speed up future runs
+
+      # ── Step 3: Set up Node.js ──
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── Step 4: Install JS dependencies ──
+      - name: Install Node dependencies
+        run: npm ci  # 'ci' is stricter than 'install' — better for CI environments
+
+      # ── Step 5: Install Fastlane via Bundler ──
+      - name: Install Fastlane
+        run: gem install fastlane
+
+      # ── Step 6: Run Expo Prebuild to generate ios/ folder ──
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --non-interactive
+
+      # ── Step 7: Install CocoaPods ──
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      # ── Step 8: Run the correct Fastlane lane based on branch ──
+      - name: Deploy to TestFlight (dev branch)
+        if: github.ref == 'refs/heads/dev'
+        run: fastlane beta
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_AUTH: ${{ secrets.MATCH_GIT_AUTH }}
+
+      - name: Deploy to App Store (main branch)
+        if: github.ref == 'refs/heads/main'
+        run: fastlane release
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_AUTH: ${{ secrets.MATCH_GIT_AUTH }}
