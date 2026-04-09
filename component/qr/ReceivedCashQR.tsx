@@ -356,14 +356,29 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         throw new Error(response.data.message || "Failed to hand over cash");
       }
     } catch (error: any) {
-      console.error("Error processing QR scan:", error);
-
       const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
         "Failed to hand over cash. Please try again.";
 
-      setModalTitle("Error!");
+      let errorTitle = "Error!";
+      if (errorMessage.includes("not assigned to this centre")) {
+        errorTitle = "Centre Mismatch";
+      } else if (errorMessage.includes("not in an approved status")) {
+        errorTitle = "Manager Not Approved";
+      } else if (errorMessage.includes("Officer not found")) {
+        errorTitle = "Officer Not Found";
+      } else if (errorMessage.includes("No orders")) {
+        errorTitle = "No Orders Found";
+      } else if (
+        errorMessage.includes("Network") ||
+        error.code === "ECONNABORTED"
+      ) {
+        errorTitle = "Network Error";
+      }
+
+      setModalTitle(errorTitle);
       setModalMessage(errorMessage);
       setModalType("error");
       setShowErrorModal(true);
@@ -470,7 +485,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       <AlertModal
         visible={showErrorModal}
         title="Error!"
-        //  message="The QR code is not identified.Please check and try again."
         message={modalMessage}
         type="error"
         onClose={handleErrorModalClose}

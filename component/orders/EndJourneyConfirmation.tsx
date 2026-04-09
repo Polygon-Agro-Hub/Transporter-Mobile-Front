@@ -56,7 +56,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
     if (!latitude || !longitude) {
       Alert.alert(
         "Location Not Available",
-        "Location coordinates are not available for navigation."
+        "Location coordinates are not available for navigation.",
       );
       return;
     }
@@ -81,7 +81,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
       .catch(() => {
         Alert.alert(
           "Error",
-          "Could not open Google Maps. Please make sure Google Maps is installed on your device."
+          "Could not open Google Maps. Please make sure Google Maps is installed on your device.",
         );
       });
   };
@@ -143,7 +143,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
         <View className="items-center mt-6">
           <Image
             source={locationImage}
-            className="w-32 h-32" 
+            className="w-32 h-32"
             resizeMode="contain"
           />
         </View>
@@ -158,7 +158,13 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           <TouchableOpacity
             onPress={handleHoldOrder}
             className="w-full mb-4 py-4 rounded-full flex-row justify-center items-center bg-[#FFF2BF]"
-            style={{ elevation: 3 }}
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
           >
             <FontAwesome5 name="pause" size={24} color="black" />
             <Text className="ml-4 text-base font-semibold text-black">
@@ -170,6 +176,13 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           <TouchableOpacity
             onPress={handleReturnOrder}
             className="w-full py-4 rounded-full flex-row justify-center items-center bg-[#DFE5F2]"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
           >
             <FontAwesome5 name="undo" size={24} color="black" />
             <Text className="ml-4 text-base font-semibold text-black">
@@ -195,6 +208,13 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           <TouchableOpacity
             onPress={handleGetSignature}
             className="w-full py-4 rounded-full bg-[#F7CA21] flex-row items-center justify-center"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
           >
             <MaterialIcons name="draw" size={24} color="black" />
             <Text className="ml-2 text-base font-semibold text-black">

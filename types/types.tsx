@@ -46,4 +46,14 @@ export type RootStackParamList = {
     onOrderComplete?: (completedId: number) => void;
   };
   DeliverySuccessful: undefined;
+  OrderDetailsLoadingScreen: {
+    processOrderIds: number[];
+    allProcessOrderIds: number[];
+    remainingOrders: number[];
+    orderData: any;
+    onOrderComplete: (id: number) => void;
+    latitude: string | null;
+    longitude: string | null;
+    address?: string;
+  };
 };

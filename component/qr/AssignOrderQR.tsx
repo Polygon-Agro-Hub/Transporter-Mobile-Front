@@ -199,7 +199,6 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
     }
   };
 
-  // API call to assign order
   const assignOrderToDriver = async (invoiceNo: string) => {
     try {
       setLoading(true);
@@ -209,7 +208,6 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         throw new Error("Authentication token not found");
       }
 
-      // Construct the full API URL using environment
       const apiUrl = `${environment.API_BASE_URL}api/order/assign-driver-order`;
 
       const response = await axios.post(
@@ -237,17 +235,14 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          // Server responded with error
           throw {
             message: error.response.data?.message || "Failed to assign order",
             status: error.response.status,
             data: error.response.data,
           };
         } else if (error.request) {
-          // Request made but no response
           throw new Error("Network error. Please check your connection.");
         } else {
-          // Other errors
           throw new Error(error.message || "Failed to assign order");
         }
       } else {
@@ -268,13 +263,11 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
     setScanned(true);
 
-    // Clear the timeout timer when scan is detected
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
     try {
-      // Extract invoice number from QR
       const invoiceNo = extractInvoiceNumber(data);
 
       if (!invoiceNo) {
@@ -339,30 +332,35 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
 
-      console.log("Error details:", { errorMessage, statusCode, currentStatus });
+      console.log("Error details:", {
+        errorMessage,
+        statusCode,
+        currentStatus,
+      });
 
-      // PRIORITY 1: Handle "Return Received" status (works for both 400 and 409)
-      if (currentStatus === "Return Received") {
-        title = "Already Returned!";
-        message = "This order was already returned to the centre.";
-      }
-      // PRIORITY 2: Handle "Ready to Pickup" status  
-      else if (currentStatus === "Ready to Pickup") {
+      if (currentStatus === "Return" || currentStatus === "Return Received") {
+        title = "Order Already Returned!";
+        message =
+          "This order has already been returned to the centre and cannot be delivered again.";
+      } else if (currentStatus === "Ready to Pickup") {
         title = "Cannot Proceed!";
         message =
           "This order is designated for customer pickup. Kindly hand it over to the officers to proceed further.";
-      }
-      // PRIORITY 3: Handle 409 - already in target list
-      else if (
+      } else if (
+        currentStatus === "Delivered" ||
+        currentStatus === "Picked up"
+      ) {
+        title = "Cannot Proceed!";
+        message =
+          "This order has already been successfully handed over to the customer. Please scan an active order to proceed.";
+      } else if (
         statusCode === 409 &&
         (errorMessage.includes("already in your target list") ||
           errorMessage.toLowerCase().includes("already got"))
       ) {
         title = "Already got this!";
         message = errorMessage;
-      }
-      // PRIORITY 4: Handle 409 - assigned to another driver
-      else if (
+      } else if (
         statusCode === 409 &&
         (errorMessage.includes("already been collected") ||
           errorMessage.includes("already been assigned to another driver") ||
@@ -374,9 +372,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         message = errorMessage
           .replace(/officer/gi, "Driver")
           .replace(/Officer ID:/gi, "Driver ID:");
-      }
-      // PRIORITY 5: Handle 400 - order not ready
-      else if (
+      } else if (
         statusCode === 400 &&
         (errorMessage.includes("Still processing this order") ||
           errorMessage.includes("Scanning will be available") ||
@@ -387,9 +383,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         message = errorMessage.includes("Scanning will be available")
           ? errorMessage
           : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
-      }
-      // PRIORITY 6: Handle 404 - not found
-      else if (
+      } else if (
         statusCode === 404 ||
         errorMessage.includes("not found") ||
         errorMessage.includes("Invoice number not found") ||
@@ -397,27 +391,19 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       ) {
         title = "Error!";
         message = "The QR code is not identified. Please check and try again.";
-      }
-      // Network errors
-      else if (
+      } else if (
         errorMessage.includes("Network error") ||
         errorMessage.includes("Network Error")
       ) {
         title = "Network Error";
         message = "Please check your internet connection and try again.";
-      }
-      // Authentication errors (401 status)
-      else if (statusCode === 401 || errorMessage.includes("Unauthorized")) {
+      } else if (statusCode === 401 || errorMessage.includes("Unauthorized")) {
         title = "Session Expired";
         message = "Please login again to continue.";
-      }
-      // Server errors (500 status)
-      else if (statusCode === 500) {
+      } else if (statusCode === 500) {
         title = "Server Error";
         message = "Internal server error. Please try again later.";
-      }
-      // Bad request (400 status) - general
-      else if (statusCode === 400) {
+      } else if (statusCode === 400) {
         title = "Invalid Request";
         message = errorMessage || "Invalid request. Please try again.";
       }

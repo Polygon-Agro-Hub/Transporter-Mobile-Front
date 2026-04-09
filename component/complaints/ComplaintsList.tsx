@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  ActivityIndicator,
   Modal,
   BackHandler,
 } from "react-native";
@@ -153,10 +152,15 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const formatReplyDate = (dateString: string | null) => {
     if (!dateString) return "";
     const date = new Date(dateString);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes.toString().padStart(2, "0");
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `${year}/${month}/${day}`;
+    return `At ${formattedHours}:${formattedMinutes} ${ampm} on ${year}/${month}/${day}`;
   };
 
   const handleReply = (complaint: Complaint) => {
@@ -205,7 +209,6 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       />
 
       {complaints.length === 0 ? (
-        // Centered empty state
         <View className="flex-1 items-center justify-center">
           <View
             className="items-center justify-center"
@@ -236,8 +239,10 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
           {/* Complaints List */}
           <View className="px-4 py-4">
             {complaints.map((complaint) => {
-              const isWaiting = complaint.status === "Opened";
-              const isAnswered = complaint.status === "Closed";
+              const hasReply =
+                complaint.reply !== null && complaint.reply !== undefined;
+              const isWaiting = !hasReply;
+              const isAnswered = hasReply;
 
               return (
                 <View
@@ -263,24 +268,18 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   <View className="flex-row items-center justify-between">
                     {/* Status Badge */}
                     <View
-                      className={`flex-row items-center px-4 py-2 rounded-lg ${
-                        isWaiting ? "bg-[#FFF3BF]" : "bg-[#FFF3BF]"
-                      }`}
+                      className={`flex-row items-center px-4 py-2 rounded-lg bg-[#FFF3BF] `}
                     >
                       {isWaiting ? (
-                        <AntDesign name="hourglass" size={14} color="black" />
+                        <AntDesign name="hourglass" size={14} color="#000000" />
                       ) : (
                         <FontAwesome6
                           name="circle-check"
                           size={14}
-                          color="black"
+                          color="#000000"
                         />
                       )}
-                      <Text
-                        className={`ml-1.5 text-xs font-medium ${
-                          isWaiting ? "text-black" : "text-black"
-                        }`}
-                      >
+                      <Text className={`ml-1.5 text-xs font-medium `}>
                         {isWaiting ? "Waiting.." : "Answered"}
                       </Text>
                     </View>
@@ -288,7 +287,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                     {/* Reply Button */}
                     <TouchableOpacity
                       className={`flex-row items-center px-4 py-1.5 rounded-lg ${
-                        isWaiting ? "bg-[#CBD7E8]" : "bg-black"
+                        isWaiting ? "bg-[#CBD7E8] " : "bg-black"
                       }`}
                       disabled={isWaiting}
                       onPress={() => handleReply(complaint)}
@@ -368,12 +367,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                 {/* Footer Message */}
                 <Text className="text-sm text-[#2D2D2D] leading-6">
                   If you have any further concerns or questions, feel free to
-                  reach out. 
-                   </Text>
-                    <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
+                  reach out.
+                </Text>
+                <Text className="text-sm text-[#2D2D2D] leading-6 mb-4">
                   Thank you for your patience and understanding.
-                  </Text>
-               
+                </Text>
 
                 {/* Signature */}
                 <View className="mt-4 pt-4 ">
@@ -381,7 +379,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
                   <Text className="text-sm text-[#2D2D2D] mt-1">
                     Polygon Customer Support Team
                   </Text>
-                  <Text className="text-xs text-[#2D2D2D] mt-2">
+                  <Text className="text-sm text-[#2D2D2D] mt-2">
                     {formatReplyDate(selectedComplaint?.replyTime || null)}
                   </Text>
                 </View>

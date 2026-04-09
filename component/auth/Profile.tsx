@@ -270,9 +270,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
 
-        // Show confirmation using AlertModal
-        setModalMessage("Do you want to update your profile picture?");
-        setShowErrorModal(true);
         uploadProfileImage(selectedImage);
       }
     } catch (error) {
@@ -301,9 +298,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
 
-        // Show confirmation using AlertModal
-        setModalMessage("Do you want to update your profile picture?");
-        setShowErrorModal(true);
         uploadProfileImage(selectedImage);
       }
     } catch (error) {
