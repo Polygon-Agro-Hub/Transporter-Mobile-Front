@@ -44,17 +44,31 @@ platform :ios do
   # Downloads the distribution certificate and provisioning profile from
   # the private certs repo. In CI, runs in readonly mode (never generates).
   private_lane :sync_certificates do |options|
-    api_key = options[:api_key]
+  api_key = options[:api_key]
 
-    match(
-      type:                   "appstore",   # Distribution cert (for TestFlight + App Store)
-      app_identifier:         APP_IDENTIFIER,
-      git_url:                ENV["MATCH_GIT_URL"],
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
-      readonly:               is_ci,        # true in GitHub Actions, false locally
-      api_key:                api_key,
-      verbose:                false
-    )
+  match(
+    type:                   "appstore",
+    app_identifier:         APP_IDENTIFIER,
+    git_url:                ENV["MATCH_GIT_URL"],
+    git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+    readonly:               is_ci,
+    api_key:                api_key,
+    verbose:                false
+  )
+
+  # ── Tell Xcode which team owns this app ──────────────────────────────
+  # expo prebuild --clean generates a fresh Xcode project each time with
+  # no team set. This injects the team ID and disables auto-signing so
+  # Xcode uses the Match certificate instead of looking for a local one.
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    team_id:               ENV["APPLE_TEAM_ID"],
+    code_sign_identity:    "iPhone Distribution",
+    targets:               [WORKSPACE_NAME],
+    path:                  "ios/#{WORKSPACE_NAME}.xcodeproj",
+    profile_name:          "match AppStore #{APP_IDENTIFIER}",
+    bundle_identifier:     APP_IDENTIFIER
+  )
   end
 
   # ── PRIVATE LANE: Build the iOS App ───────────────────────────────────────
