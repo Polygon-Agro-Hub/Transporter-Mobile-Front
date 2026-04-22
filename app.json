@@ -39,7 +39,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.polygonagro.goviTransport",
+      "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "1.0.0",
       "supportsTablet": false,
       "infoPlist": {
