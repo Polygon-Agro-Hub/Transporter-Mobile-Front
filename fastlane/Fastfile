@@ -66,7 +66,7 @@ platform :ios do
     code_sign_identity:    "iPhone Distribution",
     targets:               [WORKSPACE_NAME],
     path:                  "ios/#{WORKSPACE_NAME}.xcodeproj",
-    profile_name:          "match AppStore #{APP_IDENTIFIER}",
+    profile_name:          ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"],
     bundle_identifier:     APP_IDENTIFIER
   )
   end
@@ -84,7 +84,7 @@ platform :ios do
       output_name:      "GoVi-Transport.ipa",  # The output filename
       export_options: {
         provisioningProfiles: {
-          APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}"  # Must match Match's profile name
+          APP_IDENTIFIER => ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"]  # Must match Match's profile name
         }
       },
       xcargs:           "-allowProvisioningUpdates"  # Allows Xcode to update signing automatically
