@@ -34,7 +34,7 @@ jobs:
     runs-on: macos-latest
 
     # Timeout after 90 minutes to avoid runaway builds eating up minutes
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       # ─────────────────────────────────────────────────────────────────
@@ -125,12 +125,19 @@ jobs:
         uses: actions/cache@v4
         id: pods-cache
         with:
+          # path: |
+          #   ios/Pods
+          #   ~/.cocoapods
+          # key: pods-${{ hashFiles('ios/Podfile.lock') }}
+          # restore-keys: |
+          #   pods-
           path: |
             ios/Pods
+            ~/Library/Caches/CocoaPods
             ~/.cocoapods
-          key: pods-${{ hashFiles('ios/Podfile.lock') }}
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
-            pods-
+            pods-${{ runner.os }}-
 
       # ─────────────────────────────────────────────────────────────────
       # STEP 8: Install CocoaPods dependencies
@@ -140,7 +147,7 @@ jobs:
       - name: "🍫 Install CocoaPods dependencies"
         run: |
           cd ios
-          pod install --repo-update
+          pod install
           cd ..
 
       # ─────────────────────────────────────────────────────────────────
