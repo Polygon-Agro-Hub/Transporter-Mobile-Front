@@ -31,7 +31,7 @@ jobs:
 
     # MUST be macos — only Apple hardware can build iOS apps
     # macos-latest = macOS 14 (Sonoma) with Xcode pre-installed
-    runs-on: macos-13
+    runs-on: macos-latest
 
     # Timeout after 90 minutes to avoid runaway builds eating up minutes
     timeout-minutes: 120
