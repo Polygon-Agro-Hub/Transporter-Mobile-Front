@@ -1,171 +1,285 @@
-# fastlane/Fastfile
-#
-# This file defines the automation "lanes" that Fastlane runs.
-#
-# LANES:
-#   - beta    → Builds the app and uploads to TestFlight (triggered by dev-main branch)
-#   - release → Builds the app and uploads to App Store (triggered by main branch)
-#
-# HOW TO RUN LOCALLY (for testing):
-#   bundle exec fastlane beta      ← test the TestFlight lane
-#   bundle exec fastlane release   ← test the App Store lane
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# ⚠️  IMPORTANT: After running `expo prebuild` locally, check the exact name of
-# the generated .xcworkspace and .xcodeproj files inside the ios/ folder.
-# Update the `WORKSPACE_NAME` and `SCHEME_NAME` constants below if needed.
-# Run: ls ios/*.xcworkspace    to see the exact filename.
-# ─────────────────────────────────────────────────────────────────────────────
+# # fastlane/Fastfile
+# #
+# # This file defines the automation "lanes" that Fastlane runs.
+# #
+# # LANES:
+# #   - beta    → Builds the app and uploads to TestFlight (triggered by dev-main branch)
+# #   - release → Builds the app and uploads to App Store (triggered by main branch)
+# #
+# # HOW TO RUN LOCALLY (for testing):
+# #   bundle exec fastlane beta      ← test the TestFlight lane
+# #   bundle exec fastlane release   ← test the App Store lane
+# #
+# # ─────────────────────────────────────────────────────────────────────────────
+# # ⚠️  IMPORTANT: After running `expo prebuild` locally, check the exact name of
+# # the generated .xcworkspace and .xcodeproj files inside the ios/ folder.
+# # Update the `WORKSPACE_NAME` and `SCHEME_NAME` constants below if needed.
+# # Run: ls ios/*.xcworkspace    to see the exact filename.
+# # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Constants ──────────────────────────────────────────────────────────────
-# Verify these by running: npx expo prebuild --platform ios && ls ios/*.xcworkspace
-WORKSPACE_NAME = "GoViTransport"      # ← Update if different (the part before .xcworkspace)
+# # ── Constants ──────────────────────────────────────────────────────────────
+# # Verify these by running: npx expo prebuild --platform ios && ls ios/*.xcworkspace
+# WORKSPACE_NAME = "GoViTransport"      # ← Update if different (the part before .xcworkspace)
+# APP_IDENTIFIER = "com.polygonagro.Transporter"
+# # ───────────────────────────────────────────────────────────────────────────
+
+# default_platform(:ios)
+
+# platform :ios do
+
+#   # ── PRIVATE LANE: Authenticate with App Store Connect ─────────────────────
+#   # Returns an API key object used by Match and upload actions.
+#   # Using API Key is safer than Apple ID + password in CI environments.
+#   private_lane :get_api_key do
+#     app_store_connect_api_key(
+#       key_id:               ENV["ASC_KEY_ID"],
+#       issuer_id:            ENV["ASC_ISSUER_ID"],
+#       key_content:          ENV["ASC_KEY_CONTENT"],
+#       is_key_content_base64: true,  # We stored it as base64 in GitHub Secrets
+#       in_house:             false   # false = standard Apple Developer account
+#     )
+#   end
+
+#   # ── PRIVATE LANE: Sync Certificates with Match ────────────────────────────
+#   # Downloads the distribution certificate and provisioning profile from
+#   # the private certs repo. In CI, runs in readonly mode (never generates).
+#   private_lane :sync_certificates do |options|
+#   api_key = options[:api_key]
+
+#   match(
+#     type:                   "appstore",
+#     app_identifier:         APP_IDENTIFIER,
+#     git_url:                ENV["MATCH_GIT_URL"],
+#     git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+#     readonly:               is_ci,
+#     api_key:                api_key,
+#     verbose:                false
+#   )
+
+#   # ── Tell Xcode which team owns this app ──────────────────────────────
+#   # expo prebuild --clean generates a fresh Xcode project each time with
+#   # no team set. This injects the team ID and disables auto-signing so
+#   # Xcode uses the Match certificate instead of looking for a local one.
+#   update_code_signing_settings(
+#     use_automatic_signing: false,
+#     team_id:               ENV["APPLE_TEAM_ID"],
+#     code_sign_identity:    "iPhone Distribution",
+#     targets:               [WORKSPACE_NAME],
+#     path:                  "ios/#{WORKSPACE_NAME}.xcodeproj",
+#     profile_name:          ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"],
+#     bundle_identifier:     APP_IDENTIFIER
+#   )
+#   end
+
+#   # ── PRIVATE LANE: Build the iOS App ───────────────────────────────────────
+#   # Uses Xcode to compile and archive the app into an .ipa file.
+#   private_lane :build_ios_app do
+#     build_app(
+#       workspace:        "ios/#{WORKSPACE_NAME}.xcworkspace",
+#       scheme:           WORKSPACE_NAME,
+#       configuration:    "Release",
+#       export_method:    "app-store",           # Required for both TestFlight and App Store
+#       clean:            true,                  # Clean build folder before building
+#       output_directory: "./build",             # Where the .ipa file is saved
+#       output_name:      "GoVi-Transport.ipa",  # The output filename
+#       export_options: {
+#         provisioningProfiles: {
+#           APP_IDENTIFIER => ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"]  # Must match Match's profile name
+#         }
+#       },
+#       xcargs:           "-allowProvisioningUpdates"  # Allows Xcode to update signing automatically
+#     )
+#   end
+
+#   # ── LANE: beta — Upload to TestFlight ─────────────────────────────────────
+#   # Triggered when code is pushed/merged to the `dev-main` branch.
+#   # Builds the app and uploads to TestFlight for QA testing.
+#   desc "Build and upload to TestFlight (dev-main branch)"
+#   lane :beta do
+#     # Step 1: Get the App Store Connect API key
+#     api_key = get_api_key
+
+#     # Step 2: Download signing certificates and provisioning profiles
+#     sync_certificates(api_key: api_key)
+
+#     # Step 3: Set the build number to GitHub Actions run number
+#     # This ensures build numbers always increase (required by Apple).
+#     # Locally, GITHUB_RUN_NUMBER falls back to "1".
+#     build_number = ENV.fetch("GITHUB_RUN_NUMBER", "1")
+#     increment_build_number(
+#       build_number: build_number,
+#       xcodeproj:    "ios/#{WORKSPACE_NAME}.xcodeproj"
+#     )
+
+#     UI.message("📦 Building version with build number: #{build_number}")
+
+#     # Step 4: Build the .ipa file
+#     build_ios_app
+
+#     # Step 5: Upload to TestFlight
+#     # skip_waiting_for_build_processing: true = don't wait for Apple to finish
+#     # processing (saves 10–20 minutes in CI). The build will appear in
+#     # TestFlight once Apple finishes processing it (5–30 minutes after upload).
+#     upload_to_testflight(
+#       api_key:                          api_key,
+#       skip_waiting_for_build_processing: true,
+#       changelog:                        "Build #{build_number} — Automated CI build from dev-main branch"
+#     )
+
+#     UI.success("✅ Successfully uploaded build #{build_number} to TestFlight!")
+#   end
+
+#   # ── LANE: release — Submit to App Store ───────────────────────────────────
+#   # Triggered when code is pushed/merged to the `main` branch.
+#   # Builds the app and uploads to App Store Connect for review submission.
+#   desc "Build and upload to App Store (main branch)"
+#   lane :release do
+#     # Step 1: Get the App Store Connect API key
+#     api_key = get_api_key
+
+#     # Step 2: Download signing certificates and provisioning profiles
+#     sync_certificates(api_key: api_key)
+
+#     # Step 3: Set the build number
+#     build_number = ENV.fetch("GITHUB_RUN_NUMBER", "1")
+#     increment_build_number(
+#       build_number: build_number,
+#       xcodeproj:    "ios/#{WORKSPACE_NAME}.xcodeproj"
+#     )
+
+#     UI.message("📦 Building PRODUCTION version with build number: #{build_number}")
+
+#     # Step 4: Build the .ipa file
+#     build_ios_app
+
+#     # Step 5: Upload to App Store Connect
+#     # This uploads the build but does NOT automatically submit for review.
+#     # You still need to go to App Store Connect and click "Submit for Review".
+#     # This is intentional — gives you a chance to update metadata/screenshots first.
+#     upload_to_app_store(
+#       api_key:            api_key,
+#       skip_metadata:      true,        # Don't try to upload metadata (manage in ASC manually)
+#       skip_screenshots:   true,        # Don't try to upload screenshots (manage in ASC manually)
+#       submit_for_review:  false,       # Don't auto-submit — we'll do it manually in ASC
+#       force:              true,        # Overwrite if build already exists
+#       precheck_include_in_app_purchases: false
+#     )
+
+#     UI.success("✅ Build #{build_number} uploaded to App Store Connect! Go to ASC to submit for review.")
+#   end
+
+# end
+
+#### New Fastlane Try on 24th April
+# fastlane/Fastfile
+
+WORKSPACE_NAME = "GoViTransport"
 APP_IDENTIFIER = "com.polygonagro.Transporter"
-# ───────────────────────────────────────────────────────────────────────────
 
 default_platform(:ios)
 
 platform :ios do
 
-  # ── PRIVATE LANE: Authenticate with App Store Connect ─────────────────────
-  # Returns an API key object used by Match and upload actions.
-  # Using API Key is safer than Apple ID + password in CI environments.
   private_lane :get_api_key do
     app_store_connect_api_key(
-      key_id:               ENV["ASC_KEY_ID"],
-      issuer_id:            ENV["ASC_ISSUER_ID"],
-      key_content:          ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true,  # We stored it as base64 in GitHub Secrets
-      in_house:             false   # false = standard Apple Developer account
+      key_id:                ENV["ASC_KEY_ID"],
+      issuer_id:             ENV["ASC_ISSUER_ID"],
+      key_content:           ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house:              false
     )
   end
 
-  # ── PRIVATE LANE: Sync Certificates with Match ────────────────────────────
-  # Downloads the distribution certificate and provisioning profile from
-  # the private certs repo. In CI, runs in readonly mode (never generates).
   private_lane :sync_certificates do |options|
-  api_key = options[:api_key]
+    api_key = options[:api_key]
 
-  match(
-    type:                   "appstore",
-    app_identifier:         APP_IDENTIFIER,
-    git_url:                ENV["MATCH_GIT_URL"],
-    git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
-    readonly:               is_ci,
-    api_key:                api_key,
-    verbose:                false
-  )
+    match(
+      type:                    "appstore",
+      app_identifier:          APP_IDENTIFIER,
+      git_url:                 ENV["MATCH_GIT_URL"],
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      readonly:                is_ci,
+      api_key:                 api_key
+    )
 
-  # ── Tell Xcode which team owns this app ──────────────────────────────
-  # expo prebuild --clean generates a fresh Xcode project each time with
-  # no team set. This injects the team ID and disables auto-signing so
-  # Xcode uses the Match certificate instead of looking for a local one.
-  update_code_signing_settings(
-    use_automatic_signing: false,
-    team_id:               ENV["APPLE_TEAM_ID"],
-    code_sign_identity:    "iPhone Distribution",
-    targets:               [WORKSPACE_NAME],
-    path:                  "ios/#{WORKSPACE_NAME}.xcodeproj",
-    profile_name:          ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"],
-    bundle_identifier:     APP_IDENTIFIER
-  )
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      team_id:               ENV["APPLE_TEAM_ID"],
+      code_sign_identity:    "iPhone Distribution",
+      targets:               [WORKSPACE_NAME],
+      path:                  "ios/#{WORKSPACE_NAME}.xcodeproj",
+      profile_name:          ENV["sigh_#{APP_IDENTIFIER}_appstore_profile-name"],
+      bundle_identifier:     APP_IDENTIFIER
+    )
   end
 
-  # ── PRIVATE LANE: Build the iOS App ───────────────────────────────────────
-  # Uses Xcode to compile and archive the app into an .ipa file.
   private_lane :build_ios_app do
     build_app(
       workspace:        "ios/#{WORKSPACE_NAME}.xcworkspace",
       scheme:           WORKSPACE_NAME,
       configuration:    "Release",
-      export_method:    "app-store",           # Required for both TestFlight and App Store
-      clean:            true,                  # Clean build folder before building
-      output_directory: "./build",             # Where the .ipa file is saved
-      output_name:      "GoVi-Transport.ipa",  # The output filename
+      export_method:    "app-store",
+      clean:            true,
+      output_directory: "./build",
+      output_name:      "GoVi-Transport.ipa",
       export_options: {
         provisioningProfiles: {
-          APP_IDENTIFIER => ENV["sigh_com.polygonagro.Transporter_appstore_profile-name"]  # Must match Match's profile name
+          APP_IDENTIFIER => ENV["sigh_#{APP_IDENTIFIER}_appstore_profile-name"]
         }
-      },
-      xcargs:           "-allowProvisioningUpdates"  # Allows Xcode to update signing automatically
+      }
+      # ← xcargs removed entirely — it conflicts with Match manual signing
     )
   end
 
-  # ── LANE: beta — Upload to TestFlight ─────────────────────────────────────
-  # Triggered when code is pushed/merged to the `dev-main` branch.
-  # Builds the app and uploads to TestFlight for QA testing.
-  desc "Build and upload to TestFlight (dev-main branch)"
+  desc "Build and upload to TestFlight"
   lane :beta do
-    # Step 1: Get the App Store Connect API key
-    api_key = get_api_key
+    setup_ci  # ← THIS IS THE KEY FIX — creates unlocked keychain on GitHub Actions
 
-    # Step 2: Download signing certificates and provisioning profiles
+    api_key = get_api_key
     sync_certificates(api_key: api_key)
 
-    # Step 3: Set the build number to GitHub Actions run number
-    # This ensures build numbers always increase (required by Apple).
-    # Locally, GITHUB_RUN_NUMBER falls back to "1".
     build_number = ENV.fetch("GITHUB_RUN_NUMBER", "1")
     increment_build_number(
       build_number: build_number,
       xcodeproj:    "ios/#{WORKSPACE_NAME}.xcodeproj"
     )
 
-    UI.message("📦 Building version with build number: #{build_number}")
-
-    # Step 4: Build the .ipa file
     build_ios_app
 
-    # Step 5: Upload to TestFlight
-    # skip_waiting_for_build_processing: true = don't wait for Apple to finish
-    # processing (saves 10–20 minutes in CI). The build will appear in
-    # TestFlight once Apple finishes processing it (5–30 minutes after upload).
     upload_to_testflight(
-      api_key:                          api_key,
+      api_key:                           api_key,
       skip_waiting_for_build_processing: true,
-      changelog:                        "Build #{build_number} — Automated CI build from dev-main branch"
+      changelog:                         "Build #{build_number} — dev-main branch"
     )
 
-    UI.success("✅ Successfully uploaded build #{build_number} to TestFlight!")
+    UI.success("✅ Build #{build_number} uploaded to TestFlight!")
   end
 
-  # ── LANE: release — Submit to App Store ───────────────────────────────────
-  # Triggered when code is pushed/merged to the `main` branch.
-  # Builds the app and uploads to App Store Connect for review submission.
-  desc "Build and upload to App Store (main branch)"
+  desc "Build and upload to App Store"
   lane :release do
-    # Step 1: Get the App Store Connect API key
-    api_key = get_api_key
+    setup_ci  # ← Same fix here
 
-    # Step 2: Download signing certificates and provisioning profiles
+    api_key = get_api_key
     sync_certificates(api_key: api_key)
 
-    # Step 3: Set the build number
     build_number = ENV.fetch("GITHUB_RUN_NUMBER", "1")
     increment_build_number(
       build_number: build_number,
       xcodeproj:    "ios/#{WORKSPACE_NAME}.xcodeproj"
     )
 
-    UI.message("📦 Building PRODUCTION version with build number: #{build_number}")
-
-    # Step 4: Build the .ipa file
     build_ios_app
 
-    # Step 5: Upload to App Store Connect
-    # This uploads the build but does NOT automatically submit for review.
-    # You still need to go to App Store Connect and click "Submit for Review".
-    # This is intentional — gives you a chance to update metadata/screenshots first.
     upload_to_app_store(
-      api_key:            api_key,
-      skip_metadata:      true,        # Don't try to upload metadata (manage in ASC manually)
-      skip_screenshots:   true,        # Don't try to upload screenshots (manage in ASC manually)
-      submit_for_review:  false,       # Don't auto-submit — we'll do it manually in ASC
-      force:              true,        # Overwrite if build already exists
+      api_key:                           api_key,
+      skip_metadata:                     true,
+      skip_screenshots:                  true,
+      submit_for_review:                 false,
+      force:                             true,
       precheck_include_in_app_purchases: false
     )
 
-    UI.success("✅ Build #{build_number} uploaded to App Store Connect! Go to ASC to submit for review.")
+    UI.success("✅ Build #{build_number} uploaded to App Store Connect!")
   end
 
 end
