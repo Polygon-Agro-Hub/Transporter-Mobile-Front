@@ -39,8 +39,9 @@ yarn-error.*
  generated native folders
 /ios
 #/android
-
 ios/
 .env
 *.p8
 *.p12
+/android
+.env
