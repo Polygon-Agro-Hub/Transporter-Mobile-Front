@@ -13,7 +13,7 @@ interface GlobalSearchModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
-  data: Array<{ label: string; value: string; [key: string]: any }>;
+  data: Array<{ label: string; value: string;[key: string]: any }>;
   selectedItems: string[];
   onSelect: (items: string[]) => void;
   searchPlaceholder?: string;
@@ -69,7 +69,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   const handleItemPress = (value: string) => {
     let newSelectedValues: string[];
-    
+
     if (multiSelect) {
       if (selectedValues.includes(value)) {
         newSelectedValues = selectedValues.filter((v) => v !== value);
@@ -79,9 +79,9 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     } else {
       newSelectedValues = [value];
     }
-    
+
     setSelectedValues(newSelectedValues);
-    
+
     if (!multiSelect) {
       onSelect(newSelectedValues);
       onClose();
@@ -111,17 +111,19 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   const renderSearchInput = () => (
     <View className="px-4 py-2 border-b border-gray-200">
-      <View className="bg-gray-100 rounded-lg px-3 flex-row items-center">
-        <MaterialIcons name="search" size={20} color="#666" />
+      <View className="bg-gray-100 rounded-lg px-3 h-[50px] flex-row items-center">
+        <MaterialIcons name="search" size={22} color="#666" />
+
         <TextInput
           placeholder={searchPlaceholder}
           value={searchValue}
           onChangeText={setSearchValue}
-          className="flex-1 ml-2 text-base"
+          className="flex-1 ml-2 text-base h-full"
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}
         />
+
         {searchValue ? (
           <TouchableOpacity onPress={clearSearch}>
             <MaterialIcons name="close" size={20} color="#666" />

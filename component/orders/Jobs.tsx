@@ -266,8 +266,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       name: order.fullName || "Customer",
       time: formatScheduleTime(
         order.primaryScheduleTime ||
-          order.allScheduleTimes[0] ||
-          "Not Scheduled",
+        order.allScheduleTimes[0] ||
+        "Not Scheduled",
       ),
       count: order.jobCount || 1,
       status: order.drvStatus,
@@ -332,8 +332,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         name: order.fullName || "Customer",
         time: formatScheduleTime(
           order.primaryScheduleTime ||
-            order.allScheduleTimes[0] ||
-            "Not Scheduled",
+          order.allScheduleTimes[0] ||
+          "Not Scheduled",
         ),
         count: todayCompletedCount,
         status: "Completed",
@@ -456,9 +456,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             <Text className="text-white font-bold">{getTodoTabCount()}</Text>
           </View>
           <Text
-            className={`text-md ${
-              activeTab === "todo" ? "font-bold" : "font-medium"
-            }`}
+            className={`text-md ${activeTab === "todo" ? "font-bold" : "font-medium"
+              }`}
           >
             To Do
           </Text>
@@ -476,9 +475,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             <Text className="text-white font-bold">{getCompletedCount()}</Text>
           </View>
           <Text
-            className={`text-md ${
-              activeTab === "completed" ? "font-bold" : "font-medium"
-            }`}
+            className={`text-md ${activeTab === "completed" ? "font-bold" : "font-medium"
+              }`}
           >
             Completed
           </Text>
@@ -517,13 +515,12 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                   }
                 }
                 key={index}
-                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
-                  isOnTheWay && activeTab === "todo"
+                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${isOnTheWay && activeTab === "todo"
                     ? "bg-[#FFFBEA] border-[#F7CA21]"
                     : isOnHold
                       ? "bg-white border-[#FF0000]"
                       : "bg-white border-[#A4AAB7]"
-                }`}
+                  }`}
                 onPress={() => {
                   if (activeTab === "todo") {
                     navigateToOrderDetails(item.orderData);
@@ -535,7 +532,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                     {isOnTheWay && activeTab === "todo" ? (
                       <View className="bg-[#F7CA21] w-2 h-2 rounded-full mr-1" />
                     ) : null}
-                    <Text className="text-sm font-bold">#{item.id} </Text>{" "}
+                    <Text className="text-sm font-bold">#{item.id} </Text>
                     {isOnHold && (
                       <Text className="text-[#FF0000] text-sm font-semibold mr-2">
                         (On Hold)
@@ -570,18 +567,16 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
                 <View className="flex-row items-center">
                   <View
-                    className={`w-7 h-7 justify-center items-center rounded-full ${
-                      isOnHold
+                    className={`w-7 h-7 justify-center items-center rounded-full ${isOnHold
                         ? "bg-[#FF0000]"
                         : activeTab === "todo"
                           ? "bg-yellow-400"
                           : "bg-[#F3F3F3]"
-                    }`}
+                      }`}
                   >
                     <Text
-                      className={`font-bold ${
-                        isOnHold ? "text-white" : "text-black"
-                      }`}
+                      className={`font-bold ${isOnHold ? "text-white" : "text-black"
+                        }`}
                     >
                       {item.count}
                     </Text>

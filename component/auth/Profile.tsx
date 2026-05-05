@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Modal,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -438,7 +437,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Show retry button only if it's not an auth error */}
         {!error.includes("Account not found") &&
-        !error.includes("No authentication token") ? (
+          !error.includes("No authentication token") ? (
           <TouchableOpacity
             onPress={fetchProfileData}
             className="bg-[#FFC83D] px-6 py-3 rounded-full"
@@ -569,8 +568,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               label="Full Name"
               value={
                 profileData
-                  ? `${profileData.firstNameEnglish || ""} ${
-                      profileData.lastNameEnglish || ""
+                  ? `${profileData.firstNameEnglish || ""} ${profileData.lastNameEnglish || ""
                     }`.trim()
                   : "Not available"
               }

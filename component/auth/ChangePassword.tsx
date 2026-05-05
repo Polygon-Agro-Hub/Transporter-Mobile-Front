@@ -210,6 +210,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image

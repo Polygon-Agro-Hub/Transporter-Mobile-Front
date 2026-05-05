@@ -221,7 +221,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         label: "Scan",
         color: "#3B82F6",
         action: () => navigation.navigate("AssignOrderQR"),
-
+        disabled: showEndShift,
       },
       {
         image: packsImage,
@@ -335,7 +335,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     >
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       {/* Header */}
-      <View className="bg-white px-4 shadow-sm mt-4">
+      <View className="bg-white px-4 mt-4">
         <TouchableOpacity
           className="flex-row items-center"
           activeOpacity={0.7}
