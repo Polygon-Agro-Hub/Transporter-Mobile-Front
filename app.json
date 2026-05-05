@@ -39,10 +39,11 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.polygonagro.goviTransport",
+      "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "1.0.0",
       "supportsTablet": false,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Camera access is required to scan documents and capture images.",
         "NSMicrophoneUsageDescription": "Microphone access is required for in-app communication.",
         "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport-related images.",
