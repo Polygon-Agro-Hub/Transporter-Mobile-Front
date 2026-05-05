@@ -221,7 +221,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         label: "Scan",
         color: "#3B82F6",
         action: () => navigation.navigate("AssignOrderQR"),
-        disabled: showEndShift,
+
       },
       {
         image: packsImage,
@@ -386,12 +386,12 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
               onPress={handleEndShiftPress}
               activeOpacity={0.7}
               style={{
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              elevation: 5,
-            }}
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}
             >
               <View className="flex-row items-center">
                 <Text className="font-bold text-black">End My Shift</Text>
@@ -462,12 +462,12 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         style={
           cashAmount > 0
             ? {
-                shadowColor: "#000",
-                shadowOffset: { width: 4, height: 0 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
-              }
+              shadowColor: "#000",
+              shadowOffset: { width: 4, height: 0 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }
             : {}
         }
         onPress={handleCashReceivedPress}
@@ -522,16 +522,16 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
                   ...(action.disabled
                     ? {
-                        borderWidth: 1,
-                        borderColor: "#EBEBEB",
-                      }
+                      borderWidth: 1,
+                      borderColor: "#EBEBEB",
+                    }
                     : {
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 3,
-                      }),
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }),
 
                   opacity: 1,
                 }}
