@@ -75,14 +75,14 @@ const Splash: React.FC = () => {
         } else {
           console.log("Token expired, clearing storage.");
           await clearStorage();
-          navigation.navigate("Login");
+          navigation.replace("Login");
         }
       } else {
-        navigation.navigate("Login");
+        navigation.replace("Login");
       }
     } catch (error) {
       console.error("Error checking token expiration:", error);
-      navigation.navigate("Login");
+      navigation.replace("Login");
     }
   };
 
@@ -123,19 +123,19 @@ const Splash: React.FC = () => {
           profileData.passwordUpdated === 0 ||
           profileData.passwordUpdated === "0"
         ) {
-          navigation.navigate("ChangePassword", {
+          navigation.replace("ChangePassword", {
             passwordUpdated: Number(profileData.passwordUpdated),
           });
         } else {
-          navigation.navigate("Home");
+          navigation.replace("Home");
         }
       } else {
         console.log("Failed to fetch profile, using cached data if available.");
-        navigation.navigate("Home");
+        navigation.replace("Home");
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      navigation.navigate("Home");
+      navigation.replace("Home");
     }
   };
 

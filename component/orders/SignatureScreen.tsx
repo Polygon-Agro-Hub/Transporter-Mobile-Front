@@ -13,6 +13,7 @@ import { useFocusEffect, RouteProp } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import * as ScreenOrientation from "expo-screen-orientation";
+import * as FileSystem from "expo-file-system/legacy";
 import CustomHeader from "../common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -183,37 +184,38 @@ export default function SignatureScreen({
         return;
       }
 
-      const formData = new FormData();
-
       const base64Data = signatureBase64.includes(",")
         ? signatureBase64.split(",")[1]
         : signatureBase64;
 
       const fileName = `signature_${Date.now()}.png`;
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
 
-      const file = {
-        uri: `data:image/png;base64,${base64Data}`,
-        type: "image/png",
-        name: fileName,
-      };
-
-      formData.append("signature", file as any);
-
-      processOrderIds.forEach((id, index) => {
-        formData.append(`processOrderIds[${index}]`, id.toString());
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: 'base64',
       });
 
-      const response = await axios.post(
+      const parameters: Record<string, string> = {};
+      processOrderIds.forEach((id, index) => {
+        parameters[`processOrderIds[${index}]`] = id.toString();
+      });
+
+      const uploadResult = await FileSystem.uploadAsync(
         `${environment.API_BASE_URL}api/order/save-signature`,
-        formData,
+        fileUri,
         {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'signature',
+          mimeType: 'image/png',
+          parameters,
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
-          timeout: 30000,
-        },
+        }
       );
+
+      const response = { data: JSON.parse(uploadResult.body) };
 
       if (response.data.status === "success") {
         if (onOrderComplete) {

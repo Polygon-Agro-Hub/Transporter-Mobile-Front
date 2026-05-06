@@ -8,15 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Modal,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../types/types";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import CustomHeader from "../common/CustomHeader";
 import { useSelector, useDispatch } from "react-redux";
@@ -438,7 +433,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Show retry button only if it's not an auth error */}
         {!error.includes("Account not found") &&
-        !error.includes("No authentication token") ? (
+          !error.includes("No authentication token") ? (
           <TouchableOpacity
             onPress={fetchProfileData}
             className="bg-[#FFC83D] px-6 py-3 rounded-full"
@@ -502,18 +497,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <View className="items-center">
             <View style={{ position: "relative" }}>
               {uploading ? (
-                <View
-                  style={{
-                    width: wp(30),
-                    height: wp(30),
-                    borderRadius: wp(30) / 2,
-                    borderWidth: 2,
-                    borderColor: "#FFC83D",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "#f3f3f3",
-                  }}
-                >
+                <View className="w-30 h-30 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
                   <ActivityIndicator size="large" color="#FFC83D" />
                   <Text className="text-xs text-gray-500 mt-2">
                     Uploading...
@@ -526,13 +510,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                       ? { uri: profileData.image }
                       : require("@/assets/images/home/profile.webp")
                   }
-                  style={{
-                    width: wp(30),
-                    height: wp(30),
-                    borderRadius: wp(30) / 2,
-                    borderWidth: 2,
-                    borderColor: "#FFC83D",
-                  }}
+                  className="w-32 h-32 rounded-full border-2 border-[#FFC83D]"
                 />
               )}
 
@@ -564,13 +542,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             )}
           </View>
 
-          <View style={{ paddingHorizontal: wp(6), marginTop: hp(4) }}>
+          <View className="px-6 mt-8">
             <InfoCard
               label="Full Name"
               value={
                 profileData
-                  ? `${profileData.firstNameEnglish || ""} ${
-                      profileData.lastNameEnglish || ""
+                  ? `${profileData.firstNameEnglish || ""} ${profileData.lastNameEnglish || ""
                     }`.trim()
                   : "Not available"
               }

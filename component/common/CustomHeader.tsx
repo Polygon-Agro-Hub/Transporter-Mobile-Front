@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import Entypo from "@expo/vector-icons/Entypo";
 import { AntDesign, MaterialIcons } from "@expo/vector-icons";
-import { widthPercentageToDP as wp } from "react-native-responsive-screen";
 import { StackNavigationProp } from "@react-navigation/stack";
 
 interface CustomHeaderProps {
@@ -69,11 +68,10 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
   return (
     <View
-      className={`flex-row items-center justify-between px-4 py-3 relative ${
-        dark ? "bg-black" : "bg-white"
-      }`}
+      className={`flex-row items-center justify-between px-4 py-3 relative ${dark ? "bg-black" : "bg-white"
+        }`}
     >
-      <View style={{ width: wp(15) }}>
+      <View style={{ width: 50 }}>
         {showBackButton && navigation && (
           <TouchableOpacity
             onPress={onBackPress ?? (() => navigation.goBack())}
@@ -81,12 +79,12 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
           >
             <Entypo
               name="chevron-left"
-              size={25}
+              size={30}
               color={dark ? "white" : "black"}
               style={{
                 backgroundColor: dark ? "#1F1F1F" : "#F7FAFF",
                 borderRadius: 50,
-                padding: wp(2.5),
+                padding: 8,
               }}
             />
           </TouchableOpacity>
@@ -95,27 +93,24 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
       <View className="flex-1 items-center">
         <Text
-          className={`text-xl font-semibold text-center ${
-            dark ? "text-white" : "text-black"
-          }`}
+          className={`text-xl font-semibold text-center ${dark ? "text-white" : "text-black"
+            }`}
         >
           {title}
         </Text>
       </View>
 
-      <View style={{ width: wp(15) }} className="items-end">
+      <View style={{ width: 50 }} className="items-end">
         {showLanguageSelector && (
           <View className="relative">
             <TouchableOpacity
               onPress={() => setDropdownVisible(!dropdownVisible)}
-              className={`flex-row items-center px-3 py-2 rounded-md ${
-                dark ? "bg-[#333]" : "bg-[#F6CA20]"
-              }`}
+              className={`flex-row items-center px-3 py-2 rounded-md ${dark ? "bg-[#333]" : "bg-[#F6CA20]"
+                }`}
             >
               <Text
-                className={`font-medium text-sm ${
-                  dark ? "text-white" : "text-black"
-                }`}
+                className={`font-medium text-sm ${dark ? "text-white" : "text-black"
+                  }`}
               >
                 {getLanguageButtonText(selectedLanguage)}
               </Text>
@@ -140,16 +135,14 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
                     <TouchableOpacity
                       key={lang.code}
                       onPress={() => handleLanguageSelect(lang.code)}
-                      className={`flex-row items-center px-4 py-3 ${
-                        index !== languages.length - 1
-                          ? "border-b border-gray-100"
-                          : ""
-                      }
-                      ${
-                        selectedLanguage === lang.code
+                      className={`flex-row items-center px-4 py-3 ${index !== languages.length - 1
+                        ? "border-b border-gray-100"
+                        : ""
+                        }
+                      ${selectedLanguage === lang.code
                           ? "bg-blue-50"
                           : "bg-white"
-                      }
+                        }
                       `}
                     >
                       <Text className="flex-1 text-base">{lang.name}</Text>

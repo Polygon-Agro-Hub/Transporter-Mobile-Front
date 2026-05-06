@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  StatusBar,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,7 +35,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   navigation,
   route,
 }) => {
-  const { amount, selectedCount } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
@@ -412,7 +410,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
-        <StatusBar barStyle="light-content" />
         <View className="bg-black/50 p-8 rounded-full">
           <ActivityIndicator size="large" color="#F7CA21" />
         </View>
@@ -425,7 +422,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   if (!permission.granted) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
-        <StatusBar barStyle="light-content" />
         <View className="bg-red-500/20 p-6 rounded-full mb-6">
           <Ionicons name="camera" size={wp(15)} color="#EF4444" />
         </View>
@@ -454,8 +450,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
   return (
     <View className="flex-1">
-      <StatusBar barStyle="light-content" />
-
       {/* Loading Overlays */}
       {loading && (
         <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70 z-50 justify-center items-center">

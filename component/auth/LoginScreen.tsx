@@ -245,11 +245,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLoading(false);
 
       if (passwordUpdated === 0) {
-        navigation.navigate("ChangePassword", {
+        navigation.replace("ChangePassword", {
           passwordUpdated: passwordUpdated,
         });
       } else {
-        navigation.navigate("Home");
+        navigation.replace("Home");
       }
     }, 4000);
   } catch (error) {
@@ -281,6 +281,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
