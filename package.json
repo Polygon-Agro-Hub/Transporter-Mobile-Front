@@ -96,7 +96,9 @@
     "victory-native": "^41.20.1"
   },
   "devDependencies": {
+    "@react-native/virtualized-lists": "0.72.8",
     "@types/react": "~19.2.10",
+    "@types/react-native": "0.72.8",
     "babel-preset-expo": "~55.0.8",
     "baseline-browser-mapping": "^2.9.11",
     "typescript": "~5.9.2"
