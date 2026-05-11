@@ -6,7 +6,6 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { navigationRef } from "../navigationRef";
-import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import { RootStackParamList } from "@/types/types";
 import store from "@/services/store";
@@ -33,9 +32,6 @@ import ProfileScreen from "@/component/auth/Profile";
 import OrderDetailsLoadingScreen from "@/component/orders/OrderDetailsLoadingScreen";
 
 LogBox.ignoreAllLogs(true);
-NativeWindStyleSheet.setOutput({
-  default: "native",
-});
 
 (Text as any).defaultProps = {
   ...(Text as any).defaultProps,
