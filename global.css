@@ -1,7 +1,4 @@
-@import "tailwindcss";
-@import "nativewind/theme";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@source "./app/**/*.tsx";
-@source "./component/**/*.tsx";
-@source "./services/**/*.tsx";
-@source "./store/**/*.tsx";

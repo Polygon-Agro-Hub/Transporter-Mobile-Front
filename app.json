@@ -2,7 +2,7 @@
   "expo": {
     "name": "GoVi-Transport",
     "slug": "GoVi-Transport",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 15,
+      "versionCode": 16,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 24,
@@ -40,7 +40,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.polygonagro.Transporter",
-      "buildNumber": "1.0.0",
+      "buildNumber": "16",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -59,7 +59,16 @@
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
+      [
         "expo-notifications",
+
         {
           "icon": "./assets/images/app-icon.png",
           "color": "#ffffff",
