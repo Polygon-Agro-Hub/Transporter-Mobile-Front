@@ -844,7 +844,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         </View>
 
         {/* Orders List */}
-        <View className="mt-6 space-y-4">
+        <View className="mt-6 gap-y-4">
           {orders.map((order, index) => {
             const hasPhone2 = order.phonecode2 && order.phone2;
             const hasLocation = order.latitude && order.longitude;
