@@ -253,7 +253,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -282,7 +282,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -497,7 +497,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <View className="items-center">
             <View style={{ position: "relative" }}>
               {uploading ? (
-                <View className="w-30 h-30 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
+                <View className="w-32 h-32 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
                   <ActivityIndicator size="large" color="#FFC83D" />
                   <Text className="text-xs text-gray-500 mt-2">
                     Uploading...

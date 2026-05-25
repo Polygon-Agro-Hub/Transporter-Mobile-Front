@@ -8,6 +8,19 @@ cssInterop(LinearGradient, {
   className: "style",
 });
 
+// Suppress the InteractionManager deprecation warning in the terminal output
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  const message = args[0];
+  if (
+    typeof message === "string" &&
+    message.includes("InteractionManager has been deprecated")
+  ) {
+    return;
+  }
+  originalWarn(...args);
+};
+
 import App from './app/App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
