@@ -447,7 +447,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         <TouchableOpacity
           onPress={() => setActiveTab("todo")}
           className={`
-            flex-1 flex-row items-center justify-center space-x-2 
+            flex-1 flex-row items-center justify-center gap-x-2 
             ${activeTab === "todo" ? " bg-[#F6F9FF]" : ""}
             py-3
           `}
@@ -466,7 +466,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         <TouchableOpacity
           onPress={() => setActiveTab("completed")}
           className={`
-            flex-1 flex-row items-center justify-center space-x-2 
+            flex-1 flex-row items-center justify-center gap-x-2 
             ${activeTab === "completed" ? "bg-[#F6F9FF] " : ""}
             py-2
           `}

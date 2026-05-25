@@ -115,12 +115,12 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 
           {renderMessage()}
 
-          <View className="w-full space-y-3">
+          <View className="w-full gap-y-3">
             {showRescanButton && onRescan && (
               <TouchableOpacity
                 onPress={onRescan}
                 activeOpacity={0.8}
-                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center space-x-2 shadow-md"
+                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
                 <FontAwesome5 name="undo" size={18} color="black" />
                 <Text className="text-black font-bold text-base">Re-Scan</Text>
@@ -132,7 +132,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
               <TouchableOpacity
                 onPress={onOpenOngoing}
                 activeOpacity={0.8}
-                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center space-x-2 shadow-md"
+                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
                 <Text className="text-black font-bold text-base">
                   Open Ongoing Activity

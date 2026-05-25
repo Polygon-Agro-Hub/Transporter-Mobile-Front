@@ -348,7 +348,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
                   ? { uri: userProfile.profileImg }
                   : require("@/assets/images/home/profile.webp")
               }
-              className="w-10 h-10 rounded-full border-2 border-yellow-400"
+              className="w-14 h-14 rounded-full border-2 border-yellow-400"
               resizeMode="cover"
             />
           </View>

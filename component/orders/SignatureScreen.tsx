@@ -130,6 +130,8 @@ export default function SignatureScreen({
     });
   };
 
+  const [isOrientationLocked, setIsOrientationLocked] = useState(false);
+
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
@@ -140,13 +142,16 @@ export default function SignatureScreen({
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
         );
+        if (isActive) {
+          setIsOrientationLocked(true);
+        }
       };
 
       setupOrientation();
 
       return () => {
         isActive = false;
-
+        setIsOrientationLocked(false);
         ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP,
         );
@@ -420,18 +425,25 @@ export default function SignatureScreen({
 
             {/* SIGNATURE CANVAS */}
             <View style={{ flex: 1 }}>
-              <Signature
-                ref={signatureRef}
-                onOK={handleOK}
-                onEnd={handleSignatureChange}
-                webStyle={signatureStyle}
-                autoClear={false}
-                descriptionText=""
-                style={{
-                  flex: 1,
-                  backgroundColor: "#DFEDFC",
-                }}
-              />
+              {isOrientationLocked ? (
+                <Signature
+                  ref={signatureRef}
+                  onOK={handleOK}
+                  onEnd={handleSignatureChange}
+                  webStyle={signatureStyle}
+                  autoClear={false}
+                  descriptionText=""
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#DFEDFC",
+                  }}
+                />
+              ) : (
+                <View className="flex-1 justify-center items-center bg-[#DFEDFC]">
+                  <ActivityIndicator size="large" color="#2D7BFF" />
+                  <Text className="mt-2 text-[#2D7BFF] font-semibold">Preparing signature canvas...</Text>
+                </View>
+              )}
             </View>
           </DashedBorder>
         </View>
