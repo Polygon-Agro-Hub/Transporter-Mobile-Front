@@ -17,10 +17,6 @@ import {
   FontAwesome6,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
@@ -144,9 +140,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       "Dec",
     ];
 
-    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${
-      monthNames[date.getMonth()]
-    } ${date.getDate()}, ${date.getFullYear()}`;
+    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${monthNames[date.getMonth()]
+      } ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   const formatReplyDate = (dateString: string | null) => {
@@ -286,9 +281,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
                     {/* Reply Button */}
                     <TouchableOpacity
-                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${
-                        isWaiting ? "bg-[#CBD7E8] " : "bg-black"
-                      }`}
+                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${isWaiting ? "bg-[#CBD7E8] " : "bg-black"
+                        }`}
                       disabled={isWaiting}
                       onPress={() => handleReply(complaint)}
                     >
@@ -332,8 +326,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
           <View
-            className="bg-white rounded-3xl w-11/12 mx-4"
-            style={{ maxHeight: hp(85) }}
+            className="bg-white rounded-3xl w-11/12 mx-4 h-3/4"
           >
             {/* Close Button */}
             <TouchableOpacity

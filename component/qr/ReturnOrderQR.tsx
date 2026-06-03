@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  StatusBar,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
+import { CameraPermissionView } from "../common/CameraPermissionView";
 import { useFocusEffect } from "@react-navigation/native";
 
 type ReturnOrderQRNavigationProp = StackNavigationProp<
@@ -34,7 +34,7 @@ interface ReturnOrderQRProps {
 
 const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   const { orderId } = route.params;
-  
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
@@ -134,7 +134,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       if (response.data.status === "success") {
         const orders = response.data.data.returnOrders;
         const currentOrder = orders.find((order: any) => order.orderId === orderId);
-        
+
         if (currentOrder) {
           setOrderInvoiceNumber(currentOrder.invoiceNumber);
         } else {
@@ -350,7 +350,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             <Text className="text-center text-[#4E4E4E] mb-2">
               The scanned QR code does not match this order.Please scan the correct QR code for this order.
             </Text>
-        
+
           </View>
         );
         setModalType("error");
@@ -464,7 +464,6 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
-        <StatusBar barStyle="light-content" />
         <View className="bg-black/50 p-8 rounded-full">
           <ActivityIndicator size="large" color="#F7CA21" />
         </View>
@@ -476,26 +475,10 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   // Show permission denied screen
   if (!permission.granted) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
-        <StatusBar barStyle="light-content" />
-        <View className="bg-red-500/20 p-6 rounded-full mb-6">
-          <Ionicons name="camera" size={wp(15)} color="#EF4444" />
-        </View>
-        <Text className="text-white text-2xl font-bold mb-3 text-center">
-          Camera Permission Required
-        </Text>
-        <Text className="text-gray-400 text-center mb-8 px-4">
-          Please grant camera permission to scan QR codes.
-        </Text>
-        <TouchableOpacity
-          className="bg-[#F7CA21] py-4 px-12 rounded-xl"
-          onPress={requestPermission}
-        >
-          <Text className="text-black font-bold text-base">
-            Grant Permission
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <CameraPermissionView
+        onRequestPermission={requestPermission}
+        onBack={() => navigation.goBack()}
+      />
     );
   }
 
@@ -506,8 +489,6 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1">
-      <StatusBar barStyle="light-content" />
-
       {/* Loading Overlays */}
       {loading && (
         <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70 z-50 justify-center items-center">
@@ -584,7 +565,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
           {/* Scan Frame Container */}
           <View className="flex-1 justify-center items-center">
-            
+
 
             {/* Scan Frame with Camera */}
             <View

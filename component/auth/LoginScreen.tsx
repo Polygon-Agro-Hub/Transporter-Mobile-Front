@@ -245,11 +245,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLoading(false);
 
       if (passwordUpdated === 0) {
-        navigation.navigate("ChangePassword", {
+        navigation.replace("ChangePassword", {
           passwordUpdated: passwordUpdated,
         });
       } else {
-        navigation.navigate("Home");
+        navigation.replace("Home");
       }
     }, 4000);
   } catch (error) {
@@ -281,6 +281,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
@@ -301,7 +302,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-6 py-8 rounded-t-3xl shadow-lg -mt-20 pt-10"
+            className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-20 pt-10"
           >
             <View>
               <Text className="text-3xl font-semibold text-center mt-42 mb-2 text-white">
@@ -313,23 +314,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <View>
+              {/* EMP ID */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-1 py-3"
+                className="flex-row items-center rounded-[30px] px-4 h-[58px] mb-3 gap-3 overflow-hidden"
               >
-                <View className="flex-row items-center ml-4">
-                  <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1  text-base  text-white placeholder:ml-4"
-                    autoCapitalize="characters"
-                    value={empid}
-                    onChangeText={handleEmpIdChange}
-                    placeholder="Your EMP ID"
-                    placeholderTextColor={"#F6F9FF"}
-                  />
-                </View>
+                <FontAwesome6 name="user-large" size={18} color="#F7CA21" />
+
+                <TextInput
+                  className="flex-1 text-white text-base"
+                  autoCapitalize="characters"
+                  value={empid}
+                  onChangeText={handleEmpIdChange}
+                  placeholder="Your EMP ID"
+                  placeholderTextColor="#F6F9FF"
+                />
               </LinearGradient>
               {empIdError && (
                 <Text className="text-red-500 text-sm pl-3 mb-4">
@@ -341,29 +342,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3 mt-3"
+                className="flex-row items-center rounded-[30px] px-4 h-[58px] mb-6 gap-3 overflow-hidden"
               >
-                <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1 text-base placeholder:ml-2 text-white"
-                    secureTextEntry={secureTextEntry}
-                    value={password}
-                    onChangeText={handlePasswordChange}
-                    placeholder="Your Password"
-                    placeholderTextColor={"#F6F9FF"}
+                <MaterialIcons name="lock" size={22} color="#F7CA21" />
+
+                <TextInput
+                  className="flex-1 text-white text-base"
+                  secureTextEntry={secureTextEntry}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  placeholder="Your Password"
+                  placeholderTextColor="#F6F9FF"
+                />
+
+                <TouchableOpacity
+                  onPress={() => setSecureTextEntry(!secureTextEntry)}
+                >
+                  <FontAwesome5
+                    name={secureTextEntry ? "eye-slash" : "eye"}
+                    size={20}
+                    color="white"
                   />
-                  <TouchableOpacity
-                    onPress={() => setSecureTextEntry(!secureTextEntry)}
-                    className="mr-4"
-                  >
-                    <FontAwesome5
-                      name={secureTextEntry ? "eye-slash" : "eye"}
-                      size={24}
-                      color="white"
-                    />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
               <TouchableOpacity
                 className="rounded-full  overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"

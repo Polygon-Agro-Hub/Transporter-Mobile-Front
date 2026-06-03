@@ -210,6 +210,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
@@ -232,7 +233,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            className="flex-1 px-6 py-8 rounded-t-3xl shadow-lg -mt-24 "
+            className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-24 "
           >
             <View>
               <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">
@@ -248,94 +249,85 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-4 py-3"
+                className="flex-row items-center rounded-full px-4 h-[58px] mb-4 gap-3 overflow-hidden"
               >
-                <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1  text-base  text-white placeholder:ml-2"
-                    secureTextEntry={secureCurrent}
-                    onChangeText={setCurrentPassword}
-                    value={currentPassword}
-                    placeholder="Current Password"
-                    placeholderTextColor={"#F6F9FF"}
+                <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                <TextInput
+                  className="flex-1 text-base text-white"
+                  secureTextEntry={secureCurrent}
+                  onChangeText={setCurrentPassword}
+                  value={currentPassword}
+                  placeholder="Current Password"
+                  placeholderTextColor={"#F6F9FF"}
+                />
+                <TouchableOpacity
+                  onPress={() => setSecureCurrent(!secureCurrent)}
+                >
+                  <FontAwesome5
+                    name={secureCurrent ? "eye-slash" : "eye"}
+                    size={24}
+                    color="white"
                   />
-                  <TouchableOpacity
-                    className="mr-4"
-                    onPress={() => setSecureCurrent(!secureCurrent)}
-                  >
-                    <FontAwesome5
-                      name={secureCurrent ? "eye-slash" : "eye"}
-                      size={24}
-                      color="white"
-                    />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
 
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3"
+                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
               >
-                <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={26} color="#F7CA21" />{" "}
-                  <TextInput
-                    className="flex-1 text-base placeholder:ml-2 text-white"
-                    secureTextEntry={secureNew}
-                    // onChangeText={setNewPassword}
-                    value={newPassword}
-                    onChangeText={(text) => {
-                      const cleanText = text.replace(/\s/g, "");
-                      setNewPassword(cleanText);
-                    }}
-                    placeholder="New Password"
-                    placeholderTextColor={"#F6F9FF"}
-                  />
-                  <TouchableOpacity
+                <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                <TextInput
+                  className="flex-1 text-base text-white"
+                  secureTextEntry={secureNew}
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    const cleanText = text.replace(/\s/g, "");
+                    setNewPassword(cleanText);
+                  }}
+                  placeholder="New Password"
+                  placeholderTextColor={"#F6F9FF"}
+                />
+                <TouchableOpacity
+                  onPress={() => setSecureNew(!secureNew)}
+                >
+                  <FontAwesome5
+                    name={secureNew ? "eye-slash" : "eye"}
+                    size={24}
+                    color="white"
                     className="mr-4"
-                    onPress={() => setSecureNew(!secureNew)}
-                  >
-                    <FontAwesome5
-                      name={secureNew ? "eye-slash" : "eye"}
-                      size={24}
-                      color="white"
-                    />
-                  </TouchableOpacity>
-                </View>
+                  />
+                </TouchableOpacity>
               </LinearGradient>
 
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4]  rounded-full  mb-6 py-3"
+                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
               >
-                <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1 text-base placeholder:ml-2 text-white"
-                    secureTextEntry={secureConfirm}
-                    onChangeText={(text) => {
-                      const cleanText = text.replace(/\s/g, "");
-                      setConfirmPassword(cleanText);
-                    }}
-                    value={confirmPassword}
-                    placeholder="Re-enter New Password"
-                    placeholderTextColor={"#F6F9FF"}
+                <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                <TextInput
+                  className="flex-1 text-base text-white"
+                  secureTextEntry={secureConfirm}
+                  onChangeText={(text) => {
+                    const cleanText = text.replace(/\s/g, "");
+                    setConfirmPassword(cleanText);
+                  }}
+                  value={confirmPassword}
+                  placeholder="Re-enter New Password"
+                  placeholderTextColor={"#F6F9FF"}
+                />
+                <TouchableOpacity
+                  onPress={() => setSecureConfirm(!secureConfirm)}
+                >
+                  <FontAwesome5
+                    name={secureConfirm ? "eye-slash" : "eye"}
+                    size={24}
+                    color="white"
                   />
-                  <TouchableOpacity
-                    className="mr-4"
-                    onPress={() => setSecureConfirm(!secureConfirm)}
-                  >
-                    <FontAwesome5
-                      name={secureNew ? "eye-slash" : "eye"}
-                      size={24}
-                      color="white"
-                    />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
 
               <TouchableOpacity

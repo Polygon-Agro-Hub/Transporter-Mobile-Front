@@ -2,7 +2,7 @@
   "expo": {
     "name": "GoVi-Transport",
     "slug": "GoVi-Transport",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "light",
@@ -14,9 +14,9 @@
     },
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 15,
-      "compileSdkVersion": 35,
-      "targetSdkVersion": 35,
+      "versionCode": 16,
+      "compileSdkVersion": 36,
+      "targetSdkVersion": 36,
       "minSdkVersion": 24,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -39,10 +39,11 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.polygonagro.goviTransport",
-      "buildNumber": "1.0.0",
+      "bundleIdentifier": "com.polygonagro.Transporter",
+      "buildNumber": "16",
       "supportsTablet": false,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Camera access is required to scan documents and capture images.",
         "NSMicrophoneUsageDescription": "Microphone access is required for in-app communication.",
         "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport-related images.",
@@ -58,6 +59,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/images/app-icon.png",
@@ -72,14 +81,16 @@
         {
           "initialOrientation": "PORTRAIT_UP"
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-web-browser"
     ],
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "92f29b17-9511-45b9-a7ff-02602d0d1c81"
+        "projectId": "b9f3fc58-6e89-43e1-89c4-c71080e2e335"
       }
     }
   }

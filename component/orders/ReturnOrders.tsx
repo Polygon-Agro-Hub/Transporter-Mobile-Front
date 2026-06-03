@@ -5,17 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   BackHandler,
 } from "react-native";
 
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from "react-native-responsive-screen";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -142,9 +137,9 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
 
   const getPaymentIcon = (isPaid: boolean, paymentMethod: string) => {
     if (!isPaid && paymentMethod === "Cash") {
-      return <FontAwesome6 name="coins" size={wp(4.5)} color="#F7CA21" />;
+      return <FontAwesome6 name="coins" size={20} color="#F7CA21" />;
     } else if (isPaid) {
-      return <FontAwesome name="check-circle" size={wp(4.5)} color="#F7CA21" />;
+      return <FontAwesome name="check-circle" size={20} color="#F7CA21" />;
     }
     return null;
   };
@@ -322,7 +317,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                 <View className="flex-row items-center mb-2">
                   <FontAwesome
                     name="exclamation-circle"
-                    size={wp(5)}
+                    size={20}
                     color="black"
                     style={{ marginRight: 8 }}
                   />
@@ -334,7 +329,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                         color: getStatusColor(order.returnDetails.reason),
                       }}
                       speed={50}
-                      //   threshold={25}
+                    //   threshold={25}
                     />
                   </View>
                 </View>
@@ -345,9 +340,8 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                     {getPaymentIcon(order.isPaid, order.paymentMethod)}
 
                     <Text
-                      className={`ml-2 mr-1 text-sm ${
-                        order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
-                      }`}
+                      className={`ml-2 mr-1 text-sm ${order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
+                        }`}
                     >
                       {order.isPaid
                         ? "Already Paid!"

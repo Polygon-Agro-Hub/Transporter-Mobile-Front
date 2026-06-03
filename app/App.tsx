@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { Alert, BackHandler, Text, TextInput } from "react-native";
+import { Alert, BackHandler, Text, TextInput, StatusBar } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { navigationRef } from "../navigationRef";
-import { NativeWindStyleSheet } from "nativewind";
 import { LogBox } from "react-native";
 import { RootStackParamList } from "@/types/types";
 import store from "@/services/store";
@@ -33,9 +32,7 @@ import ProfileScreen from "@/component/auth/Profile";
 import OrderDetailsLoadingScreen from "@/component/orders/OrderDetailsLoadingScreen";
 
 LogBox.ignoreAllLogs(true);
-NativeWindStyleSheet.setOutput({
-  default: "native",
-});
+LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
 
 (Text as any).defaultProps = {
   ...(Text as any).defaultProps,
@@ -111,6 +108,7 @@ function AppContent() {
           backgroundColor: "#fff",
         }}
       >
+        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
