@@ -225,7 +225,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
       },
       {
         image: packsImage,
-        label: `${packsCount} Packs`,
+        label: `${packsCount} ${packsCount === 1 ? "Pack" : "Packs"}`,
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
         disabled: packsCount === 0 && (amountData?.completedOrders || 0) === 0,
