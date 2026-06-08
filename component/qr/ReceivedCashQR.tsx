@@ -70,7 +70,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
       return () => {
         isFocusedRef.current = false;
-
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
@@ -83,9 +82,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     if (permission && !permission.granted && permission.canAskAgain) {
       requestPermission();
     }
-
     startScanAnimation();
-
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -97,7 +94,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     if (permission?.granted && !scanned && !loading && isFocusedRef.current) {
       startTimeoutTimer();
     }
-
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -109,7 +105,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-
     timerRef.current = setTimeout(() => {
       if (!scanned && !loading && isFocusedRef.current) {
         setModalTitle("Error!");
@@ -122,20 +117,14 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     }, 15000);
   };
 
-  // Reset timer and scanning
   const resetScanning = () => {
-    // Clear timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-
-    // Reset states
     setScanned(false);
     setShowTimeoutModal(false);
     setShowErrorModal(false);
     setShowSuccessModal(false);
-
-    // Restart timer only if screen is focused
     if (isFocusedRef.current) {
       startTimeoutTimer();
     }
@@ -159,85 +148,39 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
   };
 
   const validateOfficerType = (officerId: string): boolean => {
-    const upperOfficerId = officerId.toUpperCase();
-
-    // Only allow DCM or DCH
-    if (upperOfficerId.startsWith("DCM")) {
-      return true;
-    }
-
-    // Check if it's one of the disallowed types
-    const disallowedTypes = ["DIO", "FIO", "CFO"];
-    for (const type of disallowedTypes) {
-      if (upperOfficerId.startsWith(type)) {
-        return false;
-      }
-    }
-
-    return false;
+    return officerId.toUpperCase().startsWith("DCM");
   };
 
   const extractOfficerId = (qrData: string): string | null => {
     try {
-      if (qrData.trim().startsWith("{") && qrData.trim().endsWith("}")) {
+      const trimmed = qrData.trim();
+
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
         try {
-          const parsed = JSON.parse(qrData);
+          const parsed = JSON.parse(trimmed);
 
-          // Check for various possible field names and get their VALUES
-          const possibleFields = [
-            "empId",
-            "officerId",
-            "officer_id",
-            "officerID",
-            "id",
-            "userId",
-            "user_id",
-            "employeeId",
-            "employee_id",
-          ];
-
-          for (const field of possibleFields) {
-            if (parsed[field]) {
-              const officerId = String(parsed[field]);
-
-              return officerId;
-            }
-          }
-
-          console.log("No recognized field found in JSON");
+          if (parsed.empId) return String(parsed.empId);
+          if (parsed.officerId) return String(parsed.officerId);
+          if (parsed.officer_id) return String(parsed.officer_id);
+          if (parsed.officerID) return String(parsed.officerID);
+          if (parsed.employeeId) return String(parsed.employeeId);
+          if (parsed.employee_id) return String(parsed.employee_id);
+          if (parsed.userId) return String(parsed.userId);
+          if (parsed.user_id) return String(parsed.user_id);
+          if (parsed.id) return String(parsed.id);
         } catch (e) {
-          console.log("Not valid JSON:", e);
+          console.log("JSON parse failed:", e);
         }
       }
 
-      // Method 2: Check if it's just the officer ID (alphanumeric, 3-20 chars)
       const simplePattern = /^[A-Z0-9]{3,20}$/i;
-      if (simplePattern.test(qrData.trim())) {
-        return qrData.trim();
+      if (simplePattern.test(trimmed)) {
+        return trimmed;
       }
 
-      // Method 3: Check for officer ID pattern (OFC, OFF, DBM, or just numbers)
-      const officerPattern = /(OFC|OFF|OFFICER|DBM|EMP)?[_-]?([A-Z0-9]{3,20})/i;
-      const match = qrData.match(officerPattern);
-      if (match) {
-        const officerId = match[2] || match[0];
-
-        return officerId;
-      }
-
-      // Method 4: Try to extract any alphanumeric code (3+ characters)
-      const alphanumericPattern = /[A-Z0-9]{3,}/gi;
-      const alphanumericMatches = qrData.match(alphanumericPattern);
-      if (alphanumericMatches && alphanumericMatches.length > 0) {
-        const filtered = alphanumericMatches.filter(
-          (match) =>
-            !["empId", "officerId", "userId", "employeeId"].includes(match),
-        );
-        if (filtered.length > 0) {
-          return filtered[0];
-        }
-        return alphanumericMatches[0];
-      }
+      const dcmPattern = /\b(DCM[A-Z0-9]+)\b/i;
+      const dcmMatch = trimmed.match(dcmPattern);
+      if (dcmMatch) return dcmMatch[1];
 
       return null;
     } catch (error) {
@@ -257,13 +200,11 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
     setScanned(true);
 
-    // Clear the timeout timer when scan is detected
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
 
     try {
-      // Extract officer ID from QR
       const officerId = extractOfficerId(data);
 
       if (!officerId) {
@@ -286,11 +227,10 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         return;
       }
 
-      // Show loading while making API call
       setLoading(true);
 
-      // Get selected items from storage
       const storedItems = await AsyncStorage.getItem("selectedCashItems");
+
       if (!storedItems) {
         throw new Error("No items selected");
       }
@@ -308,13 +248,12 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
       const orderIds = selectedItems.map((item: any) => item.id);
 
-      // Make API call to hand over cash
       const response = await axios.post(
         `${environment.API_BASE_URL}api/home/hand-over-cash`,
         {
           orderIds,
           totalAmount,
-          officerId, // This will be treated as empId in backend
+          officerId,
         },
         {
           headers: {
@@ -407,7 +346,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     resetScanning();
   };
 
-  // Show loading while permission is being checked
   if (!permission) {
     return (
       <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
@@ -419,7 +357,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
     );
   }
 
-  // Show permission denied screen
   if (!permission.granted) {
     return (
       <CameraPermissionView
@@ -436,7 +373,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
 
   return (
     <View className="flex-1">
-      {/* Loading Overlays */}
+      {/* Loading Overlay */}
       {loading && (
         <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70 z-50 justify-center items-center">
           <View className="bg-black/80 p-6 rounded-xl items-center">
@@ -452,7 +389,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       <AlertModal
         visible={showTimeoutModal}
         title="Error!"
-        message="The QR code could not be detected within the time limit.Please check and try again."
+        message="The QR code could not be detected within the time limit. Please check and try again."
         type="error"
         onClose={handleTimeoutModalClose}
         showRescanButton={true}
@@ -464,7 +401,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       {/* Error Modal */}
       <AlertModal
         visible={showErrorModal}
-        title="Error!"
+        title={modalTitle}
         message={modalMessage}
         type="error"
         onClose={handleErrorModalClose}
@@ -487,7 +424,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       />
 
       <View className="flex-1">
-        {/* Semi-transparent overlay */}
         <View className="flex-1 bg-black/50">
           {/* Back Button */}
           <View className="flex-row items-center justify-between px-4 py-3 relative">
@@ -509,9 +445,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Scan Frame Container */}
+          {/* Scan Frame */}
           <View className="flex-1 justify-center items-center">
-            {/* Scan Frame with Camera */}
             <View
               style={{
                 width: wp(80),
@@ -521,7 +456,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
                 position: "relative",
               }}
             >
-              {/* Camera View inside the frame */}
+              {/* Camera */}
               <CameraView
                 style={{
                   position: "absolute",
@@ -552,7 +487,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
                 }}
               />
 
-              {/* Corner Markers - Top Left */}
+              {/* Corner - Top Left */}
               <View
                 style={{
                   position: "absolute",
@@ -582,7 +517,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
                 />
               </View>
 
-              {/* Corner Markers - Top Right */}
+              {/* Corner - Top Right */}
               <View
                 style={{
                   position: "absolute",
@@ -613,7 +548,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
                 />
               </View>
 
-              {/* Corner Markers - Bottom Left */}
+              {/* Corner - Bottom Left */}
               <View
                 style={{
                   position: "absolute",
@@ -643,7 +578,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
                 />
               </View>
 
-              {/* Corner Markers - Bottom Right */}
+              {/* Corner - Bottom Right */}
               <View
                 style={{
                   position: "absolute",
