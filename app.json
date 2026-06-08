@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GoVi-Transport",
-    "slug": "GoVi-Transport",
+    "name": "GoVi-Trans",
+    "slug": "GoVi-Trans",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
