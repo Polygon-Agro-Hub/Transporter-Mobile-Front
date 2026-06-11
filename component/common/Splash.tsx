@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Image, Animated, StatusBar, StyleSheet } from "react-native";
+import { View, Image, Animated, StatusBar, StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types/types";
@@ -60,7 +60,6 @@ const Splash: React.FC = () => {
             }),
           );
 
-          // If we have saved profile data in AsyncStorage, set it in Redux
           if (userProfileStr) {
             try {
               const userProfile = JSON.parse(userProfileStr);
@@ -70,7 +69,6 @@ const Splash: React.FC = () => {
             }
           }
 
-          // Fetch fresh profile data from API
           await fetchUserProfile(userToken, empId);
         } else {
           console.log("Token expired, clearing storage.");
@@ -153,6 +151,9 @@ const Splash: React.FC = () => {
     <View style={styles.container}>
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <Image source={splashscreen} style={styles.image} resizeMode="cover" />
+      <View style={styles.poweredByContainer}>
+        <Text style={styles.poweredByText}>Powered By Polygon</Text>
+      </View>
     </View>
   );
 };
@@ -170,6 +171,20 @@ const styles = StyleSheet.create({
   },
   safeBottom: {
     flex: 0,
+  },
+  poweredByContainer: {
+    position: "absolute",
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  poweredByText: {
+    fontSize: 16,
+    color: "#000000",
+    fontWeight: "400",
+    letterSpacing: 0.3,
+    opacity: 0.6,
   },
 });
 

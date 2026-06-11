@@ -469,7 +469,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Assigning Order...
+              Checking Order...
             </Text>
           </View>
         </View>
@@ -484,7 +484,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         onClose={handleTimeoutModalClose}
         showRescanButton={true}
         onRescan={handleTimeoutRescan}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 
@@ -497,7 +497,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         onClose={handleErrorModalClose}
         showRescanButton={showRescanButton}
         onRescan={resetScanning}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 
@@ -509,7 +509,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         type={modalType}
         onClose={handleSuccessModalClose}
         showRescanButton={false}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 

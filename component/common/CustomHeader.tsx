@@ -11,6 +11,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 
 interface CustomHeaderProps {
   title: string;
+  titleStyle?: object;
   showBackButton?: boolean;
   showLanguageSelector?: boolean;
   showLogoutButton?: boolean;
@@ -23,6 +24,7 @@ interface CustomHeaderProps {
 
 const CustomHeader: React.FC<CustomHeaderProps> = ({
   title,
+  titleStyle,
   showBackButton = true,
   showLanguageSelector = false,
   showLogoutButton = false,
@@ -68,8 +70,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
   return (
     <View
-      className={`flex-row items-center justify-between px-4 py-3 relative ${dark ? "bg-black" : "bg-white"
-        }`}
+      className={`flex-row items-center justify-between px-4 py-3 relative ${
+        dark ? "bg-black" : "bg-white"
+      }`}
     >
       <View style={{ width: 50 }}>
         {showBackButton && navigation && (
@@ -93,8 +96,11 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
       <View className="flex-1 items-center">
         <Text
-          className={`text-xl font-semibold text-center ${dark ? "text-white" : "text-black"
-            }`}
+          className={`text-xl font-semibold text-center ${dark ? "text-white" : "text-black"}`}
+          style={titleStyle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
         >
           {title}
         </Text>
@@ -105,12 +111,14 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
           <View className="relative">
             <TouchableOpacity
               onPress={() => setDropdownVisible(!dropdownVisible)}
-              className={`flex-row items-center px-3 py-2 rounded-md ${dark ? "bg-[#333]" : "bg-[#F6CA20]"
-                }`}
+              className={`flex-row items-center px-3 py-2 rounded-md ${
+                dark ? "bg-[#333]" : "bg-[#F6CA20]"
+              }`}
             >
               <Text
-                className={`font-medium text-sm ${dark ? "text-white" : "text-black"
-                  }`}
+                className={`font-medium text-sm ${
+                  dark ? "text-white" : "text-black"
+                }`}
               >
                 {getLanguageButtonText(selectedLanguage)}
               </Text>
@@ -135,14 +143,16 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
                     <TouchableOpacity
                       key={lang.code}
                       onPress={() => handleLanguageSelect(lang.code)}
-                      className={`flex-row items-center px-4 py-3 ${index !== languages.length - 1
-                        ? "border-b border-gray-100"
-                        : ""
-                        }
-                      ${selectedLanguage === lang.code
+                      className={`flex-row items-center px-4 py-3 ${
+                        index !== languages.length - 1
+                          ? "border-b border-gray-100"
+                          : ""
+                      }
+                      ${
+                        selectedLanguage === lang.code
                           ? "bg-blue-50"
                           : "bg-white"
-                        }
+                      }
                       `}
                     >
                       <Text className="flex-1 text-base">{lang.name}</Text>
