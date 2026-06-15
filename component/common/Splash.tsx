@@ -128,8 +128,18 @@ const Splash: React.FC = () => {
           navigation.replace("Home");
         }
       } else {
-        console.log("Failed to fetch profile, using cached data if available.");
-        navigation.replace("Home");
+        const statusType = data.statusType;
+        if (response.status === 403 && (statusType === "rejected" || statusType === "not_approved" || statusType === "pending")) {
+          console.log("User is banned/pending verification, redirecting to BannedScreen.");
+          await clearStorage();
+          navigation.replace("BannedScreen", {
+            statusType,
+            message: data.message || "Your account has been rejected or is not approved.",
+          });
+        } else {
+          console.log("Failed to fetch profile, using cached data if available.");
+          navigation.replace("Home");
+        }
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
