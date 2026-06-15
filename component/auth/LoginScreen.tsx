@@ -148,6 +148,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       const message = data.message?.toLowerCase() || "";
       const statusCode = response.status;
+      const statusType = data.statusType;
+
+      if (statusType === "rejected" || statusType === "not_approved" || statusType === "pending") {
+        navigation.navigate("BannedScreen", {
+          statusType,
+          message: data.message,
+        });
+        return;
+      }
 
       if (
         statusCode === 404 ||

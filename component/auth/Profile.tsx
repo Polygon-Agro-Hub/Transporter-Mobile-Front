@@ -575,6 +575,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               label="Vehicle's Registration Number"
               value={profileData?.vRegNo || "Not available"}
             />
+
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate("BannedScreen", {
+                  statusType: "rejected",
+                  message: "Test rejected account message"
+                });
+              }}
+              style={{
+                marginTop: 20,
+                marginBottom: 30,
+                backgroundColor: "#F7CA21",
+                padding: 12,
+                borderRadius: 25,
+                alignItems: "center"
+              }}
+            >
+              <Text style={{ color: "black", fontWeight: "bold", fontSize: 16 }}>
+                [TEMP] View Banned Screen
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

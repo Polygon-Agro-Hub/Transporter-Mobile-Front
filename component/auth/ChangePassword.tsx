@@ -296,7 +296,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                     name={secureNew ? "eye-slash" : "eye"}
                     size={24}
                     color="white"
-                    className="mr-4"
                   />
                 </TouchableOpacity>
               </LinearGradient>
