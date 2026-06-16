@@ -8,6 +8,10 @@ export type RootStackParamList = {
   AddComplaint: undefined;
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
+  BannedScreen: {
+    statusType: string;
+    message: string;
+  };
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;

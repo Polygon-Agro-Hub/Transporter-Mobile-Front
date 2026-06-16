@@ -15,6 +15,9 @@ import ComplaintsList from "@/component/complaints/ComplaintsList";
 import AddComplaint from "@/component/complaints/AddComplaint";
 import LoginScreen from "@/component/auth/LoginScreen";
 import ChangePassword from "@/component/auth/ChangePassword";
+import BannedScreen from "@/component/auth/BannedScreen";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ReturnOrders from "@/component/orders/ReturnOrders";
 import AssignOrderQR from "@/component/qr/AssignOrderQR";
 import Jobs from "@/component/orders/Jobs";
@@ -81,7 +84,7 @@ function AppContent() {
         return false;
       }
 
-      const currentRouteName = navigationRef.getCurrentRoute()?.name ?? "";
+      const currentRouteName = (navigationRef.getCurrentRoute() as any)?.name ?? "";
 
       if (currentRouteName === "Home") {
         BackHandler.exitApp();
@@ -98,6 +101,67 @@ function AppContent() {
       backAction,
     );
     return () => backHandler.remove();
+  }, []);
+
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const errorResponse = error.response;
+        if (
+          errorResponse &&
+          (errorResponse.status === 401 || errorResponse.status === 403) &&
+          (errorResponse.data?.statusType === "not_approved" ||
+            errorResponse.data?.statusType === "rejected" ||
+            errorResponse.data?.statusType === "pending" ||
+            errorResponse.data?.message === "This Employee ID is rejected" ||
+            errorResponse.data?.message === "This Employee ID is not approved" ||
+            errorResponse.data?.message === "Account status is pending verification")
+        ) {
+          let currentRouteName = "";
+          if (navigationRef.isReady()) {
+            const route = navigationRef.getCurrentRoute() as any;
+            currentRouteName = route?.name || "";
+          }
+
+          if (currentRouteName !== "Login" && currentRouteName !== "Splash" && currentRouteName !== "BannedScreen") {
+            try {
+              // Clear auth tokens
+              await AsyncStorage.multiRemove([
+                "token",
+                "tokenStoredTime",
+                "tokenExpirationTime",
+                "empid",
+                "userProfile",
+              ]);
+
+              if (navigationRef.isReady()) {
+                navigationRef.reset({
+                  index: 0,
+                  routes: [{ 
+                    name: "BannedScreen",
+                    params: { 
+                      statusType: errorResponse.data?.statusType,
+                      message: errorResponse.data?.message 
+                    }
+                  }],
+                });
+              }
+            } catch (e) {
+              console.error("Failed to perform force logout:", e);
+            }
+
+            // Return a promise that never resolves or rejects to prevent component error logs
+            return new Promise(() => {});
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   return (
@@ -118,6 +182,7 @@ function AppContent() {
             <Stack.Screen name="AddComplaint" component={AddComplaint} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="BannedScreen" component={BannedScreen as any} />
             <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
             <Stack.Screen name="AssignOrderQR" component={AssignOrderQR} />
             <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR} />

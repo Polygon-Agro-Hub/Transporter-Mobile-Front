@@ -1,7 +1,6 @@
 {
   "expo": {
     "name": "GoVi-Transport",
-    "slug": "GoVi-Transport",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
@@ -90,7 +89,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b9f3fc58-6e89-43e1-89c4-c71080e2e335"
+        "projectId": "fd2cb5ac-6095-4c9a-be33-e62f5d607e82"
       }
     }
   }

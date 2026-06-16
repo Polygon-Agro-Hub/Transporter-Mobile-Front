@@ -78,7 +78,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const [currentDate, setCurrentDate] = useState<string>("");
 
   useEffect(() => {
-    // Set current date when component mounts
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(
       now.getMonth() + 1,
@@ -162,10 +161,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
       if (completedResponse.data.status === "success") {
         const allCompleted = completedResponse.data.data.orders;
-
-        setCompletedOrders((prevState) => {
-          return allCompleted;
-        });
+        setCompletedOrders(() => allCompleted);
       }
     } catch (error: any) {
       console.error("Error fetching driver orders:", error);
@@ -197,7 +193,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     }
 
     const reason = orderData.holdReasons[0];
-
     return reason.rsnEnglish || "Hold reason not specified";
   };
 
@@ -243,12 +238,33 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return Number.MAX_SAFE_INTEGER;
   };
 
+  // ✅ NEW HELPER: always returns the earliest time slot among allScheduleTimes
+  const getEarliestScheduleTime = (order: DriverOrder): string => {
+    const allTimes = order.allScheduleTimes || [];
+
+    if (allTimes.length === 0) {
+      return order.primaryScheduleTime || "Not Scheduled";
+    }
+
+    if (allTimes.length === 1) {
+      return allTimes[0];
+    }
+
+    // Sort by priority (lowest priority number = earliest slot) and return first
+    const sorted = [...allTimes].sort(
+      (a, b) => getScheduleTimePriority(a) - getScheduleTimePriority(b),
+    );
+
+    return sorted[0];
+  };
+
   const getTodoDisplayOrders = () => {
     const allOrders = [...todoOrders, ...holdOrders];
 
     const sortedOrders = allOrders.sort((a, b) => {
-      const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
-      const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
+      // ✅ FIX: use earliest time slot for sorting
+      const timeA = getEarliestScheduleTime(a);
+      const timeB = getEarliestScheduleTime(b);
 
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
@@ -264,11 +280,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
       name: order.fullName || "Customer",
-      time: formatScheduleTime(
-        order.primaryScheduleTime ||
-        order.allScheduleTimes[0] ||
-        "Not Scheduled",
-      ),
+      // ✅ FIX: display earliest time slot
+      time: formatScheduleTime(getEarliestScheduleTime(order)),
       count: order.jobCount || 1,
       status: order.drvStatus,
       orderData: order,
@@ -297,14 +310,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         return false;
       }
 
-      const isTodayOrder = isToday(order.completeTime);
-
-      return isTodayOrder;
+      return isToday(order.completeTime);
     });
 
     const sortedOrders = [...todayCompletedOrders].sort((a, b) => {
-      const timeA = a.primaryScheduleTime || a.allScheduleTimes?.[0] || "";
-      const timeB = b.primaryScheduleTime || b.allScheduleTimes?.[0] || "";
+      // ✅ FIX: use earliest time slot for sorting
+      const timeA = getEarliestScheduleTime(a);
+      const timeB = getEarliestScheduleTime(b);
 
       const priorityA = getScheduleTimePriority(timeA);
       const priorityB = getScheduleTimePriority(timeB);
@@ -320,21 +332,17 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       let todayCompletedCount = 1;
 
       if (order.allCompleteTimes && order.allCompleteTimes.length > 0) {
-        todayCompletedCount = order.allCompleteTimes.filter((completeTime) => {
-          const isTodayCompleted = isToday(completeTime);
-          return isTodayCompleted;
-        }).length;
+        todayCompletedCount = order.allCompleteTimes.filter((completeTime) =>
+          isToday(completeTime),
+        ).length;
       }
 
       return {
         id: (index + 1).toString().padStart(2, "0"),
         title: order.title || "",
         name: order.fullName || "Customer",
-        time: formatScheduleTime(
-          order.primaryScheduleTime ||
-          order.allScheduleTimes[0] ||
-          "Not Scheduled",
-        ),
+        // ✅ FIX: display earliest time slot
+        time: formatScheduleTime(getEarliestScheduleTime(order)),
         count: todayCompletedCount,
         status: "Completed",
         orderData: order,
@@ -377,12 +385,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
   const navigateToOrderDetails = (orderData: DriverOrder) => {
     const processOrderId = orderData.processOrderId;
-
     const primaryOrderId = processOrderId || orderData.marketOrderId;
-
     const orderIds = orderData.allOrderIds || [orderData.marketOrderId];
-
-    const processOrderIds = orderData.allProcessOrderIds ||
+    const processOrderIds =
+      orderData.allProcessOrderIds ||
       orderData.processOrderIds || [primaryOrderId];
 
     navigation.navigate("OrderDetails", {
@@ -456,8 +462,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             <Text className="text-white font-bold">{getTodoTabCount()}</Text>
           </View>
           <Text
-            className={`text-md ${activeTab === "todo" ? "font-bold" : "font-medium"
-              }`}
+            className={`text-md ${
+              activeTab === "todo" ? "font-bold" : "font-medium"
+            }`}
           >
             To Do
           </Text>
@@ -475,8 +482,9 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             <Text className="text-white font-bold">{getCompletedCount()}</Text>
           </View>
           <Text
-            className={`text-md ${activeTab === "completed" ? "font-bold" : "font-medium"
-              }`}
+            className={`text-md ${
+              activeTab === "completed" ? "font-bold" : "font-medium"
+            }`}
           >
             Completed
           </Text>
@@ -515,12 +523,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                   }
                 }
                 key={index}
-                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${isOnTheWay && activeTab === "todo"
+                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
+                  isOnTheWay && activeTab === "todo"
                     ? "bg-[#FFFBEA] border-[#F7CA21]"
                     : isOnHold
-                      ? "bg-white border-[#FF0000]"
-                      : "bg-white border-[#A4AAB7]"
-                  }`}
+                    ? "bg-white border-[#FF0000]"
+                    : "bg-white border-[#A4AAB7]"
+                }`}
                 onPress={() => {
                   if (activeTab === "todo") {
                     navigateToOrderDetails(item.orderData);
@@ -567,16 +576,18 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
                 <View className="flex-row items-center">
                   <View
-                    className={`w-7 h-7 justify-center items-center rounded-full ${isOnHold
+                    className={`w-7 h-7 justify-center items-center rounded-full ${
+                      isOnHold
                         ? "bg-[#FF0000]"
                         : activeTab === "todo"
-                          ? "bg-yellow-400"
-                          : "bg-[#F3F3F3]"
-                      }`}
+                        ? "bg-yellow-400"
+                        : "bg-[#F3F3F3]"
+                    }`}
                   >
                     <Text
-                      className={`font-bold ${isOnHold ? "text-white" : "text-black"
-                        }`}
+                      className={`font-bold ${
+                        isOnHold ? "text-white" : "text-black"
+                      }`}
                     >
                       {item.count}
                     </Text>
@@ -619,4 +630,5 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     </View>
   );
 };
+
 export default Jobs;
