@@ -122,12 +122,7 @@ export default function SignatureScreen({
   } = route.params;
 
   const handleBackPress = () => {
-    navigation.navigate("EndJourneyConfirmation", {
-      processOrderIds: processOrderIds,
-      allProcessOrderIds: allProcessOrderIds,
-      remainingOrders: remainingOrders,
-      onOrderComplete: onOrderComplete,
-    });
+    navigation.goBack();
   };
 
   const [isOrientationLocked, setIsOrientationLocked] = useState(false);

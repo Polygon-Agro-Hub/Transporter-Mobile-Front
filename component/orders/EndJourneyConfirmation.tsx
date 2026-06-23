@@ -7,9 +7,10 @@ import {
   Image,
   Linking,
   Alert,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RouteProp } from "@react-navigation/native";
+import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import { MaterialIcons } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
@@ -118,11 +119,27 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
     ? `#${invoiceNumber}`
     : "End of the Journey";
 
-  const handleBackPress = () => {
+  const handleBackPress = React.useCallback(() => {
     navigation.navigate("OrderDetails", {
       processOrderIds: allProcessOrderIds || remainingOrders || processOrderIds,
     });
-  };
+  }, [navigation, allProcessOrderIds, remainingOrders, processOrderIds]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [handleBackPress])
+  );
 
   return (
     <View className="flex-1 bg-white">

@@ -292,12 +292,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           setSelectedLanguage(mappedLang);
         }}
         onBackPress={() => {
-          navigation.navigate("EndJourneyConfirmation", {
-            processOrderIds: orderIds,
-            allProcessOrderIds: allProcessOrderIds,
-            remainingOrders: remainingOrders,
-            onOrderComplete: onOrderComplete,
-          });
+          navigation.goBack();
         }}
       />
 

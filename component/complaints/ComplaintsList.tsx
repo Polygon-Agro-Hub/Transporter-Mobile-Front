@@ -205,21 +205,14 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
       {complaints.length === 0 ? (
         <View className="flex-1 items-center justify-center">
-          <View
-            className="items-center justify-center"
-            style={{
-              position: "absolute",
-              top: "30%",
-              transform: [{ translateY: -50 }],
-            }}
-          >
+          <View className="items-center justify-center">
             <LottieView
               source={NodataAnimation}
               autoPlay
               loop={true}
-              style={{ width: 200, height: 200 }}
+              style={{ width: 160, height: 160 }}
             />
-            <Text className="text-[#495D86] text-base mb-2">
+            <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
               -- No Complaints Yet --
             </Text>
           </View>
@@ -326,7 +319,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
           <View
-            className="bg-white rounded-3xl w-11/12 mx-4 h-3/4"
+            className="bg-white rounded-3xl w-11/12 mx-4"
+            style={{ maxHeight: "75%" }}
           >
             {/* Close Button */}
             <TouchableOpacity

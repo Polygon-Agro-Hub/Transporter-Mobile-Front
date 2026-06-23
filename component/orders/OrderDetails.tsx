@@ -987,7 +987,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   {startingJourney === order.orderId.toString() ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
-                    <Text className="text-base font-bold">{buttonText}</Text>
+                    <Text
+                      className="text-base font-bold"
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
+                      {buttonText}
+                    </Text>
                   )}
                 </TouchableOpacity>
                 {showSameLocationNotice && (
