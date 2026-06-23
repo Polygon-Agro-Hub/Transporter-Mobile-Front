@@ -107,7 +107,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             orderId: item.orderId,
             invoNo: item.invoNo || `#${item.orderId}`,
             amount: parseFloat(item.amount),
-            selected: selectedIds.has(String(item.id)), // ✅ only restored if from QR
+            selected: selectedIds.has(String(item.id)), 
             createdAt: item.createdAt,
           }));
 
@@ -160,9 +160,9 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       0,
     );
 
-    // ✅ Save selected items AND set the navigation flag
+    // Save selected items AND set the navigation flag
     AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
-    AsyncStorage.setItem("isNavigatingToQR", "true"); // ← NEW
+    AsyncStorage.setItem("isNavigatingToQR", "true");
 
     navigation.navigate("ReceivedCashQR", {
       amount: totalAmount,
@@ -217,9 +217,9 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             source={require("@/assets/json/no-data.json")}
             autoPlay
             loop
-            style={{ width: 200, height: 200 }}
+            style={{ width: 160, height: 160 }}
           />
-          <Text className="text-[#495D86] text-base mt-4">
+          <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
             -- No received cash found --
           </Text>
         </View>

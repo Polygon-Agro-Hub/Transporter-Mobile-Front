@@ -4,11 +4,13 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { Alert, BackHandler, Text, TextInput, StatusBar } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Provider } from "react-redux";
+import { Provider, useSelector, useDispatch } from "react-redux";
 import { navigationRef } from "../navigationRef";
 import { LogBox } from "react-native";
 import { RootStackParamList } from "@/types/types";
 import store from "@/services/store";
+import { selectAuthToken, selectEmpId, logoutUser } from "@/store/authSlice";
+import { environment } from "@/environment/environment";
 import NetInfo from "@react-native-community/netinfo";
 import Splash from "@/component/common/Splash";
 import ComplaintsList from "@/component/complaints/ComplaintsList";
@@ -51,6 +53,78 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 function AppContent() {
   const [isOfflineAlertShown, setIsOfflineAlertShown] = useState(false);
+  const token = useSelector(selectAuthToken);
+  const empId = useSelector(selectEmpId);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (!token || !empId) return;
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(
+          `${environment.API_BASE_URL}api/auth/get-profile`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const statusType = data.statusType;
+          if (
+            response.status === 403 &&
+            (statusType === "rejected" ||
+              statusType === "not_approved" ||
+              statusType === "pending")
+          ) {
+            // Clear auth tokens
+            await AsyncStorage.multiRemove([
+              "token",
+              "tokenStoredTime",
+              "tokenExpirationTime",
+              "empid",
+              "userProfile",
+            ]);
+
+            // Clear Redux state
+            dispatch(logoutUser());
+
+            // Redirect
+            if (navigationRef.isReady()) {
+              navigationRef.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "BannedScreen",
+                    params: {
+                      statusType,
+                      message: data.message || "Your account has been rejected or is not approved.",
+                    },
+                  },
+                ],
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user status in background:", error);
+      }
+    };
+
+    // Run status check immediately on mount/token change
+    checkStatus();
+
+    // Poll every 15 seconds
+    const intervalId = setInterval(checkStatus, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [token, empId, dispatch]);
 
   useEffect(() => {
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
@@ -134,6 +208,9 @@ function AppContent() {
                 "empid",
                 "userProfile",
               ]);
+
+              // Clear Redux state
+              dispatch(logoutUser());
 
               if (navigationRef.isReady()) {
                 navigationRef.reset({

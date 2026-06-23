@@ -262,7 +262,13 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     const allOrders = [...todoOrders, ...holdOrders];
 
     const sortedOrders = allOrders.sort((a, b) => {
-      // ✅ FIX: use earliest time slot for sorting
+      const isHoldA = a.drvStatus.toLowerCase() === "hold";
+      const isHoldB = b.drvStatus.toLowerCase() === "hold";
+
+      if (isHoldA && !isHoldB) return 1;
+      if (!isHoldA && isHoldB) return -1;
+
+      // ✅ use earliest time slot for sorting
       const timeA = getEarliestScheduleTime(a);
       const timeB = getEarliestScheduleTime(b);
 
@@ -603,12 +609,12 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             source={require("@/assets/json/no-data.json")}
             autoPlay
             loop
-            style={{ width: 200, height: 200 }}
+            style={{ width: 160, height: 160 }}
           />
 
           {activeTab === "todo" ? (
             <>
-              <Text className="text-gray-500 text-lg text-center">
+              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
                 No pending jobs
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
@@ -617,7 +623,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             </>
           ) : (
             <>
-              <Text className="text-gray-500 text-lg text-center">
+              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
                 No completed jobs today
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">

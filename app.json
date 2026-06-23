@@ -38,6 +38,7 @@
       ]
     },
     "ios": {
+      "icon": "./assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "16",
       "supportsTablet": false,
@@ -80,9 +81,7 @@
         {
           "initialOrientation": "PORTRAIT_UP"
         }
-      ],
-      "expo-sharing",
-      "expo-web-browser"
+      ]
     ],
     "extra": {
       "router": {

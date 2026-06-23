@@ -162,12 +162,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleBackPress = () => {
-    navigation.navigate("EndJourneyConfirmation", {
-      processOrderIds: orderIds,
-      allProcessOrderIds: allProcessOrderIds,
-      remainingOrders: remainingOrders,
-      onOrderComplete: onOrderComplete,
-    });
+    navigation.goBack();
   };
 
   const handleSubmit = async () => {
@@ -402,7 +397,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                   }`}
                 >
                   {selectedReason?.id === reason.id && (
-                    <Ionicons name="checkmark" size={16} color="white" />
+                    <Ionicons name="checkmark" size={14} color="white" />
                   )}
                 </View>
                 <Text

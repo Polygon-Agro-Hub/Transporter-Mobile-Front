@@ -6,17 +6,16 @@ import {
   Alert,
   Image,
   Platform,
-  KeyboardAvoidingView,
   BackHandler,
   Keyboard,
   ActivityIndicator,
 } from "react-native";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../../types/types";
 import axios from "axios";
-import { ScrollView } from "react-native-gesture-handler";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { environment } from "@/environment/environment";
 import { AntDesign, FontAwesome5 } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -49,6 +48,23 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState<"success" | "error">("error");
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const showModal = (
     title: string,
@@ -201,152 +217,150 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      enabled
-      style={{ flex: 1 }}
-      className="bg-[#F7CA21]"
+    <KeyboardAwareScrollView
+      contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+      bounces={false}
+      showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: "#0E0E0E" }}
+      scrollEnabled={!isKeyboardVisible}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
-          <Image
-            source={require("@/assets/images/auth/changepassword.webp")}
-            className="w-auto h-[65%]"
-            resizeMode="contain"
-          />
-        </View>
-        {passwordUpdated === 1 && (
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="bg-[#f3f3f380] rounded-full p-2 justify-center w-10"
-          >
-            <AntDesign name="left" size={24} color="#000502" />
-          </TouchableOpacity>
-        )}
+      <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
+        <Image
+          source={require("@/assets/images/auth/changepassword.webp")}
+          className="w-auto h-[65%]"
+          resizeMode="contain"
+        />
+      </View>
+      {passwordUpdated === 1 && (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="bg-[#f3f3f380] rounded-full p-2 justify-center w-10"
+        >
+          <AntDesign name="left" size={24} color="#000502" />
+        </TouchableOpacity>
+      )}
 
-        <View className="flex-1">
-          <LinearGradient
-            colors={["#323232", "#0E0E0E"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-24 "
-          >
-            <View>
-              <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">
-                Update Password
-              </Text>
-              <Text className="text-center text-white mb-6 ">
-                Password must be at least 8 characters
-              </Text>
-            </View>
+      <View className="flex-1">
+        <LinearGradient
+          colors={["#323232", "#0E0E0E"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-24 pt-10 justify-center"
+        >
+          <View>
+            <Text className="text-2xl font-semibold text-center mt-42 mb-2 text-white">
+              Update Password
+            </Text>
+            <Text className="text-center text-white mb-6 ">
+              Password must be at least 8 characters
+            </Text>
+          </View>
 
-            <View>
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-4 gap-3 overflow-hidden"
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                  className="flex-1 text-base text-white"
-                  secureTextEntry={secureCurrent}
-                  onChangeText={setCurrentPassword}
-                  value={currentPassword}
-                  placeholder="Current Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity
-                  onPress={() => setSecureCurrent(!secureCurrent)}
-                >
-                  <FontAwesome5
-                    name={secureCurrent ? "eye-slash" : "eye"}
-                    size={24}
-                    color="white"
-                  />
-                </TouchableOpacity>
-              </LinearGradient>
-
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                  className="flex-1 text-base text-white"
-                  secureTextEntry={secureNew}
-                  value={newPassword}
-                  onChangeText={(text) => {
-                    const cleanText = text.replace(/\s/g, "");
-                    setNewPassword(cleanText);
-                  }}
-                  placeholder="New Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity
-                  onPress={() => setSecureNew(!secureNew)}
-                >
-                  <FontAwesome5
-                    name={secureNew ? "eye-slash" : "eye"}
-                    size={24}
-                    color="white"
-                  />
-                </TouchableOpacity>
-              </LinearGradient>
-
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                  className="flex-1 text-base text-white"
-                  secureTextEntry={secureConfirm}
-                  onChangeText={(text) => {
-                    const cleanText = text.replace(/\s/g, "");
-                    setConfirmPassword(cleanText);
-                  }}
-                  value={confirmPassword}
-                  placeholder="Re-enter New Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity
-                  onPress={() => setSecureConfirm(!secureConfirm)}
-                >
-                  <FontAwesome5
-                    name={secureConfirm ? "eye-slash" : "eye"}
-                    size={24}
-                    color="white"
-                  />
-                </TouchableOpacity>
-              </LinearGradient>
-
+          <View>
+            <LinearGradient
+              colors={["#474747", "#242424"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="flex-row items-center rounded-full px-4 h-[58px] mb-4 gap-3 overflow-hidden"
+            >
+              <MaterialIcons name="lock" size={26} color="#F7CA21" />
+              <TextInput
+                className="flex-1 text-base text-white"
+                secureTextEntry={secureCurrent}
+                onChangeText={setCurrentPassword}
+                value={currentPassword}
+                placeholder="Current Password"
+                placeholderTextColor={"#F6F9FF"}
+              />
               <TouchableOpacity
-                className="rounded-full  overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
-                style={{ width: "100%" }}
-                onPress={handleChangePassword}
-                disabled={loading}
+                onPress={() => setSecureCurrent(!secureCurrent)}
               >
-                {loading ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <Text className=" text-xl font-semibold tracking-wide">
-                    Update
-                  </Text>
-                )}
+                <FontAwesome5
+                  name={secureCurrent ? "eye-slash" : "eye"}
+                  size={20}
+                  color="white"
+                />
               </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
-      </ScrollView>
+            </LinearGradient>
+
+            <LinearGradient
+              colors={["#474747", "#242424"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
+            >
+              <MaterialIcons name="lock" size={26} color="#F7CA21" />
+              <TextInput
+                className="flex-1 text-base text-white"
+                secureTextEntry={secureNew}
+                value={newPassword}
+                onChangeText={(text) => {
+                  const cleanText = text.replace(/\s/g, "");
+                  setNewPassword(cleanText);
+                }}
+                placeholder="New Password"
+                placeholderTextColor={"#F6F9FF"}
+              />
+              <TouchableOpacity
+                onPress={() => setSecureNew(!secureNew)}
+              >
+                <FontAwesome5
+                  name={secureNew ? "eye-slash" : "eye"}
+                  size={20}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <LinearGradient
+              colors={["#474747", "#242424"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
+            >
+              <MaterialIcons name="lock" size={26} color="#F7CA21" />
+              <TextInput
+                className="flex-1 text-base text-white"
+                secureTextEntry={secureConfirm}
+                onChangeText={(text) => {
+                  const cleanText = text.replace(/\s/g, "");
+                  setConfirmPassword(cleanText);
+                }}
+                value={confirmPassword}
+                placeholder="Re-enter New Password"
+                placeholderTextColor={"#F6F9FF"}
+              />
+              <TouchableOpacity
+                onPress={() => setSecureConfirm(!secureConfirm)}
+              >
+                <FontAwesome5
+                  name={secureConfirm ? "eye-slash" : "eye"}
+                  size={20}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <TouchableOpacity
+              className="rounded-full  overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
+              style={{ width: "100%" }}
+              onPress={handleChangePassword}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text className=" text-xl font-semibold tracking-wide">
+                  Update
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
 
       {/* Use the AlertModal component */}
       <AlertModal
@@ -358,7 +372,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         duration={4000}
         autoClose={true}
       />
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 };
 
