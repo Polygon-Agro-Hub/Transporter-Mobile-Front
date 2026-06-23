@@ -20,7 +20,12 @@ interface GlobalSearchModalProps {
   doneButtonText?: string;
   noResultsText?: string;
   multiSelect?: boolean;
-  renderItem?: (item: any, isSelected: boolean) => React.ReactNode;
+  renderItem?: (
+    item: any,
+    isSelected: boolean,
+    index: number,
+    isLast: boolean
+  ) => React.ReactNode;
   searchKeys?: string[];
 }
 
@@ -42,9 +47,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const [filteredData, setFilteredData] = useState(data);
   const [selectedValues, setSelectedValues] = useState<string[]>(selectedItems);
 
-  // Initialize selected values
+  // Initialize selected values and reset search
   useEffect(() => {
     setSelectedValues(selectedItems);
+    setSearchValue("");
   }, [selectedItems, visible]);
 
   // Filter data based on search
@@ -97,9 +103,15 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     setSearchValue("");
   };
 
-  const renderDefaultItem = (item: any, isSelected: boolean) => (
+  const renderDefaultItem = (
+    item: any,
+    isSelected: boolean,
+    isLast: boolean
+  ) => (
     <TouchableOpacity
-      className="px-4 py-3 border-b border-gray-200 flex-row items-center justify-between"
+      className={`px-4 py-3 flex-row items-center justify-between ${
+        !isLast ? "border-b border-gray-200" : ""
+      }`}
       onPress={() => handleItemPress(item.value)}
     >
       <Text className="text-base text-gray-800">{item.label}</Text>
@@ -164,12 +176,13 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           <FlatList
             data={filteredData}
             keyExtractor={(item) => item.value}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const isSelected = selectedValues.includes(item.value);
+              const isLast = index === filteredData.length - 1;
               if (renderItem) {
-                return renderItem(item, isSelected) as React.ReactElement | null;
+                return renderItem(item, isSelected, index, isLast) as React.ReactElement | null;
               }
-              return renderDefaultItem(item, isSelected);
+              return renderDefaultItem(item, isSelected, isLast);
             }}
             showsVerticalScrollIndicator={false}
             className="max-h-64"

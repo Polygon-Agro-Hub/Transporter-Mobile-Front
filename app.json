@@ -80,9 +80,7 @@
         {
           "initialOrientation": "PORTRAIT_UP"
         }
-      ],
-      "expo-sharing",
-      "expo-web-browser"
+      ]
     ],
     "extra": {
       "router": {

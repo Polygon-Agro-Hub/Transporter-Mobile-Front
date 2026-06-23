@@ -266,9 +266,9 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
             source={require("@/assets/json/no-data.json")}
             autoPlay
             loop
-            style={{ width: 200, height: 200 }}
+            style={{ width: 160, height: 160 }}
           />
-          <Text className="text-[#495D86] text-base">
+          <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
             -- No return orders found --
           </Text>
         </View>

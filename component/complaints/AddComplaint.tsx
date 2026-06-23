@@ -232,12 +232,19 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
   };
 
   // Custom render item for GlobalSearchModal
-  const renderCategoryItem = (item: any, isSelected: boolean) => {
+  const renderCategoryItem = (
+    item: any,
+    isSelected: boolean,
+    index: number,
+    isLast: boolean
+  ) => {
     const category = item.originalCategory;
 
     return (
       <TouchableOpacity
-        className="px-4 py-4 border-b border-gray-200 flex-row items-center justify-between"
+        className={`px-4 py-4 flex-row items-center justify-between ${
+          !isLast ? "border-b border-gray-200" : ""
+        }`}
         onPress={() => handleCategorySelect([item.value])}
       >
         <View className="flex-1">
@@ -275,7 +282,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         {/* Content */}
-        <View className="px-4 pb-8">
+        <View className="px-6 pb-8">
           {/* Warning Icon */}
           <View className="items-center mb-8">
             <Image
@@ -298,7 +305,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
                 onPress={() => setSearchModalVisible(true)}
                 className="bg-[#F6F6F6] border border-[#F6F6F6] rounded-full px-5 flex-row items-center justify-between"
                 style={{
-                  height: 55,
+                  height: 50,
                   borderRadius: 25,
                 }}
                 disabled={categoriesLoading}
@@ -335,12 +342,14 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={!isFormValid || loading || categoriesLoading}
-            className={`rounded-full py-3 mx-3 items-center ${
+            className={`rounded-full mx-6 items-center justify-center ${
               isFormValid && !loading && !categoriesLoading
                 ? "bg-[#F7CA21]"
                 : "bg-[#DCDCDC]"
             }`}
             style={{
+              height: 50,
+              borderRadius: 25,
               shadowColor: "#000000",
               shadowOffset: {
                 width: 2,
