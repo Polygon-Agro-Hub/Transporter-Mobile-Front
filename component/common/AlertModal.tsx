@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, Modal, Animated, TouchableOpacity } from "react-native";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
@@ -30,7 +30,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   duration = 4000,
   autoClose = true,
 }) => {
-  const loadingBarWidth = new Animated.Value(300);
+  const loadingBarWidth = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
     if (visible && autoClose) {

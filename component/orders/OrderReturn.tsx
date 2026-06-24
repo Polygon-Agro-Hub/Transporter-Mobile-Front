@@ -242,13 +242,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         if (onOrderComplete && orderIds && orderIds.length > 0) {
           onOrderComplete(orderIds[0]);
         }
-
-        setTimeout(() => {
-          if (showSuccessModal) {
-            setShowSuccessModal(false);
-            handleNavigationAfterSuccess();
-          }
-        }, 4000);
       } else {
         Alert.alert("Error", result.message || "Failed to submit return order");
       }
