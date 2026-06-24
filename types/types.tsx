@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Lanuage: undefined;
   Splash: undefined;
   ComplaintsList: undefined;
+  DeliverySuccessful: undefined;
   ReceivedCash: { scannedOfficerId?: string } | undefined;
   AddComplaint: undefined;
   Login: undefined;
@@ -49,7 +50,6 @@ export type RootStackParamList = {
     remainingOrders?: number[];
     onOrderComplete?: (completedId: number) => void;
   };
-  DeliverySuccessful: undefined;
   OrderDetailsLoadingScreen: {
     processOrderIds: number[];
     allProcessOrderIds: number[];
