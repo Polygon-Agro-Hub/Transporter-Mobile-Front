@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -19,6 +20,7 @@ import { environment } from "@/environment/environment";
 import axios from "axios";
 import GlobalSearchModal from "@/component/common/GlobalSearchModal";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 type AddComplaintNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -133,6 +135,22 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("ComplaintsList");
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [navigation]),
+  );
+
   const handleSubmit = async () => {
     if (!selectedCategory || !description.trim()) {
       showModal(
@@ -236,7 +254,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     item: any,
     isSelected: boolean,
     index: number,
-    isLast: boolean
+    isLast: boolean,
   ) => {
     const category = item.originalCategory;
 

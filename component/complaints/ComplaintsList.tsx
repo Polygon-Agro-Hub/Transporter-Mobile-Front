@@ -23,8 +23,8 @@ import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../../store/authSlice";
-import LottieView from "lottie-react-native";
 import LoadingPage from "../common/LoadingPage";
+import NoData from "../common/NoDataModal";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -50,8 +50,6 @@ interface Complaint {
   categorySinhala: string;
   categoryTamil: string;
 }
-
-const NodataAnimation = require("@/assets/json/no-data.json");
 
 const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -140,8 +138,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       "Dec",
     ];
 
-    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${monthNames[date.getMonth()]
-      } ${date.getDate()}, ${date.getFullYear()}`;
+    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${
+      monthNames[date.getMonth()]
+    } ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   const formatReplyDate = (dateString: string | null) => {
@@ -204,18 +203,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       />
 
       {complaints.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <View className="items-center justify-center">
-            <LottieView
-              source={NodataAnimation}
-              autoPlay
-              loop={true}
-              style={{ width: 160, height: 160 }}
-            />
-            <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
-              -- No Complaints Yet --
-            </Text>
-          </View>
+        <View className="flex-1">
+          <NoData text=" -- No Complaints Yet --" />
         </View>
       ) : (
         <ScrollView
@@ -274,8 +263,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
                     {/* Reply Button */}
                     <TouchableOpacity
-                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${isWaiting ? "bg-[#CBD7E8] " : "bg-black"
-                        }`}
+                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${
+                        isWaiting ? "bg-[#CBD7E8] " : "bg-black"
+                      }`}
                       disabled={isWaiting}
                       onPress={() => handleReply(complaint)}
                     >
