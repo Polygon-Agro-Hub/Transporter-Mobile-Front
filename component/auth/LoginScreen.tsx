@@ -91,224 +91,220 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
- const handleLogin = async () => {
-  Keyboard.dismiss();
+  const handleLogin = async () => {
+    Keyboard.dismiss();
 
-  setEmpIdError("");
-  setPasswordError("");
-  setEmpIdHasError(false);
-  setPasswordHasError(false);
+    setEmpIdError("");
+    setPasswordError("");
+    setEmpIdHasError(false);
+    setPasswordHasError(false);
 
-  if (!empid && !password) {
-    setEmpIdHasError(true);
-    setPasswordHasError(true);
-    setEmpIdError("Employee ID is not allowed to be empty");
-    setPasswordError("Password is not allowed to be empty");
-    showModal(
-      "Sorry",
-      "Password & Employee ID are not allowed to be empty",
-      "error",
-    );
-    return false;
-  }
-
-  if (empid && !password) {
-    setPasswordHasError(true);
-    setPasswordError("Password is not allowed to be empty");
-    showModal("Sorry", "Password is not allowed to be empty", "error");
-    return false;
-  }
-
-  if (!empid && password) {
-    setEmpIdHasError(true);
-    setEmpIdError("Employee ID is not allowed to be empty");
-    showModal("Sorry", "Employee ID is not allowed to be empty", "error");
-    return false;
-  }
-
-  const trimmedEmpId = empid.trim();
-
-  const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
-
-  if (!empIdPatternRegex.test(trimmedEmpId)) {
-    setEmpIdHasError(true);
-    const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
-
-    if (!startsWithDRV) {
+    if (!empid && !password) {
+      setEmpIdHasError(true);
+      setPasswordHasError(true);
+      setEmpIdError("Employee ID is not allowed to be empty");
+      setPasswordError("Password is not allowed to be empty");
       showModal(
-        "Unauthorized Access",
-        "You are not authorized to access this system. Please use a valid Employee ID.",
+        "Sorry",
+        "Password & Employee ID are not allowed to be empty",
         "error",
       );
-    } else {
-      showModal(
-        "Invalid EMP ID",
-        "Please enter a valid Employee ID.",
-        "error",
-      );
+      return false;
     }
-    return false;
-  }
 
-  const uppercaseRegex = /^DRV\d{5}$/;
+    if (empid && !password) {
+      setPasswordHasError(true);
+      setPasswordError("Password is not allowed to be empty");
+      showModal("Sorry", "Password is not allowed to be empty", "error");
+      return false;
+    }
 
-  if (!uppercaseRegex.test(trimmedEmpId)) {
-    setEmpIdHasError(true);
-    setEmpIdError("Please enter Employee ID in uppercase letters");
-    return false;
-  }
+    if (!empid && password) {
+      setEmpIdHasError(true);
+      setEmpIdError("Employee ID is not allowed to be empty");
+      showModal("Sorry", "Employee ID is not allowed to be empty", "error");
+      return false;
+    }
 
-  setLoading(true);
+    const trimmedEmpId = empid.trim();
 
-  await AsyncStorage.removeItem("token");
-  await AsyncStorage.removeItem("empid");
+    const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
 
-  try {
-    const response = await fetch(
-      `${environment.API_BASE_URL}api/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    if (!empIdPatternRegex.test(trimmedEmpId)) {
+      setEmpIdHasError(true);
+      const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
+
+      if (!startsWithDRV) {
+        showModal(
+          "Unauthorized Access",
+          "You are not authorized to access this system. Please use a valid Employee ID.",
+          "error",
+        );
+      } else {
+        showModal(
+          "Invalid EMP ID",
+          "Please enter a valid Employee ID.",
+          "error",
+        );
+      }
+      return false;
+    }
+
+    const uppercaseRegex = /^DRV\d{5}$/;
+
+    if (!uppercaseRegex.test(trimmedEmpId)) {
+      setEmpIdHasError(true);
+      setEmpIdError("Please enter Employee ID in uppercase letters");
+      return false;
+    }
+
+    setLoading(true);
+
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("empid");
+
+    try {
+      const response = await fetch(
+        `${environment.API_BASE_URL}api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            empId: trimmedEmpId,
+            password,
+          }),
         },
-        body: JSON.stringify({
-          empId: trimmedEmpId,
-          password,
-        }),
-      },
-    );
+      );
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok || !data.success) {
-      setLoading(false);
+      if (!response.ok || !data.success) {
+        setLoading(false);
 
-      const message = data.message?.toLowerCase() || "";
-      const statusCode = response.status;
-      const statusType = data.statusType;
+        const message = data.message?.toLowerCase() || "";
+        const statusCode = response.status;
+        const statusType = data.statusType;
 
-      if (statusType === "rejected" || statusType === "not_approved" || statusType === "pending") {
-        navigation.navigate("BannedScreen", {
-          statusType,
-          message: data.message,
-        });
+        if (
+          statusType === "rejected" ||
+          statusType === "not_approved" ||
+          statusType === "pending"
+        ) {
+          navigation.navigate("BannedScreen", {
+            statusType,
+            message: data.message,
+          });
+          return;
+        }
+
+        if (
+          statusCode === 404 ||
+          message.includes("user not found") ||
+          message.includes("not found") ||
+          message.includes("not registered") ||
+          message.includes("does not exist")
+        ) {
+          setEmpIdHasError(true);
+          showModal(
+            "EMP ID Not Registered",
+            "This Employee ID is not registered yet. ",
+            "error",
+          );
+        } else if (
+          message.includes("rejected") ||
+          message.includes("emp id is rejected")
+        ) {
+          setEmpIdHasError(true);
+          showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
+        } else if (
+          message.includes("not approved") ||
+          message.includes("emp id not approved")
+        ) {
+          setEmpIdHasError(true);
+          showModal(
+            "Not Approved EMP ID",
+            "This EMP ID is not approved.",
+            "error",
+          );
+        } else if (
+          statusCode === 401 ||
+          message.includes("invalid") ||
+          message.includes("password") ||
+          message.includes("incorrect password")
+        ) {
+          setPasswordHasError(true);
+          setPasswordError("Please check the Password and retry again.");
+          showModal(
+            "Invalid Password!",
+            "Please check the Password and retry again.",
+            "error",
+          );
+        } else {
+          showModal(
+            "Sorry",
+            "Something went wrong. Please try again.",
+            "error",
+          );
+        }
+
         return;
       }
 
-      if (
-        statusCode === 404 ||
-        message.includes("user not found") ||
-        message.includes("not found") ||
-        message.includes("not registered") ||
-        message.includes("does not exist")
-      ) {
-        setEmpIdHasError(true);
-        showModal(
-          "EMP ID Not Registered",
-          "This Employee ID is not registered yet. ",
-          "error",
-        );
-      }
+      const {
+        firstNameEnglish,
+        lastNameEnglish,
+        image,
+        token,
+        passwordUpdated,
+        empId,
+      } = data.data;
 
-      else if (
-        message.includes("rejected") ||
-        message.includes("emp id is rejected")
-      ) {
-        setEmpIdHasError(true);
-        showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
-      }
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("empid", empId.toString());
 
-      else if (
-        message.includes("not approved") ||
-        message.includes("emp id not approved")
-      ) {
-        setEmpIdHasError(true);
-        showModal(
-          "Not Approved EMP ID",
-          "This EMP ID is not approved.",
-          "error",
-        );
-      }
+      dispatch(setUser({ token, empId: empId.toString() }));
 
-      else if (
-        statusCode === 401 ||
-        message.includes("invalid") ||
-        message.includes("password") ||
-        message.includes("incorrect password")
-      ) {
-        setPasswordHasError(true);
-        setPasswordError("Please check the Password and retry again.");
-        showModal(
-          "Invalid Password!",
-          "Please check the Password and retry again.",
-          "error",
-        );
-      }
-
-      else {
-        showModal(
-          "Sorry",
-          "Something went wrong. Please try again.",
-          "error",
-        );
-      }
-
-      return;
-    }
-
-    const {
-      firstNameEnglish,
-      lastNameEnglish,
-      image,
-      token,
-      passwordUpdated,
-      empId,
-    } = data.data;
-
-    await AsyncStorage.setItem("token", token);
-    await AsyncStorage.setItem("empid", empId.toString());
-
-    dispatch(setUser({ token, empId: empId.toString() }));
-
-    dispatch(
-      setUserProfile({
-        firstName: firstNameEnglish,
-        lastName: lastNameEnglish,
-        profileImg: image,
-        empId: empId.toString(),
-        passwordUpdated: passwordUpdated,
-      }),
-    );
-
-    if (token) {
-      const timestamp = new Date();
-      const expirationTime = new Date(
-        timestamp.getTime() + 8 * 60 * 60 * 1000,
+      dispatch(
+        setUserProfile({
+          firstName: firstNameEnglish,
+          lastName: lastNameEnglish,
+          profileImg: image,
+          empId: empId.toString(),
+          passwordUpdated: passwordUpdated,
+        }),
       );
 
-      await AsyncStorage.multiSet([
-        ["tokenStoredTime", timestamp.toISOString()],
-        ["tokenExpirationTime", expirationTime.toISOString()],
-      ]);
-    }
+      if (token) {
+        const timestamp = new Date();
+        const expirationTime = new Date(
+          timestamp.getTime() + 8 * 60 * 60 * 1000,
+        );
 
-    setTimeout(() => {
-      setLoading(false);
-
-      if (passwordUpdated === 0) {
-        navigation.replace("ChangePassword", {
-          passwordUpdated: passwordUpdated,
-        });
-      } else {
-        navigation.replace("Home");
+        await AsyncStorage.multiSet([
+          ["tokenStoredTime", timestamp.toISOString()],
+          ["tokenExpirationTime", expirationTime.toISOString()],
+        ]);
       }
-    }, 4000);
-  } catch (error) {
-    setLoading(false);
-    console.error("Login error:", error);
-    showModal("Error", "Something went wrong. Please try again.", "error");
-  }
-};
+
+      setTimeout(() => {
+        setLoading(false);
+
+        if (passwordUpdated === 0) {
+          navigation.replace("ChangePassword", {
+            passwordUpdated: passwordUpdated,
+          });
+        } else {
+          navigation.replace("Home");
+        }
+      }, 4000);
+    } catch (error) {
+      setLoading(false);
+      console.error("Login error:", error);
+      showModal("Error", "Something went wrong. Please try again.", "error");
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -323,130 +319,138 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   );
 
   return (
-    <KeyboardAwareScrollView
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
-      enableOnAndroid={true}
-      keyboardShouldPersistTaps="handled"
-      bounces={false}
-      showsVerticalScrollIndicator={false}
-      style={{ backgroundColor: "#0E0E0E" }}
-      scrollEnabled={!isKeyboardVisible}
+    <LinearGradient
+      colors={["#323232", "#0E0E0E"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
-        <Image
-          source={require("@/assets/images/auth/logo.webp")}
-          className="w-auto h-[22%]"
-          resizeMode="contain"
-        />
-        <Image
-          source={require("@/assets/images/auth/truck.webp")}
-          className="w-auto h-[60%]"
-          resizeMode="contain"
-        />
-      </View>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        extraScrollHeight={Platform.OS === "android" ? 80 : 20}
+        enableAutomaticScroll={true}
+        keyboardOpeningTime={0}
+      >
+        <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
+          <Image
+            source={require("@/assets/images/auth/logo.webp")}
+            className="w-auto h-[22%]"
+            resizeMode="contain"
+          />
+          <Image
+            source={require("@/assets/images/auth/truck.webp")}
+            className="w-auto h-[60%]"
+            resizeMode="contain"
+          />
+        </View>
 
-      <View className="flex-1">
-        {/* Form Section */}
-        <LinearGradient
-          colors={["#323232", "#0E0E0E"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-20 pt-10 justify-center"
-        >
-          <View>
-            <Text className="text-3xl font-semibold text-center mt-42 mb-2 text-white">
-              Hey, Welcome
-            </Text>
-            <Text className="text-center text-white mb-6 px-12">
-              Please Login to start your work
-            </Text>
-          </View>
-
-           <View>
-            {/* EMP ID */}
-            <LinearGradient
-              colors={["#474747", "#242424"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              className={`flex-row items-center rounded-[30px] px-4 h-[58px] mb-3 gap-3 overflow-hidden border-2 ${empIdHasError ? 'border-red-500' : 'border-transparent'}`}
-            >
-              <FontAwesome6 name="user-large" size={18} color="#F7CA21" />
-
-              <TextInput
-                className="flex-1 text-white text-base"
-                autoCapitalize="characters"
-                value={empid}
-                onChangeText={handleEmpIdChange}
-                placeholder="Your EMP ID"
-                placeholderTextColor="#F6F9FF"
-              />
-            </LinearGradient>
-            {empIdError && (
-              <Text className="text-red-500 text-sm pl-3 mb-4">
-                {empIdError}
+        <View className="flex-1" style={{ backgroundColor: "#323232" }}>
+          {/* Form Section */}
+          <LinearGradient
+            colors={["#323232", "#0E0E0E"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-20 pt-10 justify-center"
+          >
+            <View>
+              <Text className="text-3xl font-semibold text-center mt-42 mb-2 text-white">
+                Hey, Welcome
               </Text>
-            )}
+              <Text className="text-center text-white mb-6 px-12">
+                Please Login to start your work
+              </Text>
+            </View>
 
-            <LinearGradient
-              colors={["#474747", "#242424"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              className={`flex-row items-center rounded-[30px] px-4 h-[58px] gap-3 overflow-hidden border-2 ${passwordError ? 'mb-3' : 'mb-6'} ${passwordHasError ? 'border-red-500' : 'border-transparent'}`}
-            >
-              <MaterialIcons name="lock" size={22} color="#F7CA21" />
-
-              <TextInput
-                className="flex-1 text-white text-base"
-                secureTextEntry={secureTextEntry}
-                value={password}
-                onChangeText={handlePasswordChange}
-                placeholder="Your Password"
-                placeholderTextColor="#F6F9FF"
-              />
-
-              <TouchableOpacity
-                onPress={() => setSecureTextEntry(!secureTextEntry)}
+            <View>
+              {/* EMP ID */}
+              <LinearGradient
+                colors={["#474747", "#242424"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className={`flex-row items-center rounded-[30px] px-4 h-[58px] mb-3 gap-3 overflow-hidden border-2 ${empIdHasError ? "border-red-500" : "border-transparent"}`}
               >
-                <FontAwesome5
-                  name={secureTextEntry ? "eye-slash" : "eye"}
-                  size={20}
-                  color="white"
+                <FontAwesome6 name="user-large" size={18} color="#F7CA21" />
+
+                <TextInput
+                  className="flex-1 text-white text-base"
+                  autoCapitalize="characters"
+                  value={empid}
+                  onChangeText={handleEmpIdChange}
+                  placeholder="Your EMP ID"
+                  placeholderTextColor="#F6F9FF"
                 />
-              </TouchableOpacity>
-            </LinearGradient>
-            {passwordError && (
-              <Text className="text-red-500 text-sm pl-3 mb-4">
-                {passwordError}
-              </Text>
-            )}
-            <TouchableOpacity
-              className="rounded-full overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
-              style={{ width: "100%" }}
-              disabled={loading}
-              onPress={handleLogin}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text className=" text-xl font-semibold tracking-wide">
-                  Login
+              </LinearGradient>
+              {empIdError && (
+                <Text className="text-red-500 text-sm pl-3 mb-4">
+                  {empIdError}
                 </Text>
               )}
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </View>
 
-      <AlertModal
-        visible={modalVisible}
-        title={modalTitle}
-        message={modalMessage}
-        type={modalType}
-        onClose={() => setModalVisible(false)}
-        duration={4000}
-        autoClose={true}
-      />
-    </KeyboardAwareScrollView>
+              <LinearGradient
+                colors={["#474747", "#242424"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className={`flex-row items-center rounded-[30px] px-4 h-[58px] gap-3 overflow-hidden border-2 ${passwordError ? "mb-3" : "mb-6"} ${passwordHasError ? "border-red-500" : "border-transparent"}`}
+              >
+                <MaterialIcons name="lock" size={22} color="#F7CA21" />
+
+                <TextInput
+                  className="flex-1 text-white text-base"
+                  secureTextEntry={secureTextEntry}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  placeholder="Your Password"
+                  placeholderTextColor="#F6F9FF"
+                />
+
+                <TouchableOpacity
+                  onPress={() => setSecureTextEntry(!secureTextEntry)}
+                >
+                  <FontAwesome5
+                    name={secureTextEntry ? "eye-slash" : "eye"}
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+              </LinearGradient>
+              {passwordError && (
+                <Text className="text-red-500 text-sm pl-3 mb-4">
+                  {passwordError}
+                </Text>
+              )}
+              <TouchableOpacity
+                className="rounded-full overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
+                style={{ width: "100%" }}
+                disabled={loading}
+                onPress={handleLogin}
+              >
+                {loading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className=" text-xl font-semibold tracking-wide">
+                    Login
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <AlertModal
+          visible={modalVisible}
+          title={modalTitle}
+          message={modalMessage}
+          type={modalType}
+          onClose={() => setModalVisible(false)}
+          duration={4000}
+          autoClose={true}
+        />
+      </KeyboardAwareScrollView>
+    </LinearGradient>
   );
 };
 

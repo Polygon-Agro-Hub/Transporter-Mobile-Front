@@ -492,7 +492,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
               activeTab === "completed" ? "font-bold" : "font-medium"
             }`}
           >
-            Completed
+            Delivered
           </Text>
         </TouchableOpacity>
       </View>

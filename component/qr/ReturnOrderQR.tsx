@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Animated,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -133,7 +134,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
       if (response.data.status === "success") {
         const orders = response.data.data.returnOrders;
-        const currentOrder = orders.find((order: any) => order.orderId === orderId);
+        const currentOrder = orders.find(
+          (order: any) => order.orderId === orderId,
+        );
 
         if (currentOrder) {
           setOrderInvoiceNumber(currentOrder.invoiceNumber);
@@ -348,10 +351,10 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         setModalMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-2">
-              The scanned QR code does not match this order.Please scan the correct QR code for this order.
+              The scanned QR code does not match this order.Please scan the
+              correct QR code for this order.
             </Text>
-
-          </View>
+          </View>,
         );
         setModalType("error");
         setShowErrorModal(true);
@@ -372,8 +375,10 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
               Order :{" "}
-              <Text className="font-bold text-[#000000]">{scannedInvoiceNo}</Text> has
-              been successfully returned to the centre.
+              <Text className="font-bold text-[#000000]">
+                {scannedInvoiceNo}
+              </Text>{" "}
+              has been successfully returned to the centre.
             </Text>
           </View>,
         );
@@ -454,6 +459,22 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     setShowTimeoutModal(false);
     resetScanning();
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.goBack();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, [navigation]),
+  );
 
   const handleTimeoutRescan = () => {
     setShowTimeoutModal(false);
@@ -565,8 +586,6 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
           {/* Scan Frame Container */}
           <View className="flex-1 justify-center items-center">
-
-
             {/* Scan Frame with Camera */}
             <View
               style={{
