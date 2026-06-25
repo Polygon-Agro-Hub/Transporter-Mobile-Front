@@ -624,10 +624,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           ) : (
             <>
               <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
-                No completed jobs today
+                No delivered jobs today
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
-                Today's completed jobs will appear here
+                Today's delivered jobs will appear here
               </Text>
             </>
           )}
