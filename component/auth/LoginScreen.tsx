@@ -241,6 +241,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             "Please check the Password and retry again.",
             "error",
           );
+        } else if (
+          statusCode === 429 ||
+          message.includes("too many") ||
+          message.includes("attempts")
+        ) {
+          showModal(
+            "Too Many Attempts",
+            data.message || "Too many login attempts. Please try again after 15 minutes.",
+            "error",
+          );
         } else {
           showModal(
             "Sorry",
