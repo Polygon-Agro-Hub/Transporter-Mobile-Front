@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  findNodeHandle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -62,7 +63,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const [successMessage, setSuccessMessage] = useState<
     string | React.ReactNode
   >("");
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -88,24 +88,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchReasons();
-
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => {
-        setKeyboardVisible(true);
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false);
-      },
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
   }, []);
 
   const fetchReasons = async () => {
@@ -298,10 +280,35 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return "காரணத்தை இங்கே குறிப்பிடவும்...";
   };
 
+  // Scrolls the ScrollView just enough to bring the focused TextInput
+  // into view, instead of jumping to the end of the content (which was
+  // causing the input to be pushed off-screen on iOS when combined with
+  // KeyboardAvoidingView's own offset).
   const handleTextInputFocus = () => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 300);
+      const scrollNode = scrollViewRef.current;
+      const inputNode = textInputRef.current;
+      if (!scrollNode || !inputNode) return;
+
+      const inputHandle = findNodeHandle(inputNode);
+      const scrollHandle = findNodeHandle(scrollNode);
+      if (!inputHandle || !scrollHandle) return;
+
+      // @ts-ignore - measureLayout exists at runtime on native components
+      inputNode.measureLayout(
+        scrollHandle,
+        (_x: number, y: number, _w: number, h: number) => {
+          scrollNode.scrollTo({
+            y: Math.max(y - 40, 0),
+            animated: true,
+          });
+        },
+        () => {
+          // Fallback: measureLayout can fail on some RN versions/timing.
+          scrollNode.scrollToEnd({ animated: true });
+        },
+      );
+    }, 250);
   };
 
   return (
@@ -338,7 +345,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingVertical: 24,
-            paddingBottom: keyboardVisible ? 400 : 24,
+            paddingBottom: 40,
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -410,15 +417,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <TextInput
                 ref={textInputRef}
                 value={otherReason}
-                onChangeText={(text) => {
-                  setOtherReason(text);
-                  // Keep text input visible while typing
-                  if (keyboardVisible) {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 100);
-                  }
-                }}
+                onChangeText={setOtherReason}
                 onFocus={handleTextInputFocus}
                 placeholder={getPlaceholderText()}
                 placeholderTextColor="#767F94"

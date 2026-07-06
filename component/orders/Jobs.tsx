@@ -7,6 +7,7 @@ import {
   RefreshControl,
   BackHandler,
   StatusBar,
+  Platform,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -377,8 +378,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     const processOrderId = orderData.processOrderId;
     const primaryOrderId = processOrderId || orderData.marketOrderId;
     const orderIds = orderData.allOrderIds || [orderData.marketOrderId];
-    const processOrderIds =
-      orderData.allProcessOrderIds ||
+    const processOrderIds = orderData.allProcessOrderIds ||
       orderData.processOrderIds || [primaryOrderId];
 
     navigation.navigate("OrderDetails", {
@@ -401,7 +401,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     );
   }
 
-  return (
+return (
     <View className="flex-1 bg-white">
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
@@ -430,55 +430,70 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         </View>
       )}
 
-      <View
-        className="flex-row mt-2 bg-white"
-        style={{
-          shadowColor: "#000",
-          shadowOffset: { width: 2, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 6,
-          elevation: 2,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => setActiveTab("todo")}
-          className={`
-            flex-1 flex-row items-center justify-center gap-x-2 
-            ${activeTab === "todo" ? " bg-[#F6F9FF]" : ""}
-            py-3
-          `}
+      <View className="mt-2 bg-white relative">
+        <View
+          className="flex-row"
+          style={Platform.OS === "android" ? { elevation: 5 } : undefined}
         >
-          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-            <Text className="text-white font-bold">{getTodoTabCount()}</Text>
-          </View>
-          <Text
-            className={`text-md ${
-              activeTab === "todo" ? "font-bold" : "font-medium"
-            }`}
+          <TouchableOpacity
+            onPress={() => setActiveTab("todo")}
+            className={`
+              flex-1 flex-row items-center justify-center gap-x-2 
+              ${activeTab === "todo" ? " bg-[#F6F9FF]" : ""}
+              py-3
+            `}
           >
-            To Do
-          </Text>
-        </TouchableOpacity>
+            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+              <Text className="text-white font-bold">{getTodoTabCount()}</Text>
+            </View>
+            <Text
+              className={`text-md ${
+                activeTab === "todo" ? "font-bold" : "font-medium"
+              }`}
+            >
+              To Do
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setActiveTab("completed")}
-          className={`
-            flex-1 flex-row items-center justify-center gap-x-2 
-            ${activeTab === "completed" ? "bg-[#F6F9FF] " : ""}
-            py-2
-          `}
-        >
-          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-            <Text className="text-white font-bold">{getCompletedCount()}</Text>
-          </View>
-          <Text
-            className={`text-md ${
-              activeTab === "completed" ? "font-bold" : "font-medium"
-            }`}
+          <TouchableOpacity
+            onPress={() => setActiveTab("completed")}
+            className={`
+              flex-1 flex-row items-center justify-center gap-x-2 
+              ${activeTab === "completed" ? "bg-[#F6F9FF] " : ""}
+              py-2
+            `}
           >
-            Delivered
-          </Text>
-        </TouchableOpacity>
+            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+              <Text className="text-white font-bold">{getCompletedCount()}</Text>
+            </View>
+            <Text
+              className={`text-md ${
+                activeTab === "completed" ? "font-bold" : "font-medium"
+              }`}
+            >
+              Delivered
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* iOS-only: thin strip casts a bottom-only shadow instead of wrapping the whole bar */}
+        {Platform.OS === "ios" && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 1,
+              backgroundColor: "#fff",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+            }}
+          />
+        )}
       </View>
 
       {dataToShow.length > 0 ? (
@@ -503,22 +518,29 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             return (
               <TouchableOpacity
                 disabled={activeTab === "completed"}
-                style={
+                style={[
+                  {
+                    borderRadius: 10,
+                    borderWidth: 0.5,
+                    borderColor: isOnHold
+                      ? "#FF0000"
+                      : isOnTheWay && activeTab === "todo"
+                        ? "#F7CA21"
+                        : "#A4AAB7",
+                  },
                   activeTab === "todo" && {
-                    shadowColor: "#000",
+                    shadowColor: "#000000",
                     shadowOffset: { width: 2, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 6,
+                    shadowOpacity: 0.25,
+                    shadowRadius: 2,
                     elevation: 2,
-                  }
-                }
+                  },
+                ]}
                 key={index}
-                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
+                className={`px-5 py-2 mb-5 flex-row justify-between items-center ${
                   isOnTheWay && activeTab === "todo"
-                    ? "bg-[#FFFBEA] border-[#F7CA21]"
-                    : isOnHold
-                    ? "bg-white border-[#FF0000]"
-                    : "bg-white border-[#A4AAB7]"
+                    ? "bg-[#FFFBEA]"
+                    : "bg-white"
                 }`}
                 onPress={() => {
                   if (activeTab === "todo") {
@@ -570,8 +592,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                       isOnHold
                         ? "bg-[#FF0000]"
                         : activeTab === "todo"
-                        ? "bg-yellow-400"
-                        : "bg-[#F3F3F3]"
+                          ? "bg-yellow-400"
+                          : "bg-[#F3F3F3]"
                     }`}
                   >
                     <Text
@@ -598,7 +620,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
           {activeTab === "todo" ? (
             <>
-              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
                 No pending jobs
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
@@ -607,7 +632,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             </>
           ) : (
             <>
-              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
                 No delivered jobs today
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
