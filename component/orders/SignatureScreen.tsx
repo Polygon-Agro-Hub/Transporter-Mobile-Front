@@ -316,8 +316,6 @@ export default function SignatureScreen({
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("Navigating back to OrderDetails");
-
     navigation.navigate("Jobs");
   };
 

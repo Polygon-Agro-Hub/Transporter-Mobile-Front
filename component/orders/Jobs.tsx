@@ -295,22 +295,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   };
 
   const getCompletedDisplayOrders = () => {
-    console.log(
-      "completedOrders full data:",
-      JSON.stringify(
-        completedOrders.map((o) => ({
-          driverOrderId: o.driverOrderId,
-          processOrderId: o.processOrderId,
-          fullName: o.fullName,
-          completeTime: o.completeTime,
-          allCompleteTimes: o.allCompleteTimes,
-          drvStatus: o.drvStatus,
-        })),
-        null,
-        2,
-      ),
-    );
-
     const todayCompletedOrders = completedOrders.filter((order) => {
       if (!order.completeTime) {
         return false;

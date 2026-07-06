@@ -234,7 +234,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             return invoice;
           }
         } catch (e) {
-          console.log("Not valid JSON");
+          // Silent catch for non-JSON QR scan formats
         }
       }
 

@@ -169,7 +169,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
           if (parsed.user_id) return String(parsed.user_id);
           if (parsed.id) return String(parsed.id);
         } catch (e) {
-          console.log("JSON parse failed:", e);
+          // Silent catch for non-JSON QR scan formats
         }
       }
 

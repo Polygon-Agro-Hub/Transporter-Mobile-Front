@@ -274,7 +274,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("Navigating to Jobs screen");
     navigation.navigate("Jobs");
   };
 
@@ -290,7 +289,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     setSelectedReason(null);
     setOtherReason("");
 
-    console.log("Error modal closed, navigating to Jobs");
     navigation.navigate("Jobs");
   };
 
