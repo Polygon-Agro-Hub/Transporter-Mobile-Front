@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Entypo, Ionicons } from "@expo/vector-icons";
+import { Entypo } from "@expo/vector-icons";
 import { widthPercentageToDP as wp } from "react-native-responsive-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -169,7 +169,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
           if (parsed.user_id) return String(parsed.user_id);
           if (parsed.id) return String(parsed.id);
         } catch (e) {
-          console.log("JSON parse failed:", e);
+          console.error(e);
         }
       }
 
@@ -246,59 +246,83 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         throw new Error("Authentication token not found");
       }
 
+      const driverId = (await AsyncStorage.getItem("empid")) || "";
+      const formattedAmount = formatNumberWithCommas(totalAmount).replace(
+        /\.00$/,
+        "",
+      );
+
       const orderIds = selectedItems.map((item: any) => item.id);
 
-      const response = await axios.post(
-        `${environment.API_BASE_URL}api/home/hand-over-cash`,
-        {
-          orderIds,
-          totalAmount,
-          officerId,
-        },
+      const officerRes = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-officer-details/${officerId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
+          },
+          timeout: 10000,
+        },
+      );
+
+      if (officerRes.data.status !== "success") {
+        throw new Error(
+          officerRes.data.message || "Failed to validate officer",
+        );
+      }
+
+      const {
+        mobileNumber,
+        empId: validatedEmpId,
+        firstNameEnglish,
+        lastNameEnglish,
+      } = officerRes.data.data;
+
+      if (!mobileNumber) {
+        throw new Error("Officer does not have a registered mobile number");
+      }
+
+      const otpRes = await axios.post(
+        "https://api.getshoutout.com/otpservice/send",
+        {
+          source: "PolygonAgro",
+          transport: "sms",
+          content: {
+            sms: `${driverId} sent you Rs.${formattedAmount}. Use OTP {{code}} if you received it`,
+          },
+          destination: mobileNumber,
+        },
+        {
+          headers: {
+            Authorization: `Apikey ${environment.SHOUTOUT_API_KEY}`,
             "Content-Type": "application/json",
           },
           timeout: 10000,
         },
       );
 
-      if (response.data.status === "success") {
-        await AsyncStorage.removeItem("selectedCashItems");
-
-        const responseData = response.data.data;
-        setModalTitle("Successful!");
-        setModalMessage(
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              <Text className="font-bold text-[#000000]">
-                Rs. {formatNumberWithCommas(responseData.totalAmount)}
-              </Text>{" "}
-              has been successfully handed over to{" "}
-              <Text className="font-bold text-[#000000]">
-                {responseData.empId}
-              </Text>
-              .
-            </Text>
-          </View>,
-        );
-        setModalType("success");
-        setShowSuccessModal(true);
-
-        setTimeout(() => {
-          setShowSuccessModal(false);
-          navigation.navigate("ReceivedCash");
-        }, 3000);
-      } else {
-        throw new Error(response.data.message || "Failed to hand over cash");
+      if (!otpRes.data.referenceId) {
+        throw new Error("Failed to send OTP to officer");
       }
+
+      await AsyncStorage.setItem("referenceId", otpRes.data.referenceId);
+      await AsyncStorage.setItem("isNavigatingToQR", "true");
+
+      setLoading(false);
+
+      navigation.navigate("CashHandOverOTP", {
+        orderIds,
+        officerId: validatedEmpId,
+        totalAmount,
+        mobileNumber,
+        officerName:
+          `${firstNameEnglish || ""} ${lastNameEnglish || ""}`.trim(),
+      });
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
         error?.data?.message ||
         error?.message ||
-        "Failed to hand over cash. Please try again.";
+        "Failed to verify officer. Please try again.";
 
       let errorTitle = "Error!";
       if (errorMessage.includes("not assigned to this centre")) {
@@ -309,6 +333,8 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
         errorTitle = "Officer Not Found";
       } else if (errorMessage.includes("No orders")) {
         errorTitle = "No Orders Found";
+      } else if (errorMessage.includes("mobile number")) {
+        errorTitle = "No Mobile Number";
       } else if (
         errorMessage.includes("Network") ||
         error.code === "ECONNABORTED"
@@ -320,7 +346,6 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       setModalMessage(errorMessage);
       setModalType("error");
       setShowErrorModal(true);
-    } finally {
       setLoading(false);
     }
   };

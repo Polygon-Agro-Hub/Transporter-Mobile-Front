@@ -8,6 +8,13 @@ export type RootStackParamList = {
   ReceivedCash: { scannedOfficerId?: string } | undefined;
   AddComplaint: undefined;
   Login: undefined;
+  CashHandOverOTP: {
+    orderIds: string[];
+    officerId: string; 
+    totalAmount: number;
+    mobileNumber: string;
+    officerName?: string;
+  };
   ChangePassword: { passwordUpdated: number };
   BannedScreen: {
     statusType: string;

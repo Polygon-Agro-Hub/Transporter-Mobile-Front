@@ -241,6 +241,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             "Please check the Password and retry again.",
             "error",
           );
+        } else if (
+          statusCode === 429 ||
+          message.includes("too many") ||
+          message.includes("attempts")
+        ) {
+          showModal(
+            "Too Many Attempts",
+            data.message ||
+              "Too many login attempts. Please try again after 15 minutes.",
+            "error",
+          );
         } else {
           showModal(
             "Sorry",
@@ -394,12 +405,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className={`flex-row items-center rounded-[30px] px-4 h-[58px] gap-3 overflow-hidden border-2 ${passwordError ? "mb-3" : "mb-6"} ${passwordHasError ? "border-red-500" : "border-transparent"}`}
+                className={`flex-row items-center rounded-[30px] px-4 h-[62px] gap-3 border-2 ${
+                  passwordError ? "mb-3" : "mb-6"
+                } ${passwordHasError ? "border-red-500" : "border-transparent"}`}
+                // note: overflow-hidden removed here
               >
                 <MaterialIcons name="lock" size={22} color="#F7CA21" />
 
                 <TextInput
                   className="flex-1 text-white text-base"
+                  style={{
+                    lineHeight: 24,
+                    paddingVertical: 10,
+                    includeFontPadding: true,
+                    textAlignVertical: "center",
+                    height: "100%",
+                  }}
                   secureTextEntry={secureTextEntry}
                   value={password}
                   onChangeText={handlePasswordChange}

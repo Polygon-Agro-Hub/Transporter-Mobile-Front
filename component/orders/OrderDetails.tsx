@@ -623,10 +623,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       if (error.response) {
         console.error("Error response data:", error.response.data);
         console.error("Error response status:", error.response.status);
-        console.log(
-          "Full error response:",
-          JSON.stringify(error.response.data, null, 2),
-        );
       }
 
       const errorMessage =
@@ -673,9 +669,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       const allOrderIds = orders.map((order) => order.processOrder.id);
       const allCompleted = allOrderIds.every((id) => newCompleted.includes(id));
 
-      if (allCompleted) {
-        console.log("All orders completed - Staying on OrderDetails screen");
-      } else {
+      if (!allCompleted) {
         setShowContinueButton(true);
       }
 

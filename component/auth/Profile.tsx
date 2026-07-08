@@ -178,7 +178,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             });
           }, 3000);
 
-          return; // Exit early
+          return; 
         }
 
         // For other errors
@@ -253,7 +253,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -282,7 +282,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -389,8 +389,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     try {
       await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
       dispatch(logoutUser());
-      navigation.navigate("Login");
       setShowLogoutModal(false);
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
     } catch (error) {
       console.error("Error during logout:", error);
       setModalMessage("Failed to logout. Please try again.");
@@ -433,7 +437,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Show retry button only if it's not an auth error */}
         {!error.includes("Account not found") &&
-          !error.includes("No authentication token") ? (
+        !error.includes("No authentication token") ? (
           <TouchableOpacity
             onPress={fetchProfileData}
             className="bg-[#FFC83D] px-6 py-3 rounded-full"
@@ -547,7 +551,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               label="Full Name"
               value={
                 profileData
-                  ? `${profileData.firstNameEnglish || ""} ${profileData.lastNameEnglish || ""
+                  ? `${profileData.firstNameEnglish || ""} ${
+                      profileData.lastNameEnglish || ""
                     }`.trim()
                   : "Not available"
               }

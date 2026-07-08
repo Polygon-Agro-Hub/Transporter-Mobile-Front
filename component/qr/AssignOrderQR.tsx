@@ -174,7 +174,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
             return invoice;
           }
         } catch (e) {
-          console.log("Not valid JSON");
+          // Silent catch for non-JSON QR scan formats
         }
       }
 
@@ -331,12 +331,6 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const statusCode = error.response?.status || error.status;
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
-
-      console.log("Error details:", {
-        errorMessage,
-        statusCode,
-        currentStatus,
-      });
 
       if (currentStatus === "Return" || currentStatus === "Return Received") {
         title = "Order Already Returned!";
