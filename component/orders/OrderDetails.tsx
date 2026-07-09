@@ -540,7 +540,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       if (currentStatus === "hold") {
         const payload = {
           orderIds: processOrderId.toString(),
-          isProcessOrderIds: 1,
         };
 
         const response = await axios.post(
@@ -584,7 +583,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
       const payload = {
         orderIds: processOrderId.toString(),
-        isProcessOrderIds: 1,
       };
 
       const response = await axios.post(
@@ -806,7 +804,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <Ionicons name="location-sharp" size={18} color="black" />
                   {formatAddressWithLabels(userDetails.address)}
                 </Text>
-                =
               </View>
             )}
         </View>
