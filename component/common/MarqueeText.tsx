@@ -36,7 +36,7 @@ const FixedMarqueeText: React.FC<FixedMarqueeTextProps> = ({
   }, []);
 
   useEffect(() => {
-    const estimatedWidth = Math.max(cleanText.length * 6, 200);
+    const estimatedWidth = Math.max(cleanText.length * 30, 200);
     setMeasurementWidth(estimatedWidth);
     setTextWidth(0);
 
@@ -75,7 +75,7 @@ const FixedMarqueeText: React.FC<FixedMarqueeTextProps> = ({
 
     animationRef.current = Animated.loop(
       Animated.sequence([
-        Animated.delay(1000),
+        Animated.delay(300),
         Animated.timing(scrollX, {
           toValue: endPosition,
           duration: duration,

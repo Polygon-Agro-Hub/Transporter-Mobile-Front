@@ -11,6 +11,7 @@ interface AlertModalProps {
   onClose: () => void;
   showRescanButton?: boolean;
   onRescan?: () => void;
+  rescanButtonText?: string;
   showOpenOngoingButton?: boolean;
   onOpenOngoing?: () => void;
   duration?: number;
@@ -25,6 +26,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   onClose,
   showRescanButton = false,
   onRescan,
+  rescanButtonText,
   showOpenOngoingButton = false,
   onOpenOngoing,
   duration = 4000,
@@ -123,7 +125,9 @@ export const AlertModal: React.FC<AlertModalProps> = ({
                 className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
                 <FontAwesome5 name="undo" size={18} color="black" />
-                <Text className="text-black font-bold text-base">Re-Scan</Text>
+                <Text className="text-black font-bold text-base">
+                  {rescanButtonText || "Re-Scan"}
+                </Text>
               </TouchableOpacity>
             )}
 
