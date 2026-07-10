@@ -267,15 +267,9 @@ function AppContent() {
             <Stack.Screen name="ReceivedCashQR" component={ReceivedCashQR} />
             <Stack.Screen name="Jobs" component={Jobs} />
             <Stack.Screen name="OrderDetails" component={OrderDetails} />
-            <Stack.Screen
-              name="EndJourneyConfirmation"
-              component={EndJourneyConfirmation}
-            />
+            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
             <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
-            <Stack.Screen
-              name="DeliverySuccessful"
-              component={DeliverySuccessful}
-            />
+            <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
             <Stack.Screen name="OrderReturn" component={OrderReturn} />
             <Stack.Screen name="CashHandOverOTP" component={CashHandOverOTP} />
             <Stack.Screen name="HoldOrder" component={HoldOrder} />
