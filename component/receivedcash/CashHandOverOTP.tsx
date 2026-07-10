@@ -59,6 +59,13 @@ const CashHandOverOTP: React.FC = () => {
     empId: string;
   }>({ amount: "", empId: "" });
 
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorTitle, setErrorTitle] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | React.ReactNode>("");
+  const [showRetryButton, setShowRetryButton] = useState(false);
+  const [retryAction, setRetryAction] = useState<(() => void) | undefined>(undefined);
+  const [autoCloseError, setAutoCloseError] = useState(true);
+
   const isOtpComplete = otp.every((digit) => digit.length === 1);
 
   const verifyOTP = async () => {
@@ -70,7 +77,24 @@ const CashHandOverOTP: React.FC = () => {
     }
 
     if (timer <= 0) {
-      Alert.alert("Error", "OTP has expired. Please request a new one.");
+      setErrorTitle("Error!");
+      setErrorMessage(
+        <View className="items-center mt-2 mb-4">
+          <Text className="text-center text-[#4E4E4E] text-sm">
+            The OTP has expired.
+          </Text>
+          <Text className="text-center text-[#4E4E4E] text-sm mt-1">
+            Please request a new one.
+          </Text>
+        </View>
+      );
+      setShowRetryButton(true);
+      setRetryAction(() => () => {
+        setShowErrorModal(false);
+        handleResendOtp();
+      });
+      setAutoCloseError(false);
+      setShowErrorModal(true);
       return;
     }
 
@@ -81,7 +105,11 @@ const CashHandOverOTP: React.FC = () => {
       const token = await AsyncStorage.getItem("token");
 
       if (!referenceId || !token) {
-        Alert.alert("Error", "Missing OTP reference or authentication token.");
+        setErrorTitle("Error");
+        setErrorMessage("Missing OTP reference or authentication token.");
+        setShowRetryButton(false);
+        setAutoCloseError(true);
+        setShowErrorModal(true);
         return;
       }
 
@@ -102,7 +130,24 @@ const CashHandOverOTP: React.FC = () => {
 
       if (statusCode !== "1000") {
         setIsOtpInvalid(true);
-        Alert.alert("Error", "Invalid OTP. Please try again.");
+        setErrorTitle("Error!");
+        setErrorMessage(
+          <View className="items-center mt-2 mb-4">
+            <Text className="text-center text-[#4E4E4E] text-sm">
+              The OTP is incorrect.
+            </Text>
+            <Text className="text-center text-[#4E4E4E] text-sm mt-1">
+              Please check and try again.
+            </Text>
+          </View>
+        );
+        setShowRetryButton(true);
+        setRetryAction(() => () => {
+          setShowErrorModal(false);
+          setOtp(Array(OTP_LENGTH).fill(""));
+        });
+        setAutoCloseError(false);
+        setShowErrorModal(true);
         return;
       }
 
@@ -135,19 +180,24 @@ const CashHandOverOTP: React.FC = () => {
         });
         setShowSuccessModal(true);
       } else {
-        Alert.alert(
-          "Error",
-          response.data.message || "Failed to hand over cash.",
-        );
+        setErrorTitle("Error");
+        setErrorMessage(response.data.message || "Failed to hand over cash.");
+        setShowRetryButton(false);
+        setAutoCloseError(true);
+        setShowErrorModal(true);
       }
     } catch (error: any) {
       console.error("Error verifying handover OTP:", error);
-      const errorMessage =
+      const errorMsg =
         error?.response?.data?.message ||
         error?.data?.message ||
         error?.message ||
         "An error occurred while verifying OTP.";
-      Alert.alert("Error", errorMessage);
+      setErrorTitle("Error");
+      setErrorMessage(errorMsg);
+      setShowRetryButton(false);
+      setAutoCloseError(true);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
@@ -160,10 +210,7 @@ const CashHandOverOTP: React.FC = () => {
       setTimer(RESEND_TIMER_SECONDS);
 
       const driverId = (await AsyncStorage.getItem("empid")) || "";
-      const formattedAmount = formatNumberWithCommas(totalAmount).replace(
-        /\.00$/,
-        "",
-      );
+      const formattedAmount = formatNumberWithCommas(totalAmount);
 
       const apiUrl = "https://api.getshoutout.com/otpservice/send";
       const headers = {
@@ -175,7 +222,7 @@ const CashHandOverOTP: React.FC = () => {
         source: "PolygonAgro",
         transport: "sms",
         content: {
-          sms: `${driverId} sent you Rs.${formattedAmount}. Use OTP {{code}} if you received it`,
+          sms: `${driverId} has sent you Rs. ${formattedAmount}. Enter OTP {{code}} to confirm the payment.`,
         },
         destination: mobileNumber,
       };
@@ -186,12 +233,20 @@ const CashHandOverOTP: React.FC = () => {
         await AsyncStorage.setItem("referenceId", response.data.referenceId);
         Alert.alert("Success", "OTP resent successfully.");
       } else {
-        Alert.alert("Error", "Failed to resend OTP.");
+        setErrorTitle("Error");
+        setErrorMessage("Failed to resend OTP.");
+        setShowRetryButton(false);
+        setAutoCloseError(true);
+        setShowErrorModal(true);
         setResendDisabled(false);
       }
     } catch (error) {
       console.error("Error resending handover OTP:", error);
-      Alert.alert("Error", "An error occurred while resending OTP.");
+      setErrorTitle("Error");
+      setErrorMessage("An error occurred while resending OTP.");
+      setShowRetryButton(false);
+      setAutoCloseError(true);
+      setShowErrorModal(true);
       setResendDisabled(false);
     }
   };
@@ -404,12 +459,46 @@ const CashHandOverOTP: React.FC = () => {
       <AlertModal
         visible={showSuccessModal}
         title="Successful!"
-        message={`Successfully handed over Rs. ${successData.amount} to ${successData.empId}.`}
+        message={
+          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+            Successfully handed over{" "}
+            <Text className="font-bold text-black">Rs. {successData.amount}</Text>
+            {" to "}
+            <Text className="font-bold text-black">{successData.empId}</Text>.
+          </Text>
+        }
         type="success"
         onClose={handleSuccessModalClose}
         showRescanButton={false}
         duration={4000}
         autoClose={true}
+      />
+
+      <AlertModal
+        visible={showErrorModal}
+        title={errorTitle}
+        message={errorMessage}
+        type="error"
+        onClose={() => {
+          setShowErrorModal(false);
+          if (retryAction) {
+            retryAction();
+          } else {
+            setOtp(Array(OTP_LENGTH).fill(""));
+          }
+        }}
+        showRescanButton={showRetryButton}
+        rescanButtonText="Retry"
+        onRescan={() => {
+          if (retryAction) {
+            retryAction();
+          } else {
+            setShowErrorModal(false);
+            setOtp(Array(OTP_LENGTH).fill(""));
+          }
+        }}
+        duration={4000}
+        autoClose={autoCloseError}
       />
     </KeyboardAvoidingView>
   );

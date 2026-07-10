@@ -75,7 +75,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const handleEmpIdChange = (text: string) => {
-    setEmpid(text);
+    const capitalized = text.toUpperCase();
+    setEmpid(capitalized);
     setEmpIdHasError(false);
 
     if (empIdError) {
@@ -337,7 +338,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       style={{ flex: 1 }}
     >
       <KeyboardAwareScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        style={{ flex: 1, backgroundColor: "#0E0E0E" }}
+        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
         enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
         bounces={false}
@@ -359,12 +361,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        <View className="flex-1" style={{ backgroundColor: "#323232" }}>
+        <View className="flex-1" style={{ backgroundColor: "#0E0E0E" }}>
           {/* Form Section */}
           <LinearGradient
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
             className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-20 pt-10 justify-center"
           >
             <View>
@@ -389,10 +391,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <TextInput
                   className="flex-1 text-white text-base"
                   autoCapitalize="characters"
+                  autoCorrect={false}
                   value={empid}
                   onChangeText={handleEmpIdChange}
                   placeholder="Your EMP ID"
                   placeholderTextColor="#F6F9FF"
+                  style={{
+                    paddingBottom: Platform.OS === "ios" ? 6 : 0,
+                  }}
                 />
               </LinearGradient>
               {empIdError && (
@@ -420,6 +426,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     includeFontPadding: true,
                     textAlignVertical: "center",
                     height: "100%",
+                    paddingBottom: Platform.OS === "ios" ? 15 : 10,
                   }}
                   secureTextEntry={secureTextEntry}
                   value={password}

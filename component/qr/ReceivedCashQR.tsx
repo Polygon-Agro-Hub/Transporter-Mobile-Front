@@ -247,10 +247,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
       }
 
       const driverId = (await AsyncStorage.getItem("empid")) || "";
-      const formattedAmount = formatNumberWithCommas(totalAmount).replace(
-        /\.00$/,
-        "",
-      );
+      const formattedAmount = formatNumberWithCommas(totalAmount);
 
       const orderIds = selectedItems.map((item: any) => item.id);
 
@@ -287,7 +284,7 @@ const ReceivedCashQR: React.FC<ReceivedCashQRProps> = ({
           source: "PolygonAgro",
           transport: "sms",
           content: {
-            sms: `${driverId} sent you Rs.${formattedAmount}. Use OTP {{code}} if you received it`,
+            sms: `${driverId} has sent you Rs. ${formattedAmount}. Enter OTP {{code}} to confirm the payment.`,
           },
           destination: mobileNumber,
         },

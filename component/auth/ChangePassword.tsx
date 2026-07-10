@@ -230,7 +230,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
         bounces={false}
         showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: "#0E0E0E" }}
+        style={{ flex: 1, backgroundColor: "#0E0E0E" }}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
@@ -248,11 +248,11 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
-        <View className="flex-1">
+        <View className="flex-1" style={{ backgroundColor: "#0E0E0E" }}>
           <LinearGradient
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
             className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-24 pt-10 justify-center"
           >
             <View>

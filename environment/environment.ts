@@ -2,7 +2,7 @@ export const environment = {
   production: true,
 
   // LOCAL --------------------
-  // API_BASE_URL: "http://192.168.8.180:3000/transporter/",
+  // API_BASE_URL: "http://192.168.8.101:3000/transporter/",
 
   // DEV --------------------
   API_BASE_URL: "https://transporter-mobile-api.vercel.app/transporter/",
