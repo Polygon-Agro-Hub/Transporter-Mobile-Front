@@ -23,11 +23,12 @@ import {
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { RefreshControl } from "react-native";
 import LoadingPage from "../common/LoadingPage";
+import LottieView from "lottie-react-native";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -38,8 +39,18 @@ interface ProfileScreenProps {
   navigation: ProfileScreenNavigationProp;
 }
 
+interface EarningsData {
+  todayDate: string;
+  totalEarnings: number;
+  cashEarnings: number;
+  cashOrders: number;
+  cardEarnings: number;
+  cardOrders: number;
+}
+
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [profileData, setProfileData] = useState<any>(null);
+  const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -117,8 +128,33 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const formatEarningsDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    } catch (error) {
+      return "";
+    }
+  };
+
   useEffect(() => {
     fetchProfileData();
+    fetchEarningsData();
   }, []);
 
   const fetchProfileData = async () => {
@@ -178,7 +214,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             });
           }, 3000);
 
-          return; 
+          return;
         }
 
         // For other errors
@@ -224,9 +260,59 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  // NOTE: adjust endpoint & response shape to match your actual backend contract.
+  const fetchEarningsData = async (dateFilter?: string) => {
+    if (!token) return;
+
+    try {
+      const url = dateFilter
+        ? `${environment.API_BASE_URL}api/auth/get-earnings?date=${dateFilter}`
+        : `${environment.API_BASE_URL}api/auth/get-earnings`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEarningsData(data.data);
+      } else {
+        // Fail quietly for earnings - profile still usable without it
+        setEarningsData({
+          todayDate: new Date().toISOString(),
+          totalEarnings: 0,
+          cashEarnings: 0,
+          cashOrders: 0,
+          cardEarnings: 0,
+          cardOrders: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching earnings:", error);
+      setEarningsData({
+        todayDate: new Date().toISOString(),
+        totalEarnings: 0,
+        cashEarnings: 0,
+        cashOrders: 0,
+        cardEarnings: 0,
+        cardOrders: 0,
+      });
+    }
+  };
+
+  const handleFilterByDate = () => {
+    // Hook this up to your date-picker / earnings history screen
+    navigation.navigate("MyEarnings" as any);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProfileData();
+    await Promise.all([fetchProfileData(), fetchEarningsData()]);
     setRefreshing(false);
   };
 
@@ -402,19 +488,44 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const InfoCard = ({ label, value }: { label: string; value: string }) => (
-    <View className="mb-4">
-      <Text className="text-[#495D86] mb-1 font-medium">{label}</Text>
-      <Text className="bg-[#F3F3F3] rounded-full px-5 py-4 text-[#000000] text-sm">
-        {value}
-      </Text>
-    </View>
-  );
-
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneCode && !phoneNumber) return "Not available";
     return `${phoneCode || ""} ${phoneNumber || ""}`.trim();
   };
+
+  // Icon + text row used in the details list card
+  const InfoRow = ({
+    icon,
+    iconSet = "material",
+    value,
+    isLast = false,
+  }: {
+    icon: string;
+    iconSet?: "material" | "community";
+    value: string;
+    isLast?: boolean;
+  }) => (
+    <View
+      className={`flex-row items-center py-4 px-4 ${
+        !isLast ? "border-b border-[#F0F0F0]" : ""
+      }`}
+    >
+      <View className="w-8 items-center mr-3">
+        {iconSet === "material" ? (
+          <MaterialIcons name={icon as any} size={20} color="#495D86" />
+        ) : (
+          <MaterialCommunityIcons
+            name={icon as any}
+            size={20}
+            color="#495D86"
+          />
+        )}
+      </View>
+      <Text className="text-black text-sm flex-1" numberOfLines={1}>
+        {value || "Not available"}
+      </Text>
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -488,6 +599,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               tintColor="#FFC83D"
             />
           }
+          showsVerticalScrollIndicator={false}
         >
           <CustomHeader
             title="My Profile"
@@ -498,7 +610,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             onLogoutPress={handleLogoutConfirm}
           />
 
-          <View className="items-center">
+          {/* Avatar + joined date */}
+          <View className="items-center mt-2">
             <View style={{ position: "relative" }}>
               {uploading ? (
                 <View className="w-32 h-32 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
@@ -546,9 +659,119 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             )}
           </View>
 
-          <View className="px-6 mt-8">
-            <InfoCard
-              label="Full Name"
+          {/* Earnings card */}
+          <View className="mx-4 mt-6 bg-white rounded-2xl border border-[#EFEFEF] p-4 shadow-sm">
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F3F3F3]">
+                <FontAwesome5
+                  name="wallet"
+                  size={18}
+                  color="#000"
+                />
+                </View>
+                <Text className="text-black font-bold text-base ml-2">
+                  My Earnings
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleFilterByDate}
+                className="flex-row items-center"
+                activeOpacity={0.7}
+              >
+                <Text className="text-[#0122F5] font-medium mr-2 text-sm">
+                  Filter By Date
+                </Text>
+                <FontAwesome6 name="arrow-up-right-from-square" size={14} color="#0122F5" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="bg-[#FFF8E6] rounded-xl px-4 py-3 mb-4">
+              <Text className="text-[#7A7A7A] text-xs mb-1">
+                Today's Earnings{"  |  "}
+                {formatEarningsDate(
+                  earningsData?.todayDate || new Date().toISOString(),
+                )}
+              </Text>
+              <Text className="text-black font-bold text-xl">
+                Rs. {(earningsData?.totalEarnings ?? 0).toFixed(2)}
+              </Text>
+            </View>
+
+            <View className="flex-row">
+              {/* Cash earnings */}
+              <View className="flex-1 items-center">
+                <LottieView
+                  source={require("@/assets/json/coin.json")}
+                  style={{
+                    width: 40,
+                    height: 40,
+                  }}
+                  autoPlay
+                  loop
+                />
+                <Text className="text-[#7A7A7A] text-xs mb-1">
+                  Cash Earnings
+                </Text>
+                <Text className="text-black font-bold text-base mb-2">
+                  Rs. {(earningsData?.cashEarnings ?? 0).toFixed(2)}
+                </Text>
+                <View className="bg-[#FFF3D6] rounded-full px-3 py-1">
+                  <Text className="text-[#8A6D1D] text-xs font-medium">
+                    {earningsData?.cashOrders ?? 0} Order
+                    {(earningsData?.cashOrders ?? 0) === 1 ? "" : "s"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View className="w-[1px] bg-[#EAEAEA] mx-2" />
+
+              {/* Card earnings */}
+              <View className="flex-1 items-center">
+                <LottieView
+                  source={require("@/assets/json/card.json")}
+                  style={{
+                    width: 40,
+                    height: 40,
+                  }}
+                  autoPlay
+                  loop
+                />
+                <Text className="text-[#7A7A7A] text-xs mb-1">
+                  Card Earnings
+                </Text>
+                <Text className="text-black font-bold text-base mb-2">
+                  Rs. {(earningsData?.cardEarnings ?? 0).toFixed(2)}
+                </Text>
+                <View className="bg-[#E4F7EC] rounded-full px-3 py-1">
+                  <Text className="text-[#1E8449] text-xs font-medium">
+                    {earningsData?.cardOrders ?? 0} Order
+                    {(earningsData?.cardOrders ?? 0) === 1 ? "" : "s"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View className="flex-row items-start mt-4">
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={14}
+                color="#7A7A7A"
+                style={{ marginTop: 2, marginRight: 4 }}
+              />
+              <Text className="text-[#7A7A7A] text-xs flex-1">
+                Card payment order earnings will be transferred within 7 days
+                after the delivered date.
+              </Text>
+            </View>
+          </View>
+
+          {/* Details list card */}
+          <View className="mx-4 mt-4 mb-8 bg-white rounded-2xl border border-[#EFEFEF] shadow-sm">
+            <InfoRow
+              icon="person"
               value={
                 profileData
                   ? `${profileData.firstNameEnglish || ""} ${
@@ -557,28 +780,33 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   : "Not available"
               }
             />
-            <InfoCard
-              label="Employee ID"
+            <InfoRow
+              icon="card-account-details-outline"
+              iconSet="community"
               value={profileData?.empId || "Not available"}
             />
-            <InfoCard
-              label="Phone Number"
+            <InfoRow
+              icon="phone"
               value={formatPhoneNumber(
                 profileData?.phoneCode01,
                 profileData?.phoneNumber01,
               )}
             />
-            <InfoCard
-              label="NIC Number"
+            <InfoRow
+              icon="shield-account-outline"
+              iconSet="community"
               value={profileData?.nic || "Not available"}
             />
-            <InfoCard
-              label="Vehicle"
+            <InfoRow
+              icon="truck-outline"
+              iconSet="community"
               value={profileData?.vType || "Not available"}
             />
-            <InfoCard
-              label="Vehicle's Registration Number"
+            <InfoRow
+              icon="card-text-outline"
+              iconSet="community"
               value={profileData?.vRegNo || "Not available"}
+              isLast
             />
           </View>
         </ScrollView>

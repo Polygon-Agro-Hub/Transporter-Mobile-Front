@@ -67,4 +67,7 @@ export type RootStackParamList = {
     longitude: string | null;
     address?: string;
   };
+  MyEarnings:{
+    
+  }
 };
