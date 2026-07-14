@@ -19,6 +19,7 @@ import { useSelector } from "react-redux";
 import { selectAuthToken } from "@/store/authSlice";
 import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
+import { FontAwesome6 } from "@expo/vector-icons";
 
 type MyEarningsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -40,7 +41,7 @@ interface EarningsSummary {
 
 interface OrderItem {
   orderId: string;
-  dateTime: string; // ISO string
+  dateTime: string;
   method: "cash" | "card";
   earnings: number;
 }
@@ -122,7 +123,6 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
     if (Platform.OS === "android") setShowToPicker(false);
   };
 
-  // NOTE: adjust endpoint & response shape to match your actual backend contract.
   const handleApply = async () => {
     if (!canApply || !token) return;
 
@@ -200,34 +200,34 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
               Select Date Range
             </Text>
 
-            <Text className="text-[#7A7A7A] text-xs mb-1">From</Text>
+            <Text className="text-[#000000] text-xs mb-1">From</Text>
             <TouchableOpacity
               onPress={() => setShowFromPicker(true)}
-              className="border border-[#E5E5E5] rounded-xl px-4 py-3 mb-4"
+              className="border border-[#D5D9E4] rounded-3xl px-4 py-3 mb-4"
               activeOpacity={0.7}
             >
               <Text
                 className={
                   fromDate
                     ? "text-black font-semibold text-sm"
-                    : "text-[#9AA0A6] text-sm"
+                    : "text-[#000000] text-sm"
                 }
               >
                 {fromDate ? formatLongDate(fromDate) : "--Select Here--"}
               </Text>
             </TouchableOpacity>
 
-            <Text className="text-[#7A7A7A] text-xs mb-1">To</Text>
+            <Text className="text-[#000000] text-xs mb-1">To</Text>
             <TouchableOpacity
               onPress={() => setShowToPicker(true)}
-              className="border border-[#E5E5E5] rounded-xl px-4 py-3 mb-4"
+              className="border border-[#D5D9E4] rounded-3xl px-4 py-3 mb-4"
               activeOpacity={0.7}
             >
               <Text
                 className={
                   toDate
                     ? "text-black font-semibold text-sm"
-                    : "text-[#9AA0A6] text-sm"
+                    : "text-[#000000] text-sm"
                 }
               >
                 {toDate ? formatLongDate(toDate) : "--Select Here--"}
@@ -238,7 +238,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
               onPress={handleApply}
               disabled={!canApply || isLoading}
               className={`rounded-full py-3 items-center justify-center ${
-                canApply ? "bg-[#FFC83D]" : "bg-[#D9D9D9]"
+                canApply ? "bg-[#F7CA21]" : "bg-[#D9D9D9]"
               }`}
               activeOpacity={0.7}
             >
@@ -255,7 +255,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={onChangeFromDate}
-                maximumDate={toDate || undefined}
+                maximumDate={new Date()}
               />
             )}
 
@@ -266,6 +266,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={onChangeToDate}
                 minimumDate={fromDate || undefined}
+                maximumDate={new Date()}
               />
             )}
           </View>
@@ -273,7 +274,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
           {hasApplied && summary && (
             <>
               {/* Earnings summary highlight */}
-              <View className="mx-4 mt-4 bg-[#FFF8E6] rounded-xl px-4 py-3">
+              <View className="mx-4 mt-4 bg-[#FFFBE9] rounded-xl px-4 py-3">
                 <Text className="text-black font-bold text-sm mb-1">
                   Earnings Summery
                 </Text>
@@ -284,13 +285,13 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
               {/* Info note */}
               <View className="flex-row items-start mx-4 mt-3">
-                <MaterialCommunityIcons
-                  name="information-outline"
+                <FontAwesome6
+                  name="circle-info"
                   size={14}
-                  color="#7A7A7A"
+                  color="#5A6580"
                   style={{ marginTop: 2, marginRight: 4 }}
                 />
-                <Text className="text-[#7A7A7A] text-xs flex-1">
+                <Text className="text-[#5A6580] text-xs flex-1">
                   Card payment order earnings will be transferred within 7 days
                   after the delivered date.
                 </Text>

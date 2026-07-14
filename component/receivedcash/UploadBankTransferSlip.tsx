@@ -1,0 +1,425 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Alert,
+  Modal,
+  SafeAreaView,
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "@/types/types";
+import { useNavigation } from "@react-navigation/native";
+import CustomHeader from "@/component/common/CustomHeader";
+import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
+import { Ionicons, Feather, FontAwesome5 } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as Linking from "expo-linking";
+import * as Sharing from "expo-sharing";
+import { WebView } from "react-native-webview";
+
+type UploadBankTransferSlipNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "UploadBankTransferSlip"
+>;
+
+const TRANSFER_DETAILS = {
+  amount: 9000.0,
+  accountName: "Polygon Holdings Pvt Ltd",
+  accountNumber: "701020161763",
+  bankName: "Hatton National Bank",
+  branchName: "Colombo Metro",
+};
+
+type FileType = "image" | "pdf";
+
+interface UploadedFile {
+  uri: string;
+  name: string;
+  sizeMB: string;
+  type: FileType;
+}
+
+const UploadBankTransferSlip: React.FC = () => {
+  const navigation = useNavigation<UploadBankTransferSlipNavigationProp>();
+
+  const [file, setFile] = useState<UploadedFile | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [pdfLoadFailed, setPdfLoadFailed] = useState(false);
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission required",
+        "Please allow access to your photos to upload a transfer slip.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const sizeMB = asset.fileSize
+        ? (asset.fileSize / (1024 * 1024)).toFixed(1)
+        : "—";
+      setFile({
+        uri: asset.uri,
+        name: asset.fileName ?? "Transfer_Slip.png",
+        sizeMB: `${sizeMB} MB`,
+        type: "image",
+      });
+    }
+  };
+
+  const pickDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["image/*", "application/pdf"],
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    const isPdf =
+      asset.mimeType === "application/pdf" || asset.name?.endsWith(".pdf");
+    const sizeMB = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "—";
+
+    setFile({
+      uri: asset.uri,
+      name: asset.name ?? (isPdf ? "Transfer_Slip.pdf" : "Transfer_Slip.png"),
+      sizeMB: `${sizeMB} MB`,
+      type: isPdf ? "pdf" : "image",
+    });
+    setPdfLoadFailed(false);
+  };
+
+  const handleUploadPress = () => pickDocument();
+
+  const removeFile = () => setFile(null);
+
+  const openPdfExternally = async () => {
+    if (!file || file.type !== "pdf") return;
+    try {
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "application/pdf",
+          dialogTitle: file.name,
+        });
+      } else {
+        await Linking.openURL(file.uri);
+      }
+    } catch (error) {
+      Alert.alert(
+        "Couldn't open PDF",
+        "Please make sure you have a PDF viewer app installed.",
+      );
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!file) return;
+    try {
+      setSubmitting(true);
+
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Upload failed", "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-white">
+      <CustomHeader
+        title="Upload Bank Transfer Slip"
+        onBackPress={() => navigation.goBack()}
+      />
+
+      <ScrollView
+        className="flex-1 px-5"
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Amount to Transfer */}
+        <View className="mt-6 items-center rounded-2xl bg-amber-50 py-4">
+          <Text className="text-sm text-gray-600">Amount to Transfer</Text>
+          <Text
+            className="mt-1 text-2xl font-bold text-gray-900"
+            numberOfLines={1}
+          >
+            Rs. {formatNumberWithCommas(TRANSFER_DETAILS.amount.toFixed(2))}
+          </Text>
+        </View>
+
+        {/* Account Details */}
+        <View className="mt-5 rounded-2xl bg-[#F4F7FD] px-4 py-4">
+          <DetailRow
+            label="Account Name"
+            value={TRANSFER_DETAILS.accountName}
+          />
+          <DetailRow
+            label="Account Number"
+            value={TRANSFER_DETAILS.accountNumber}
+          />
+          <DetailRow label="Bank Name" value={TRANSFER_DETAILS.bankName} />
+          <DetailRow
+            label="Branch Name"
+            value={TRANSFER_DETAILS.branchName}
+            isLast
+          />
+        </View>
+
+        {/* Upload Area */}
+        {!file ? (
+          <TouchableOpacity
+            onPress={handleUploadPress}
+            activeOpacity={0.7}
+            className="mt-6 items-center justify-center rounded-2xl border border-dashed border-blue-300 bg-white py-10"
+          >
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1FF]">
+              <FontAwesome5 name="cloud-upload-alt" size={26} color="#3B82F6" />
+            </View>
+            <Text className="mt-3 text-base font-semibold text-gray-900">
+              Tap to Upload
+            </Text>
+            <Text className="mt-1 text-xs text-gray-400">
+              JPG, PNG, PDF up to 5MB
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View className="mt-6 rounded-2xl border border-dashed border-blue-300 bg-white p-4">
+            {/* File Uploaded badge */}
+            <View className="flex-row items-center">
+              <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+              <Text className="ml-1.5 text-sm font-medium text-green-500">
+                File Uploaded
+              </Text>
+            </View>
+
+            {file.type === "image" ? (
+              <>
+                {/* Image thumbnail */}
+                <View className="mt-3 items-center rounded-xl border border-gray-100 bg-white p-2">
+                  <Image
+                    source={{ uri: file.uri }}
+                    className="h-40 w-full rounded-lg"
+                    resizeMode="contain"
+                  />
+                </View>
+
+                {/* File row */}
+                <View className="mt-3 flex-row items-center rounded-xl bg-gray-50 px-3 py-2.5">
+                  <View className="h-9 w-9 items-center justify-center rounded-lg bg-pink-50">
+                    <Ionicons name="image" size={18} color="#EC4899" />
+                  </View>
+                  <View className="ml-3 flex-1">
+                    <Text
+                      className="text-sm font-medium text-gray-900"
+                      numberOfLines={1}
+                    >
+                      {file.name}
+                    </Text>
+                    <Text className="text-xs text-gray-400">{file.sizeMB}</Text>
+                  </View>
+                  <TouchableOpacity onPress={removeFile} hitSlop={8}>
+                    <Ionicons name="close" size={20} color="#111827" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Preview button */}
+                <TouchableOpacity
+                  onPress={() => setPreviewVisible(true)}
+                  activeOpacity={0.7}
+                  className="mt-3 flex-row items-center justify-center rounded-xl border border-blue-500 py-2.5"
+                >
+                  <Ionicons name="eye" size={16} color="#3B82F6" />
+                  <Text className="ml-2 text-sm font-semibold text-blue-500">
+                    Preview Full Image
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* PDF card */}
+                <View className="mt-3 items-center rounded-xl border border-gray-100 bg-white px-4 py-6">
+                  <View className="h-12 w-12 items-center justify-center rounded-xl bg-red-500">
+                    <Ionicons name="document-text" size={22} color="#fff" />
+                  </View>
+                  <Text
+                    className="mt-3 text-sm font-medium text-gray-900"
+                    numberOfLines={1}
+                  >
+                    {file.name}
+                  </Text>
+                  <Text className="mt-0.5 text-xs text-gray-400">
+                    {file.sizeMB}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={removeFile}
+                    hitSlop={8}
+                    className="absolute right-2 top-2"
+                  >
+                    <Ionicons name="close" size={18} color="#111827" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Preview button — now opens in-app modal first (falls
+                    back to external viewer if in-app rendering fails) */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setPdfLoadFailed(false);
+                    setPreviewVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                  className="mt-3 flex-row items-center justify-center rounded-xl border border-blue-500 py-2.5"
+                >
+                  <Ionicons name="eye" size={16} color="#3B82F6" />
+                  <Text className="ml-2 text-sm font-semibold text-blue-500">
+                    Preview PDF
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Submit */}
+      <View className="px-5 pb-6 pt-2">
+        <TouchableOpacity
+          disabled={!file || submitting}
+          onPress={handleSubmit}
+          activeOpacity={0.8}
+          className={`items-center rounded-full py-4 ${
+            file ? "bg-amber-400" : "bg-gray-200"
+          }`}
+        >
+          <Text
+            className={`text-base font-bold ${
+              file ? "text-gray-900" : "text-gray-400"
+            }`}
+          >
+            {submitting ? "Submitting..." : "Submit"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Full-screen preview modal */}
+      <Modal
+        visible={previewVisible}
+        animationType="slide"
+        onRequestClose={() => setPreviewVisible(false)}
+      >
+        <StatusBar barStyle="light-content" />
+        <SafeAreaView className="flex-1 bg-gray-100">
+          {/* Header */}
+          <View className="flex-row items-center justify-between bg-black px-4 py-3">
+            <Text
+              className="flex-1 pr-3 text-sm font-medium text-white"
+              numberOfLines={1}
+            >
+              {file?.name}
+            </Text>
+            <View className="flex-row items-center">
+              {file?.type === "pdf" && (
+                <TouchableOpacity
+                  onPress={openPdfExternally}
+                  className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-white/10"
+                  hitSlop={8}
+                >
+                  <Ionicons name="open-outline" size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => setPreviewVisible(false)}
+                className="h-8 w-8 items-center justify-center rounded-full bg-white/10"
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Body */}
+          <View className="flex-1">
+            {file?.type === "image" && (
+              <Image
+                source={{ uri: file.uri }}
+                className="flex-1"
+                resizeMode="contain"
+              />
+            )}
+
+            {file?.type === "pdf" && !pdfLoadFailed && (
+              <WebView
+                source={{ uri: file.uri }}
+                originWhitelist={["*"]}
+                style={{ flex: 1, backgroundColor: "#f3f4f6" }}
+                startInLoadingState
+                renderLoading={() => (
+                  <View className="absolute inset-0 items-center justify-center">
+                    <ActivityIndicator size="large" color="#3B82F6" />
+                  </View>
+                )}
+                onError={() => setPdfLoadFailed(true)}
+                onHttpError={() => setPdfLoadFailed(true)}
+              />
+            )}
+
+            {file?.type === "pdf" && pdfLoadFailed && (
+              <View className="flex-1 items-center justify-center px-8">
+                <Ionicons
+                  name="document-text-outline"
+                  size={48}
+                  color="#9CA3AF"
+                />
+                <Text className="mt-3 text-center text-sm text-gray-500">
+                  This device can't preview the PDF inline. Open it with another
+                  app instead.
+                </Text>
+                <TouchableOpacity
+                  onPress={openPdfExternally}
+                  activeOpacity={0.7}
+                  className="mt-4 rounded-full bg-blue-500 px-5 py-2.5"
+                >
+                  <Text className="text-sm font-semibold text-white">
+                    Open PDF
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </View>
+  );
+};
+
+const DetailRow: React.FC<{
+  label: string;
+  value: string;
+  isLast?: boolean;
+}> = ({ label, value, isLast }) => (
+  <View className={`flex-row ${isLast ? "" : "mb-2.5"}`}>
+    <Text className="w-32 text-sm text-gray-500">{label}</Text>
+    <Text className="text-sm text-gray-500">:</Text>
+    <Text className="ml-2 flex-1 text-sm font-medium text-gray-900">
+      {value}
+    </Text>
+  </View>
+);
+
+export default UploadBankTransferSlip;

@@ -71,16 +71,14 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       let selectedIds: Set<string> = new Set();
 
       if (isReturningFromQR) {
-        // Restore selections and clear the flag
         const storedSelected = await AsyncStorage.getItem("selectedCashItems");
         if (storedSelected) {
           selectedIds = new Set(
             JSON.parse(storedSelected).map((i: any) => String(i.id)),
           );
         }
-        await AsyncStorage.removeItem("isNavigatingToQR"); // ← clear flag
+        await AsyncStorage.removeItem("isNavigatingToQR");
       } else {
-        // Not returning from QR — clear any leftover selected items
         await AsyncStorage.removeItem("selectedCashItems");
       }
 
@@ -107,7 +105,7 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
             orderId: item.orderId,
             invoNo: item.invoNo || `#${item.orderId}`,
             amount: parseFloat(item.amount),
-            selected: selectedIds.has(String(item.id)), 
+            selected: selectedIds.has(String(item.id)),
             createdAt: item.createdAt,
           }));
 
@@ -160,7 +158,6 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
       0,
     );
 
-    // Save selected items AND set the navigation flag
     AsyncStorage.setItem("selectedCashItems", JSON.stringify(selectedItems));
     AsyncStorage.setItem("isNavigatingToQR", "true");
 
@@ -293,6 +290,36 @@ const ReceivedCash: React.FC<ReceivedCashProps> = ({ navigation, route }) => {
               ))}
             </View>
           </ScrollView>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("CashHandOver" as any)}
+            className="bg-[#F7CA21] py-3 mx-5 rounded-full flex-row items-center justify-center"
+            activeOpacity={0.8}
+            style={{
+              shadowColor: "#000000",
+              shadowOffset: { width: 2, height: 2 },
+              shadowOpacity: 0.18,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+          >
+            <View className="w-6 h-6 items-center justify-center mr-2">
+              <Image
+                source={require("@/assets/images/home/handOver.webp")}
+                style={{ width: 20, height: 20 }}
+                resizeMode="contain"
+              />
+            </View>
+            <Text className="text-base font-semibold text-black">
+              Hand Over (Rs.{" "}
+              {formatNumberWithCommas(
+                cashItems
+                  .filter((item) => item.selected)
+                  .reduce((sum, item) => sum + (item.amount || 0), 0)
+                  .toFixed(2),
+              )}
+              )
+            </Text>
+          </TouchableOpacity>
 
           {/* Hand Over Button */}
           {anySelected && (

@@ -186,26 +186,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       } else {
         const errorMessage = data.message || "Failed to fetch profile data";
 
-        // Check for 404 - User not found or not approved
         if (
           response.status === 404 ||
           errorMessage.includes("User not found") ||
           errorMessage.includes("account not approved")
         ) {
-          // Clear storage first
           await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
           dispatch(logoutUser());
 
-          // Set error for UI (this will show on screen temporarily)
           setError("Account not found or not approved");
 
-          // Show modal with auto-navigation
           setAuthErrorMessage(
             "Your account is not found or not approved. Redirecting to login...",
           );
           setShowAuthErrorModal(true);
 
-          // Auto navigate after 3 seconds
           setTimeout(() => {
             setShowAuthErrorModal(false);
             navigation.reset({
@@ -217,13 +212,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           return;
         }
 
-        // For other errors
         setError(errorMessage);
       }
     } catch (error: unknown) {
       console.error("Error fetching profile:", error);
 
-      // Type guard to check error type
       const isErrorWithMessage = (
         err: unknown,
       ): err is { message?: string } => {
@@ -235,12 +228,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (isErrorWithMessage(error)) {
         errorMessage = error.message || errorMessage;
 
-        // Check for network errors that might indicate auth issues
         if (
           errorMessage.includes("Network") ||
           errorMessage.includes("Failed to fetch")
         ) {
-          // Try to clear storage and navigate to login
           try {
             await AsyncStorage.multiRemove([
               "token",
@@ -260,7 +251,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  // NOTE: adjust endpoint & response shape to match your actual backend contract.
   const fetchEarningsData = async (dateFilter?: string) => {
     if (!token) return;
 
@@ -282,7 +272,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (response.ok && data.success) {
         setEarningsData(data.data);
       } else {
-        // Fail quietly for earnings - profile still usable without it
         setEarningsData({
           todayDate: new Date().toISOString(),
           totalEarnings: 0,
@@ -306,7 +295,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleFilterByDate = () => {
-    // Hook this up to your date-picker / earnings history screen
     navigation.navigate("MyEarnings" as any);
   };
 
@@ -493,7 +481,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     return `${phoneCode || ""} ${phoneNumber || ""}`.trim();
   };
 
-  // Icon + text row used in the details list card
   const InfoRow = ({
     icon,
     iconSet = "material",
@@ -506,22 +493,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     isLast?: boolean;
   }) => (
     <View
-      className={`flex-row items-center py-4 px-4 ${
-        !isLast ? "border-b border-[#F0F0F0]" : ""
+      className={`flex-row items-center py-4 px-4  "border-b border-[#F0F0F0]" 
       }`}
     >
-      <View className="w-8 items-center mr-3">
+      <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center mr-3">
         {iconSet === "material" ? (
-          <MaterialIcons name={icon as any} size={20} color="#495D86" />
+          <MaterialIcons name={icon as any} size={18} color="#000000" />
         ) : (
-          <MaterialCommunityIcons
-            name={icon as any}
-            size={20}
-            color="#495D86"
-          />
+          <FontAwesome5 name={icon as any} size={18} color="#000000" />
         )}
       </View>
-      <Text className="text-black text-sm flex-1" numberOfLines={1}>
+      <Text className="text-black text-sm font-medium flex-1" numberOfLines={1}>
         {value || "Not available"}
       </Text>
     </View>
@@ -556,10 +538,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <Text className="font-semibold">Retry</Text>
           </TouchableOpacity>
         ) : (
-          // Show login button for auth errors
           <TouchableOpacity
             onPress={() => {
-              // Clear storage and navigate to login
               AsyncStorage.multiRemove(["token", "refreshToken", "userData"])
                 .then(() => {
                   dispatch(logoutUser());
@@ -660,15 +640,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Earnings card */}
-          <View className="mx-4 mt-6 bg-white rounded-2xl border border-[#EFEFEF] p-4 shadow-sm">
+          <View
+            className="mx-4 mt-6 bg-white rounded-2xl border border-[#FFFFFF] p-4 "
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
             <View className="flex-row justify-between items-center mb-3">
               <View className="flex-row items-center">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F3F3F3]">
-                <FontAwesome5
-                  name="wallet"
-                  size={18}
-                  color="#000"
-                />
+                  <FontAwesome5 name="wallet" size={18} color="#000" />
                 </View>
                 <Text className="text-black font-bold text-base ml-2">
                   My Earnings
@@ -683,12 +668,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Text className="text-[#0122F5] font-medium mr-2 text-sm">
                   Filter By Date
                 </Text>
-                <FontAwesome6 name="arrow-up-right-from-square" size={14} color="#0122F5" />
+                <FontAwesome6
+                  name="arrow-up-right-from-square"
+                  size={14}
+                  color="#0122F5"
+                />
               </TouchableOpacity>
             </View>
 
             <View className="bg-[#FFF8E6] rounded-xl px-4 py-3 mb-4">
-              <Text className="text-[#7A7A7A] text-xs mb-1">
+              <Text className="text-[#000000] text-xs mb-1">
                 Today's Earnings{"  |  "}
                 {formatEarningsDate(
                   earningsData?.todayDate || new Date().toISOString(),
@@ -711,10 +700,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   autoPlay
                   loop
                 />
-                <Text className="text-[#7A7A7A] text-xs mb-1">
+                <Text className="text-[#000000] text-xs mb-1">
                   Cash Earnings
                 </Text>
-                <Text className="text-black font-bold text-base mb-2">
+                <Text className="text-black font-bold  mb-2">
                   Rs. {(earningsData?.cashEarnings ?? 0).toFixed(2)}
                 </Text>
                 <View className="bg-[#FFF3D6] rounded-full px-3 py-1">
@@ -726,7 +715,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               </View>
 
               {/* Divider */}
-              <View className="w-[1px] bg-[#EAEAEA] mx-2" />
+              <View className="w-[1px] bg-[#000000] mx-2" />
 
               {/* Card earnings */}
               <View className="flex-1 items-center">
@@ -739,10 +728,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   autoPlay
                   loop
                 />
-                <Text className="text-[#7A7A7A] text-xs mb-1">
+                <Text className="text-[#000000] text-xs mb-1">
                   Card Earnings
                 </Text>
-                <Text className="text-black font-bold text-base mb-2">
+                <Text className="text-black font-bold mb-2">
                   Rs. {(earningsData?.cardEarnings ?? 0).toFixed(2)}
                 </Text>
                 <View className="bg-[#E4F7EC] rounded-full px-3 py-1">
@@ -755,13 +744,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
 
             <View className="flex-row items-start mt-4">
-              <MaterialCommunityIcons
-                name="information-outline"
+              <FontAwesome6
+                name="circle-info"
                 size={14}
-                color="#7A7A7A"
+                color="#5A6580"
                 style={{ marginTop: 2, marginRight: 4 }}
               />
-              <Text className="text-[#7A7A7A] text-xs flex-1">
+              <Text className="text-[#5A6580] text-xs flex-1">
                 Card payment order earnings will be transferred within 7 days
                 after the delivered date.
               </Text>
@@ -769,7 +758,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Details list card */}
-          <View className="mx-4 mt-4 mb-8 bg-white rounded-2xl border border-[#EFEFEF] shadow-sm">
+          <View
+            className="mx-4 mt-4 mb-8 bg-white rounded-2xl border border-[#FFFFFF] "
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
             <InfoRow
               icon="person"
               value={
@@ -781,7 +779,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               }
             />
             <InfoRow
-              icon="card-account-details-outline"
+              icon="id-badge"
               iconSet="community"
               value={profileData?.empId || "Not available"}
             />
@@ -793,18 +791,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               )}
             />
             <InfoRow
-              icon="shield-account-outline"
+              icon="shield-alt"
               iconSet="community"
               value={profileData?.nic || "Not available"}
             />
             <InfoRow
-              icon="truck-outline"
+              icon="truck"
               iconSet="community"
               value={profileData?.vType || "Not available"}
             />
             <InfoRow
-              icon="card-text-outline"
-              iconSet="community"
+              icon="sticky-note-2"
+              iconSet="material"
               value={profileData?.vRegNo || "Not available"}
               isLast
             />

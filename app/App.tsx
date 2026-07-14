@@ -37,6 +37,8 @@ import ProfileScreen from "@/component/auth/Profile";
 import OrderDetailsLoadingScreen from "@/component/orders/OrderDetailsLoadingScreen";
 import CashHandOverOTP from "@/component/receivedcash/CashHandOverOTP";
 import MyEarnings from "@/component/auth/MyEarnings";
+import CashHandOver from "@/component/receivedcash/CashHandOver";
+import UploadBankTransferSlip from "@/component/receivedcash/UploadBankTransferSlip";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -276,6 +278,8 @@ function AppContent() {
             <Stack.Screen name="HoldOrder" component={HoldOrder} />
             <Stack.Screen name="ReceivedCash" component={ReceivedCash} />
             <Stack.Screen name="MyEarnings" component={MyEarnings} />
+            <Stack.Screen name="CashHandOver" component={CashHandOver} />
+            <Stack.Screen name="UploadBankTransferSlip" component={UploadBankTransferSlip} />
             <Stack.Screen name="OrderDetailsLoadingScreen" component={OrderDetailsLoadingScreen} />
           </Stack.Navigator>
         </NavigationContainer>

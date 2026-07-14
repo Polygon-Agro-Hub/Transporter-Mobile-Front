@@ -69,5 +69,11 @@ export type RootStackParamList = {
   };
   MyEarnings:{
     
+  };
+  CashHandOver:{
+
+  };
+  UploadBankTransferSlip:{
+    
   }
 };
