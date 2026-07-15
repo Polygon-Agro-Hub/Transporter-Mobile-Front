@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -21,7 +22,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
-import { WebView } from "react-native-webview";
+import * as FileSystem from "expo-file-system/legacy";
+import PdfViewer from "./PdfViewer";
 
 type UploadBankTransferSlipNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -51,7 +53,6 @@ const UploadBankTransferSlip: React.FC = () => {
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [pdfLoadFailed, setPdfLoadFailed] = useState(false);
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -95,13 +96,27 @@ const UploadBankTransferSlip: React.FC = () => {
       asset.mimeType === "application/pdf" || asset.name?.endsWith(".pdf");
     const sizeMB = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "—";
 
+    let finalUri = asset.uri;
+    if (isPdf) {
+      try {
+        // Copy to local app cache to preserve read permissions on Android
+        const localUri = FileSystem.cacheDirectory + (asset.name ?? "Transfer_Slip.pdf");
+        await FileSystem.copyAsync({
+          from: asset.uri,
+          to: localUri,
+        });
+        finalUri = localUri;
+      } catch (err) {
+        console.error("Failed to copy PDF file:", err);
+      }
+    }
+
     setFile({
-      uri: asset.uri,
+      uri: finalUri,
       name: asset.name ?? (isPdf ? "Transfer_Slip.pdf" : "Transfer_Slip.png"),
       sizeMB: `${sizeMB} MB`,
       type: isPdf ? "pdf" : "image",
     });
-    setPdfLoadFailed(false);
   };
 
   const handleUploadPress = () => pickDocument();
@@ -277,10 +292,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => {
-                    setPdfLoadFailed(false);
-                    setPreviewVisible(true);
-                  }}
+                  onPress={() => setPreviewVisible(true)}
                   activeOpacity={0.7}
                   className="mt-3 flex-row items-center justify-center rounded-xl border border-blue-500 py-2.5"
                 >
@@ -361,43 +373,8 @@ const UploadBankTransferSlip: React.FC = () => {
               />
             )}
 
-            {file?.type === "pdf" && !pdfLoadFailed && (
-              <WebView
-                source={{ uri: file.uri }}
-                originWhitelist={["*"]}
-                style={{ flex: 1, backgroundColor: "#f3f4f6" }}
-                startInLoadingState
-                renderLoading={() => (
-                  <View className="absolute inset-0 items-center justify-center">
-                    <ActivityIndicator size="large" color="#3B82F6" />
-                  </View>
-                )}
-                onError={() => setPdfLoadFailed(true)}
-                onHttpError={() => setPdfLoadFailed(true)}
-              />
-            )}
-
-            {file?.type === "pdf" && pdfLoadFailed && (
-              <View className="flex-1 items-center justify-center px-8">
-                <Ionicons
-                  name="document-text-outline"
-                  size={48}
-                  color="#9CA3AF"
-                />
-                <Text className="mt-3 text-center text-sm text-gray-500">
-                  This device can't preview the PDF inline. Open it with another
-                  app instead.
-                </Text>
-                <TouchableOpacity
-                  onPress={openPdfExternally}
-                  activeOpacity={0.7}
-                  className="mt-4 rounded-full bg-blue-500 px-5 py-2.5"
-                >
-                  <Text className="text-sm font-semibold text-white">
-                    Open PDF
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            {file?.type === "pdf" && (
+              <PdfViewer uri={file.uri} />
             )}
           </View>
         </SafeAreaView>

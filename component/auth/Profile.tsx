@@ -492,20 +492,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     value: string;
     isLast?: boolean;
   }) => (
-    <View
-      className={`flex-row items-center py-4 px-4  "border-b border-[#F0F0F0]" 
-      }`}
-    >
-      <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center mr-3">
-        {iconSet === "material" ? (
-          <MaterialIcons name={icon as any} size={18} color="#000000" />
-        ) : (
-          <FontAwesome5 name={icon as any} size={18} color="#000000" />
-        )}
+    <View>
+      <View className="flex-row items-center py-4 px-4">
+        <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center mr-3">
+          {iconSet === "material" ? (
+            <MaterialIcons name={icon as any} size={18} color="#000000" />
+          ) : (
+            <FontAwesome5 name={icon as any} size={18} color="#000000" />
+          )}
+        </View>
+        <Text
+          className="text-black text-sm font-medium flex-1"
+          numberOfLines={1}
+        >
+          {value || "Not available"}
+        </Text>
       </View>
-      <Text className="text-black text-sm font-medium flex-1" numberOfLines={1}>
-        {value || "Not available"}
-      </Text>
+      {!isLast && <View className="h-[1px] bg-[#F0F0F0] mx-4" />}
     </View>
   );
 
@@ -570,6 +573,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
+        <CustomHeader
+          title="My Profile"
+          showBackButton={true}
+          showLanguageSelector={false}
+          showLogoutButton={true}
+          navigation={navigation}
+          onLogoutPress={handleLogoutConfirm}
+        />
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -581,15 +592,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           }
           showsVerticalScrollIndicator={false}
         >
-          <CustomHeader
-            title="My Profile"
-            showBackButton={true}
-            showLanguageSelector={false}
-            showLogoutButton={true}
-            navigation={navigation}
-            onLogoutPress={handleLogoutConfirm}
-          />
-
           {/* Avatar + joined date */}
           <View className="items-center mt-2">
             <View style={{ position: "relative" }}>
@@ -706,7 +708,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Text className="text-black font-bold  mb-2">
                   Rs. {(earningsData?.cashEarnings ?? 0).toFixed(2)}
                 </Text>
-                <View className="bg-[#FFF3D6] rounded-full px-3 py-1">
+                <View className="bg-[#FFF3D6] rounded-md px-3 py-1">
                   <Text className="text-[#8A6D1D] text-xs font-medium">
                     {earningsData?.cashOrders ?? 0} Order
                     {(earningsData?.cashOrders ?? 0) === 1 ? "" : "s"}
@@ -734,7 +736,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <Text className="text-black font-bold mb-2">
                   Rs. {(earningsData?.cardEarnings ?? 0).toFixed(2)}
                 </Text>
-                <View className="bg-[#E4F7EC] rounded-full px-3 py-1">
+                <View className="bg-[#E4F7EC] rounded-md px-3 py-1">
                   <Text className="text-[#1E8449] text-xs font-medium">
                     {earningsData?.cardOrders ?? 0} Order
                     {(earningsData?.cardOrders ?? 0) === 1 ? "" : "s"}
@@ -742,19 +744,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 </View>
               </View>
             </View>
+          </View>
 
-            <View className="flex-row items-start mt-4">
-              <FontAwesome6
-                name="circle-info"
-                size={14}
-                color="#5A6580"
-                style={{ marginTop: 2, marginRight: 4 }}
-              />
-              <Text className="text-[#5A6580] text-xs flex-1">
-                Card payment order earnings will be transferred within 7 days
-                after the delivered date.
-              </Text>
-            </View>
+          {/* Info note */}
+          <View className="flex-row items-start mx-4 mt-3">
+            <FontAwesome6
+              name="circle-info"
+              size={14}
+              color="#5A6580"
+              style={{ marginTop: 2, marginRight: 4 }}
+            />
+            <Text className="text-[#5A6580] text-xs flex-1">
+              Card payment order earnings will be transferred within 7 days
+              after the delivered date.
+            </Text>
           </View>
 
           {/* Details list card */}

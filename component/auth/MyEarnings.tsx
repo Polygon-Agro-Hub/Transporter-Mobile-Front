@@ -13,7 +13,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../types/types";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import CustomHeader from "../common/CustomHeader";
 import { useSelector } from "react-redux";
 import { selectAuthToken } from "@/store/authSlice";
@@ -188,14 +187,13 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
+        <CustomHeader
+          title="My Earnings History"
+          showBackButton={true}
+          showLanguageSelector={false}
+          navigation={navigation}
+        />
         <ScrollView showsVerticalScrollIndicator={false}>
-          <CustomHeader
-            title="My Earnings History"
-            showBackButton={true}
-            showLanguageSelector={false}
-            navigation={navigation}
-          />
-
           {/* Date range card */}
           <View className="mx-4 mt-4 bg-white rounded-2xl border border-[#EFEFEF] p-4 shadow-sm">
             <Text className="text-black font-bold text-base mb-3">
@@ -205,7 +203,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
             <Text className="text-[#000000] text-xs mb-1">From</Text>
             <TouchableOpacity
               onPress={() => setShowFromPicker(true)}
-              className="border border-[#D5D9E4] rounded-3xl px-4 py-3 mb-4"
+              className="border border-[#D5D9E4] rounded-3xl px-4 mb-4 justify-center"
+              style={{ height: 50 }}
               activeOpacity={0.7}
             >
               <Text
@@ -222,7 +221,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
             <Text className="text-[#000000] text-xs mb-1">To</Text>
             <TouchableOpacity
               onPress={() => setShowToPicker(true)}
-              className="border border-[#D5D9E4] rounded-3xl px-4 py-3 mb-4"
+              className="border border-[#D5D9E4] rounded-3xl px-4 mb-4 justify-center"
+              style={{ height: 50 }}
               activeOpacity={0.7}
             >
               <Text
@@ -239,9 +239,10 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
             <TouchableOpacity
               onPress={handleApply}
               disabled={!canApply || isLoading}
-              className={`rounded-full py-3 items-center justify-center ${
+              className={`rounded-full items-center justify-center ${
                 canApply ? "bg-[#F7CA21]" : "bg-[#D9D9D9]"
               }`}
+              style={{ height: 50 }}
               activeOpacity={0.7}
             >
               {isLoading ? (
