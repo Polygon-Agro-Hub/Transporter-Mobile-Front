@@ -133,7 +133,7 @@ const UploadBankTransferSlip: React.FC = () => {
     try {
       setSubmitting(true);
 
-      navigation.goBack();
+      navigation.navigate("BankTransferSlipStatus" as any);
     } catch (error) {
       Alert.alert("Upload failed", "Something went wrong. Please try again.");
     } finally {
@@ -276,8 +276,6 @@ const UploadBankTransferSlip: React.FC = () => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Preview button — now opens in-app modal first (falls
-                    back to external viewer if in-app rendering fails) */}
                 <TouchableOpacity
                   onPress={() => {
                     setPdfLoadFailed(false);

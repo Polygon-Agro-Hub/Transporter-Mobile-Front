@@ -100,7 +100,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
   const [hasApplied, setHasApplied] = useState(false);
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
-  const [showAllOrders, setShowAllOrders] = useState(true);
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
   const canApply = !!fromDate && !!toDate;
 
@@ -160,7 +160,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
         setOrders([]);
       }
       setHasApplied(true);
-      setShowAllOrders(true);
+
+      setShowAllOrders(false);
     } catch (error) {
       console.error("Error fetching earnings history:", error);
       setSummary({
@@ -173,6 +174,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
       });
       setOrders([]);
       setHasApplied(true);
+      setShowAllOrders(false);
     } finally {
       setIsLoading(false);
     }
@@ -278,7 +280,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                 <Text className="text-black font-bold text-sm mb-1">
                   Earnings Summery
                 </Text>
-                <Text className="text-[#5B5B5B] text-xs">
+                <Text className=" text-sm">
                   {formatLongDate(fromDate)} - {formatLongDate(toDate)}
                 </Text>
               </View>
@@ -291,7 +293,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   color="#5A6580"
                   style={{ marginTop: 2, marginRight: 4 }}
                 />
-                <Text className="text-[#5A6580] text-xs flex-1">
+                <Text className="text-[#5A6580] text-sm flex-1">
                   Card payment order earnings will be transferred within 7 days
                   after the delivered date.
                 </Text>
@@ -358,11 +360,10 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   <Text className="text-black font-bold text-sm">
                     All Orders ({String(totalOrders).padStart(2, "0")})
                   </Text>
-                  <MaterialCommunityIcons
-                    name="unfold-more-horizontal"
-                    size={18}
-                    color="#7A7A7A"
-                    style={{ transform: [{ rotate: "90deg" }] }}
+                  <FontAwesome6
+                    name="arrows-up-down"
+                    size={16}
+                    color="#000000"
                   />
                 </TouchableOpacity>
 
@@ -394,22 +395,17 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                           <Text className="text-black font-semibold text-xs">
                             #{order.orderId}
                           </Text>
-                          <Text className="text-[#9AA0A6] text-[11px] mt-0.5">
+                          <Text className="text-black text-[11px] mt-0.5">
                             {formatOrderTimestamp(order.dateTime)}
                           </Text>
                         </View>
 
                         <View className="w-16 flex-row items-center">
-                          <MaterialCommunityIcons
+                          <FontAwesome6
                             name={
-                              order.method === "cash"
-                                ? "cash"
-                                : "credit-card-outline"
+                              order.method === "cash" ? "coins" : "credit-card"
                             }
                             size={14}
-                            color={
-                              order.method === "cash" ? "#8A6D1D" : "#1E8449"
-                            }
                             style={{ marginRight: 4 }}
                           />
                           <Text className="text-black text-xs capitalize">

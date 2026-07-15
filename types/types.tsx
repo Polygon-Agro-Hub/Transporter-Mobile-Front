@@ -75,5 +75,8 @@ export type RootStackParamList = {
   };
   UploadBankTransferSlip:{
     
+  };
+  BankTransferSlipStatus:{
+    
   }
 };
