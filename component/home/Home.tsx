@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -21,6 +22,7 @@ import * as Progress from "react-native-progress";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import LoadingPage from "../common/LoadingPage";
 import UnableToLoadData from "../common/UnableToLoadData";
+import HomeSkeleton from "../common/HomeSkeleton";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -51,6 +53,7 @@ interface AmountData {
   ongoingProcessOrderIds?: number[];
   pendingLocationsCount?: number;
   todayCompletedLocationsCount?: number;
+  activeTransactionStatus?: string | null;
 }
 
 const defaultAmountData: AmountData = {
@@ -68,6 +71,7 @@ const defaultAmountData: AmountData = {
   ongoingProcessOrderIds: [],
   pendingLocationsCount: 0,
   todayCompletedLocationsCount: 0,
+  activeTransactionStatus: null,
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -178,12 +182,32 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     return packsCount === 0 && (cashAmount > 0 || returnOrders > 0);
   };
 
+  const handleCashNavigation = () => {
+    const cashAmount = getCashAmount();
+    const txStatus = amountData?.activeTransactionStatus;
+
+    if (txStatus === "To Review") {
+      navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+    } else if (txStatus === "Rejected") {
+      navigation.navigate("BankTransferSlipStatus" as any, { status: "rejected" });
+    } else {
+      if (cashAmount > 0) {
+        navigation.navigate("CashHandOver" as any);
+      } else {
+        Alert.alert("Information", "No cash received. Your previous transfer is completed.");
+      }
+    }
+  };
+
   const handleEndShiftPress = () => {
     const cashAmount = getCashAmount();
     const returnOrders = amountData?.returnOrders || 0;
+    const txStatus = amountData?.activeTransactionStatus;
 
-    if (cashAmount > 0) {
-      navigation.navigate("ReceivedCash");
+    if (txStatus === "To Review" || txStatus === "Rejected") {
+      handleCashNavigation();
+    } else if (cashAmount > 0) {
+      handleCashNavigation();
     } else if (returnOrders > 0) {
       navigation.navigate("ReturnOrders");
     }
@@ -304,14 +328,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const actionRows = chunkArray(quickActions, 2);
 
   const handleCashReceivedPress = () => {
-    const cashAmount = getCashAmount();
-    if (cashAmount > 0) {
-      navigation.navigate("ReceivedCash");
-    }
+    handleCashNavigation();
   };
 
   if (loading) {
-    return <LoadingPage message="Loading Data..." fullScreen={true} />;
+    return <HomeSkeleton />;
   }
 
   if (error && !loading) {

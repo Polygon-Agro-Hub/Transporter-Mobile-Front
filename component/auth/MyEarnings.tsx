@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -102,6 +103,49 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
   const [showAllOrders, setShowAllOrders] = useState(false);
 
   const canApply = !!fromDate && !!toDate;
+
+  const handleCashEarningsPress = async () => {
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `${environment.API_BASE_URL}api/home/get-amount`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+      if (response.ok && data.status === "success" && data.data) {
+        const info = data.data;
+        const cashAmount = parseFloat(info.totalCashAmount) || 0;
+        const txStatus = info.activeTransactionStatus;
+
+        if (txStatus === "To Review") {
+          navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+        } else if (txStatus === "Rejected") {
+          navigation.navigate("BankTransferSlipStatus" as any, { status: "rejected" });
+        } else {
+          if (cashAmount > 0) {
+            navigation.navigate("CashHandOver" as any);
+          } else {
+            Alert.alert("Information", "No cash received. Your previous transfer is completed.");
+          }
+        }
+      } else {
+        navigation.navigate("CashHandOver" as any);
+      }
+    } catch (err) {
+      console.log("Error checking cash handover status:", err);
+      navigation.navigate("CashHandOver" as any);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onChangeFromDate = (
     event: DateTimePickerEvent,
@@ -302,7 +346,11 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
               {/* Cash / Card earnings cards */}
               <View className="flex-row mx-4 mt-3" style={{ gap: 12 }}>
-                <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
+                <TouchableOpacity
+                  onPress={handleCashEarningsPress}
+                  activeOpacity={0.7}
+                  className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white"
+                >
                   <LottieView
                     source={require("@/assets/json/coin.json")}
                     style={{
@@ -324,7 +372,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                       {summary.cashOrders === 1 ? "" : "s"}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
                   <LottieView

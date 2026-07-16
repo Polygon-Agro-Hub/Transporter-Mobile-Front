@@ -19,6 +19,7 @@ import CustomHeader from "@/component/common/CustomHeader";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import { Ionicons, FontAwesome6, FontAwesome5 } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
+import LoadingPage from "../common/LoadingPage";
 
 type BankTransferSlipStatusNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -79,20 +80,28 @@ const BankTransferSlipStatus: React.FC = () => {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem("accessToken");
+      const token = await AsyncStorage.getItem("token");
       const response = await axios.get(
-        `${environment.API_BASE_URL}/bank-transfer/status`,
+        `${environment.API_BASE_URL}api/home/get-latest-transaction-status`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      const result = response.data;
-      setData({
-        status: result.status,
-        submittedAt: result.submittedAt,
-        rejectedAt: result.rejectedAt,
-        amount: result.amount,
-        rejectionReason: result.rejectionReason,
-      });
+      if (response.data.status === "success" && response.data.data) {
+        const result = response.data.data;
+        let mappedStatus: SlipStatus = "pending";
+        if (result.transStatus === "Approved") mappedStatus = "approved";
+        else if (result.transStatus === "Rejected") mappedStatus = "rejected";
+
+        setData({
+          status: mappedStatus,
+          submittedAt: result.createdAt,
+          rejectedAt: result.transStatus === "Rejected" ? result.createdAt : undefined,
+          amount: parseFloat(result.transAmount) || 0,
+          rejectionReason: result.transStatus === "Rejected" ? "Transfer slip is unclear or details mismatch." : undefined,
+        });
+      } else {
+        throw new Error("No transaction found");
+      }
     } catch (error) {
       const fallbackStatus: SlipStatus =
         (route.params as any)?.status ?? "rejected";
@@ -128,13 +137,19 @@ const BankTransferSlipStatus: React.FC = () => {
   };
 
   const reUpload = () => {
-    navigation.navigate("UploadBankTransferSlip" as never);
+    navigation.navigate("UploadBankTransferSlip", { amount: data?.amount });
   };
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="Waiting for Approval"
+          navigation={navigation}
+          onBackPress={() => navigation.goBack()}
+          showBackButton={true}
+        />
+        <LoadingPage message="Fetching Status Details..." fullScreen={true} />
       </View>
     );
   }
@@ -162,7 +177,9 @@ const BankTransferSlipStatus: React.FC = () => {
     <View className="flex-1 bg-white">
       <CustomHeader
         title={isRejected ? "Rejected" : "Waiting for Approval"}
+        navigation={navigation}
         onBackPress={() => navigation.goBack()}
+        showBackButton={true}
       />
 
       <ScrollView

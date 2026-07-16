@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import CustomHeader from "@/component/common/CustomHeader";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import { Ionicons, Feather, FontAwesome5 } from "@expo/vector-icons";
@@ -24,6 +24,10 @@ import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import PdfViewer from "./PdfViewer";
+import axios from "axios";
+import { environment } from "@/environment/environment";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AlertModal } from "../common/AlertModal";
 
 type UploadBankTransferSlipNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -49,18 +53,27 @@ interface UploadedFile {
 
 const UploadBankTransferSlip: React.FC = () => {
   const navigation = useNavigation<UploadBankTransferSlipNavigationProp>();
+  const route = useRoute();
+  const routeParams = route.params as { amount?: number } | undefined;
 
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
 
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<"success" | "error">("error");
+  const [onAlertClose, setOnAlertClose] = useState<() => void>(() => () => {});
+
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        "Permission required",
-        "Please allow access to your photos to upload a transfer slip.",
-      );
+      setAlertTitle("Permission Required");
+      setAlertMessage("Please allow access to your photos to upload a transfer slip.");
+      setAlertType("error");
+      setOnAlertClose(() => () => setAlertVisible(false));
+      setAlertVisible(true);
       return;
     }
 
@@ -136,10 +149,11 @@ const UploadBankTransferSlip: React.FC = () => {
         await Linking.openURL(file.uri);
       }
     } catch (error) {
-      Alert.alert(
-        "Couldn't open PDF",
-        "Please make sure you have a PDF viewer app installed.",
-      );
+      setAlertTitle("Couldn't open PDF");
+      setAlertMessage("Please make sure you have a PDF viewer app installed.");
+      setAlertType("error");
+      setOnAlertClose(() => () => setAlertVisible(false));
+      setAlertVisible(true);
     }
   };
 
@@ -148,9 +162,65 @@ const UploadBankTransferSlip: React.FC = () => {
     try {
       setSubmitting(true);
 
-      navigation.navigate("BankTransferSlipStatus" as any);
-    } catch (error) {
-      Alert.alert("Upload failed", "Something went wrong. Please try again.");
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        setAlertTitle("Error");
+        setAlertMessage("Please login again");
+        setAlertType("error");
+        setOnAlertClose(() => () => setAlertVisible(false));
+        setAlertVisible(true);
+        return;
+      }
+
+      const formData = new FormData();
+      const fileUri = file.uri;
+      const fileExt = fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg");
+      const fileName = file.name || `transfer_slip.${fileExt}`;
+      const fileMime = file.type === "pdf" ? "application/pdf" : `image/${fileExt === "png" ? "png" : "jpeg"}`;
+
+      formData.append("slip", {
+        uri: fileUri,
+        name: fileName,
+        type: fileMime,
+      } as any);
+
+      const amountToTransfer = routeParams?.amount ?? TRANSFER_DETAILS.amount;
+      formData.append("amount", String(amountToTransfer));
+
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/home/upload-transfer-slip`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      if (response.data.status === "success") {
+        setAlertTitle("Success!");
+        setAlertMessage("Bank transfer slip uploaded successfully.");
+        setAlertType("success");
+        setOnAlertClose(() => () => {
+          setAlertVisible(false);
+          navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+        });
+        setAlertVisible(true);
+      } else {
+        setAlertTitle("Upload Failed");
+        setAlertMessage(response.data.message || "Please try again.");
+        setAlertType("error");
+        setOnAlertClose(() => () => setAlertVisible(false));
+        setAlertVisible(true);
+      }
+    } catch (error: any) {
+      console.log("Error uploading transfer slip:", error);
+      setAlertTitle("Upload Failed");
+      setAlertMessage(error.response?.data?.message || "Something went wrong. Please try again.");
+      setAlertType("error");
+      setOnAlertClose(() => () => setAlertVisible(false));
+      setAlertVisible(true);
     } finally {
       setSubmitting(false);
     }
@@ -160,7 +230,9 @@ const UploadBankTransferSlip: React.FC = () => {
     <View className="flex-1 bg-white">
       <CustomHeader
         title="Upload Bank Transfer Slip"
+        navigation={navigation}
         onBackPress={() => navigation.goBack()}
+        showBackButton={true}
       />
 
       <ScrollView
@@ -175,7 +247,7 @@ const UploadBankTransferSlip: React.FC = () => {
             className="mt-1 text-2xl font-bold text-gray-900"
             numberOfLines={1}
           >
-            Rs. {formatNumberWithCommas(TRANSFER_DETAILS.amount.toFixed(2))}
+            Rs. {formatNumberWithCommas((routeParams?.amount ?? TRANSFER_DETAILS.amount).toFixed(2))}
           </Text>
         </View>
 
@@ -379,6 +451,15 @@ const UploadBankTransferSlip: React.FC = () => {
           </View>
         </SafeAreaView>
       </Modal>
+
+      <AlertModal
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        onClose={onAlertClose}
+        autoClose={true}
+      />
     </View>
   );
 };

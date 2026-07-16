@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,6 +18,7 @@ import CustomHeader from "@/component/common/CustomHeader";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import LoadingPage from "../common/LoadingPage";
 import LottieView from "lottie-react-native";
 
 type CashHandOverNavigationProp = StackNavigationProp<
@@ -26,28 +27,18 @@ type CashHandOverNavigationProp = StackNavigationProp<
 >;
 
 interface OrderCashItem {
+  id: string;
   orderId: string;
   received: number;
   earned: number;
 }
 
-const MOCK_ORDERS: OrderCashItem[] = [
-  { orderId: "22123100001", received: 1000, earned: 237.5 },
-  { orderId: "22123100002", received: 2000, earned: 250 },
-  { orderId: "22123100003", received: 3000, earned: 250 },
-  { orderId: "22123100004", received: 4000, earned: 250 },
-];
-
-const USE_MOCK_DATA = true;
-
 const CashHandOver: React.FC = () => {
   const navigation = useNavigation<CashHandOverNavigationProp>();
 
-  const [loading, setLoading] = useState<boolean>(!USE_MOCK_DATA);
+  const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [orders, setOrders] = useState<OrderCashItem[]>(
-    USE_MOCK_DATA ? MOCK_ORDERS : [],
-  );
+  const [orders, setOrders] = useState<OrderCashItem[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
 
   const totalReceived = orders.reduce((sum, o) => sum + o.received, 0);
@@ -56,26 +47,47 @@ const CashHandOver: React.FC = () => {
   const perOrderEarning = orders.length > 0 ? orders[0].earned : 0;
 
   const fetchCashHandOverData = useCallback(async () => {
-    if (USE_MOCK_DATA) {
-      setOrders(MOCK_ORDERS);
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-
     try {
       const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Error", "Please login again");
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.get(
-        `${environment.API_BASE_URL}/rider/cash-hand-over/today`,
+        `${environment.API_BASE_URL}api/home/get-received-cash`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
 
-      const data = response?.data?.orders ?? [];
-      setOrders(data);
-    } catch (error) {
+      if (response.data.status === "success") {
+        const validItems = (response.data.data || [])
+          .filter((item: any) => {
+            const hasValidAmount =
+              item.amount != null &&
+              !isNaN(parseFloat(item.amount)) &&
+              parseFloat(item.amount) > 0;
+            return hasValidAmount;
+          })
+          .map((item: any) => ({
+            id: String(item.id),
+            orderId: item.invoNo || `#${item.orderId}`,
+            received: parseFloat(item.amount) || 0,
+            earned: parseFloat(item.earned) || 0,
+          }));
+
+        setOrders(validItems);
+      } else {
+        Alert.alert("Error", "Failed to fetch received cash");
+      }
+    } catch (error: any) {
       console.log("Error fetching cash hand over data:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Failed to fetch data",
+      );
       setOrders([]);
     } finally {
       setLoading(false);
@@ -83,83 +95,32 @@ const CashHandOver: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (!USE_MOCK_DATA) {
+  useFocusEffect(
+    useCallback(() => {
       fetchCashHandOverData();
-    }
-  }, [fetchCashHandOverData]);
+    }, [fetchCashHandOverData]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchCashHandOverData();
   };
 
-  const handleUploadSlip = async () => {
-    // try {
-    //   const permission =
-    //     await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    //   if (!permission.granted) {
-    //     Alert.alert(
-    //       "Permission required",
-    //       "Please allow access to your photos to upload the transfer slip.",
-    //     );
-    //     return;
-    //   }
-
-    //   const result = await ImagePicker.launchImageLibraryAsync({
-    //     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    //     quality: 0.8,
-    //   });
-
-    //   if (result.canceled) return;
-
-    //   const asset = result.assets[0];
-    //   setUploading(true);
-
-    //   const token = await AsyncStorage.getItem("token");
-    //   const formData = new FormData();
-    //   formData.append("slip", {
-    //     uri: asset.uri,
-    //     name: "transfer-slip.jpg",
-    //     type: "image/jpeg",
-    //   } as any);
-    //   formData.append("amount", String(amountToTransfer));
-
-    //   await axios.post(
-    //     `${environment.API_BASE_URL}/rider/cash-hand-over/upload-slip`,
-    //     formData,
-    //     {
-    //       headers: {
-    //         Authorization: `Bearer ${token}`,
-    //         "Content-Type": "multipart/form-data",
-    //       },
-    //     },
-    //   );
-
-    //   Alert.alert("Success", "Transfer slip uploaded successfully.");
-    //   fetchCashHandOverData();
-    // } catch (error) {
-    //   console.log("Error uploading transfer slip:", error);
-    //   Alert.alert("Upload failed", "Please try again.");
-    // } finally {
-    //   setUploading(false);
-    // }
-    navigation.navigate("UploadBankTransferSlip" as any);
+  const handleUploadSlip = () => {
+    navigation.navigate("UploadBankTransferSlip", { amount: amountToTransfer });
   };
 
   return (
     <View className="flex-1 bg-white">
       <CustomHeader
         title="Received Cash"
+        navigation={navigation}
         onBackPress={() => navigation.goBack()}
         showBackButton={true}
       />
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#F5C518" />
-        </View>
+        <LoadingPage message="Loading Cash Handover Details..." fullScreen={true} />
       ) : orders.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-sm">
@@ -181,8 +142,8 @@ const CashHandOver: React.FC = () => {
                 <LottieView
                   source={require("@/assets/json/coin.json")}
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 60,
+                    height: 60,
                   }}
                   autoPlay
                   loop
@@ -202,8 +163,8 @@ const CashHandOver: React.FC = () => {
                 <LottieView
                   source={require("@/assets/json/coin.json")}
                   style={{
-                    width: 40,
-                    height: 40,
+                    width: 60,
+                    height: 60,
                   }}
                   autoPlay
                   loop
