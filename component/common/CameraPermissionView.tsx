@@ -14,12 +14,11 @@ export const CameraPermissionView: React.FC<CameraPermissionViewProps> = ({
   onBack,
 }) => {
   return (
-    <SafeAreaView className="flex-1 bg-black px-6">
-      {/* Back Button (styled like CustomHeader's dark back button) */}
+    <View className="flex-1 bg-black px-4">
       {onBack && (
         <TouchableOpacity
           onPress={onBack}
-          className="self-start mt-6"
+          className="self-start mt-3"
           activeOpacity={0.7}
         >
           <Entypo
@@ -36,7 +35,7 @@ export const CameraPermissionView: React.FC<CameraPermissionViewProps> = ({
       )}
 
       {/* Main Content Area */}
-      <View className="flex-1 justify-center items-center -mt-10">
+      <View className="flex-1 justify-center items-center px-2 -mt-10">
         {/* Camera Image from permission folder */}
         <View className="mb-8">
           <Image
@@ -71,7 +70,7 @@ export const CameraPermissionView: React.FC<CameraPermissionViewProps> = ({
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

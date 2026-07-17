@@ -70,6 +70,7 @@ interface ProcessOrder {
   amount: string;
   isPaid: boolean;
   status: string;
+  cashAmountDue: number | null;
 }
 
 interface OrderItem {
@@ -129,7 +130,6 @@ const formatAddressWithLabels = (address: string) => {
       }
     }
 
-    // If no label found, return as black text
     return (
       <Text key={index} style={{ color: "#000000" }}>
         {part}
@@ -663,7 +663,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     setCompletedOrders((prev) => {
       const newCompleted = [...prev, completedId];
 
-      // Check if all orders are completed
       const allOrderIds = orders.map((order) => order.processOrder.id);
       const allCompleted = allOrderIds.every((id) => newCompleted.includes(id));
 
@@ -855,7 +854,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               isCompleted ||
               !isButtonActive;
 
-            // ✅ Must be inside the map callback where `order` is in scope
             const sameLocationOrders = findOrdersWithSameLocation(
               order.orderId,
             );
@@ -890,7 +888,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
                   {/* Payment Info */}
                   <View className="flex-row items-center mb-4">
-                    {order.processOrder.isPaid ? (
+                    {order.processOrder.paymentMethod?.toLowerCase() ===
+                    "cash" ? (
+                      <FontAwesome6 name="coins" size={16} color="#F7CA21" />
+                    ) : order.processOrder.isPaid ? (
                       <FontAwesome
                         name="check-circle"
                         size={16}
@@ -900,7 +901,14 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       <FontAwesome6 name="coins" size={16} color="#F7CA21" />
                     )}
                     <Text className="ml-2 text-sm text-black">
-                      {order.processOrder.isPaid ? (
+                      {order.processOrder.paymentMethod?.toLowerCase() ===
+                      "cash" ? (
+                        <Text>
+                          {formatCurrency(
+                            (order.processOrder.cashAmountDue ?? 0).toString(),
+                          )}
+                        </Text>
+                      ) : order.processOrder.isPaid ? (
                         <Text className="text-black">Already Paid!</Text>
                       ) : (
                         <Text>{formatCurrency(order.pricing)}</Text>

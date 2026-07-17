@@ -8,18 +8,21 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { Feather } from "@expo/vector-icons";
-import { useSelector } from "react-redux";
-import { selectUserProfile } from "../../store/authSlice";
+import { useSelector, useDispatch } from "react-redux";
+import { selectUserProfile, logoutUser } from "../../store/authSlice";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import LoadingPage from "../common/LoadingPage";
+import UnableToLoadData from "../common/UnableToLoadData";
+import HomeSkeleton from "../common/HomeSkeleton";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -50,6 +53,7 @@ interface AmountData {
   ongoingProcessOrderIds?: number[];
   pendingLocationsCount?: number;
   todayCompletedLocationsCount?: number;
+  activeTransactionStatus?: string | null;
 }
 
 const defaultAmountData: AmountData = {
@@ -67,6 +71,7 @@ const defaultAmountData: AmountData = {
   ongoingProcessOrderIds: [],
   pendingLocationsCount: 0,
   todayCompletedLocationsCount: 0,
+  activeTransactionStatus: null,
 };
 
 const Home: React.FC<HomeProps> = ({ navigation }) => {
@@ -76,6 +81,24 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
 
   const userProfile = useSelector(selectUserProfile);
+  const dispatch = useDispatch();
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
+      dispatch(logoutUser());
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
+
+  const handleTryAgain = () => {
+    fetchAmountData();
+  };
 
   const fetchAmountData = useCallback(async () => {
     try {
@@ -159,12 +182,32 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     return packsCount === 0 && (cashAmount > 0 || returnOrders > 0);
   };
 
+  const handleCashNavigation = () => {
+    const cashAmount = getCashAmount();
+    const txStatus = amountData?.activeTransactionStatus;
+
+    if (txStatus === "To Review") {
+      navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+    } else if (txStatus === "Rejected") {
+      navigation.navigate("BankTransferSlipStatus" as any, { status: "rejected" });
+    } else {
+      if (cashAmount > 0) {
+        navigation.navigate("CashHandOver" as any);
+      } else {
+        Alert.alert("Information", "No cash received. Your previous transfer is completed.");
+      }
+    }
+  };
+
   const handleEndShiftPress = () => {
     const cashAmount = getCashAmount();
     const returnOrders = amountData?.returnOrders || 0;
+    const txStatus = amountData?.activeTransactionStatus;
 
-    if (cashAmount > 0) {
-      navigation.navigate("ReceivedCash");
+    if (txStatus === "To Review" || txStatus === "Rejected") {
+      handleCashNavigation();
+    } else if (cashAmount > 0) {
+      handleCashNavigation();
     } else if (returnOrders > 0) {
       navigation.navigate("ReturnOrders");
     }
@@ -285,40 +328,22 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
   const actionRows = chunkArray(quickActions, 2);
 
   const handleCashReceivedPress = () => {
-    const cashAmount = getCashAmount();
-    if (cashAmount > 0) {
-      navigation.navigate("ReceivedCash");
-    }
+    handleCashNavigation();
   };
 
   if (loading) {
-    return <LoadingPage message="Loading Data..." fullScreen={true} />;
+    return <HomeSkeleton />;
   }
 
   if (error && !loading) {
     return (
-      <ScrollView
-        className="flex-1 bg-white"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <View className="flex-1 items-center justify-center p-4 mt-20">
-          <Feather name="alert-circle" size={48} color="#EF4444" />
-          <Text className="text-lg font-bold text-gray-900 mt-4">
-            Unable to Load Data
-          </Text>
-          <Text className="text-gray-600 text-center mt-2">
-            {error}. Pull down to refresh.
-          </Text>
-          <TouchableOpacity
-            className="mt-4 bg-blue-500 px-6 py-3 rounded-lg"
-            onPress={onRefresh}
-          >
-            <Text className="text-white font-medium">Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      <UnableToLoadData
+        error={error}
+        onRefresh={onRefresh}
+        onTryAgain={handleTryAgain}
+        onLogout={handleLogout}
+        refreshing={refreshing}
+      />
     );
   }
 

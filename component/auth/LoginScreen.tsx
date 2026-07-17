@@ -396,9 +396,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   onChangeText={handleEmpIdChange}
                   placeholder="Your EMP ID"
                   placeholderTextColor="#F6F9FF"
-                  style={{
-                    paddingBottom: Platform.OS === "ios" ? 6 : 0,
-                  }}
                 />
               </LinearGradient>
               {empIdError && (

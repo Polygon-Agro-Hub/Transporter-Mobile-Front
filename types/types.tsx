@@ -5,16 +5,8 @@ export type RootStackParamList = {
   Splash: undefined;
   ComplaintsList: undefined;
   DeliverySuccessful: undefined;
-  ReceivedCash: { scannedOfficerId?: string } | undefined;
   AddComplaint: undefined;
   Login: undefined;
-  CashHandOverOTP: {
-    orderIds: string[];
-    officerId: string; 
-    totalAmount: number;
-    mobileNumber: string;
-    officerName?: string;
-  };
   ChangePassword: { passwordUpdated: number };
   BannedScreen: {
     statusType: string;
@@ -23,7 +15,6 @@ export type RootStackParamList = {
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
-  ReceivedCashQR: { amount: number; selectedCount: number };
   ReturnOrderQR: {
     invoiceNumber: string;
     orderId: number;
@@ -67,4 +58,16 @@ export type RootStackParamList = {
     longitude: string | null;
     address?: string;
   };
+  MyEarnings:{
+    
+  };
+  CashHandOver:{
+
+  };
+  UploadBankTransferSlip: {
+    amount?: number;
+  } | undefined;
+  BankTransferSlipStatus:{
+    
+  }
 };
