@@ -318,6 +318,13 @@ const BankTransferSlipStatus: React.FC = () => {
           onPress={isRejected ? reUpload : goHome}
           activeOpacity={0.8}
           className="flex-row items-center justify-center rounded-full bg-[#F7CA21] py-4"
+          style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}
         >
           {isRejected && (
             <FontAwesome5

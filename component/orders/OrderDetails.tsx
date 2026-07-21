@@ -139,6 +139,35 @@ const formatAddressWithLabels = (address: string) => {
   });
 };
 
+/**
+ * Parses the START time of a schedule range like:
+ *   "08:00 AM - 12:00 PM"  -> 480   (8 * 60)
+ *   "12:00 PM - 04:00 PM"  -> 720   (12 * 60)
+ *   "04:00 PM - 09:00 PM"  -> 960   (16 * 60)
+ *
+ * Returns minutes-since-midnight for reliable chronological sorting.
+ * Falls back to a very large number (so unparsable/empty values sort last).
+ */
+const parseScheduleStartMinutes = (time: string): number => {
+  if (!time) return Number.MAX_SAFE_INTEGER;
+
+  // Take only the part BEFORE the first "-" (the start time of the range),
+  // so we never accidentally match against the end time.
+  const startPart = time.split("-")[0].trim();
+
+  const match = startPart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  return hour * 60 + minute;
+};
+
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const { processOrderIds = [] } = route.params;
 
@@ -253,54 +282,16 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           throw new Error("No data found");
         }
 
-        const getScheduleTimePriority = (time: string) => {
-          if (!time) return 999;
-
-          const lowerTime = time.toLowerCase();
-
-          if (
-            lowerTime.includes("8:00") ||
-            lowerTime.includes("8 am") ||
-            lowerTime.includes("8:00am") ||
-            lowerTime.includes("8:00 am") ||
-            lowerTime.includes("morning") ||
-            lowerTime.includes("early")
-          ) {
-            return 1;
-          }
-
-          if (
-            lowerTime.includes("2:00") ||
-            lowerTime.includes("2 pm") ||
-            lowerTime.includes("2:00pm") ||
-            lowerTime.includes("2:00 pm") ||
-            lowerTime.includes("afternoon") ||
-            lowerTime.includes("evening") ||
-            lowerTime.includes("late")
-          ) {
-            return 2;
-          }
-
-          const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
-          if (match) {
-            let hour = parseInt(match[1], 10);
-            const period = match[2].toUpperCase();
-
-            if (period === "PM" && hour !== 12) hour += 12;
-            if (period === "AM" && hour === 12) hour = 0;
-
-            return hour;
-          }
-
-          return 999;
-        };
-
+        // Sort strictly by the parsed start time of the schedule range,
+        // so "08:00 AM - 12:00 PM" always comes before
+        // "12:00 PM - 04:00 PM" which always comes before
+        // "04:00 PM - 09:00 PM", regardless of exact wording.
         const sortedOrders = [...data.orders].sort((a, b) => {
-          const priorityA = getScheduleTimePriority(a.sheduleTime);
-          const priorityB = getScheduleTimePriority(b.sheduleTime);
+          const startA = parseScheduleStartMinutes(a.sheduleTime);
+          const startB = parseScheduleStartMinutes(b.sheduleTime);
 
-          if (priorityA !== priorityB) {
-            return priorityA - priorityB;
+          if (startA !== startB) {
+            return startA - startB;
           }
 
           return a.orderId - b.orderId;
@@ -420,12 +411,22 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     return orders.length;
   };
 
-  const getScheduleTimeDisplay = () => {
-    if (!orders || orders.length === 0) return "Not Scheduled";
+ const getScheduleTimeDisplay = () => {
+  if (!orders || orders.length === 0) return "Not Scheduled";
 
-    const firstOrder = orders[0];
-    return firstOrder?.sheduleTime || "Not Scheduled";
-  };
+  // Collect all distinct schedule times (not just the first order's).
+  // Orders are already sorted by start time, so this stays in order.
+  const uniqueTimes: string[] = [];
+  orders.forEach((order) => {
+    if (order.sheduleTime && !uniqueTimes.includes(order.sheduleTime)) {
+      uniqueTimes.push(order.sheduleTime);
+    }
+  });
+
+  if (uniqueTimes.length === 0) return "Not Scheduled";
+
+  return uniqueTimes.join(" | ");
+};
 
   const getJourneyButtonText = (status: string) => {
     const normalizedStatus = status?.toLowerCase();

@@ -70,7 +70,9 @@ const UploadBankTransferSlip: React.FC = () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setAlertTitle("Permission Required");
-      setAlertMessage("Please allow access to your photos to upload a transfer slip.");
+      setAlertMessage(
+        "Please allow access to your photos to upload a transfer slip.",
+      );
       setAlertType("error");
       setOnAlertClose(() => () => setAlertVisible(false));
       setAlertVisible(true);
@@ -113,7 +115,8 @@ const UploadBankTransferSlip: React.FC = () => {
     if (isPdf) {
       try {
         // Copy to local app cache to preserve read permissions on Android
-        const localUri = FileSystem.cacheDirectory + (asset.name ?? "Transfer_Slip.pdf");
+        const localUri =
+          FileSystem.cacheDirectory + (asset.name ?? "Transfer_Slip.pdf");
         await FileSystem.copyAsync({
           from: asset.uri,
           to: localUri,
@@ -174,9 +177,13 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const formData = new FormData();
       const fileUri = file.uri;
-      const fileExt = fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg");
+      const fileExt =
+        fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg");
       const fileName = file.name || `transfer_slip.${fileExt}`;
-      const fileMime = file.type === "pdf" ? "application/pdf" : `image/${fileExt === "png" ? "png" : "jpeg"}`;
+      const fileMime =
+        file.type === "pdf"
+          ? "application/pdf"
+          : `image/${fileExt === "png" ? "png" : "jpeg"}`;
 
       formData.append("slip", {
         uri: fileUri,
@@ -204,7 +211,9 @@ const UploadBankTransferSlip: React.FC = () => {
         setAlertType("success");
         setOnAlertClose(() => () => {
           setAlertVisible(false);
-          navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+          navigation.navigate("BankTransferSlipStatus" as any, {
+            status: "pending",
+          });
         });
         setAlertVisible(true);
       } else {
@@ -217,7 +226,10 @@ const UploadBankTransferSlip: React.FC = () => {
     } catch (error: any) {
       console.log("Error uploading transfer slip:", error);
       setAlertTitle("Upload Failed");
-      setAlertMessage(error.response?.data?.message || "Something went wrong. Please try again.");
+      setAlertMessage(
+        error.response?.data?.message ||
+          "Something went wrong. Please try again.",
+      );
       setAlertType("error");
       setOnAlertClose(() => () => setAlertVisible(false));
       setAlertVisible(true);
@@ -241,13 +253,18 @@ const UploadBankTransferSlip: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Amount to Transfer */}
-        <View className="mt-6 items-center rounded-2xl bg-amber-50 py-4">
-          <Text className="text-sm text-gray-600">Amount to Transfer</Text>
+        <View className="mt-6 self-center items-center rounded-2xl bg-[#FFFBE9] px-12 py-4">
+          <Text numberOfLines={1} className="text-sm text-black">
+            Amount to Transfer
+          </Text>
           <Text
             className="mt-1 text-2xl font-bold text-gray-900"
             numberOfLines={1}
           >
-            Rs. {formatNumberWithCommas((routeParams?.amount ?? TRANSFER_DETAILS.amount).toFixed(2))}
+            Rs.{" "}
+            {formatNumberWithCommas(
+              (routeParams?.amount ?? TRANSFER_DETAILS.amount).toFixed(2),
+            )}
           </Text>
         </View>
 
@@ -308,7 +325,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 </View>
 
                 {/* File row */}
-                <View className="mt-3 flex-row items-center rounded-xl bg-gray-50 px-3 py-2.5">
+                <View className="mt-3 flex-row items-center rounded-xl bg-[#F9F9F9] border border-[#DEDEDE] px-3 py-2.5">
                   <View className="h-9 w-9 items-center justify-center rounded-lg bg-pink-50">
                     <Ionicons name="image" size={18} color="#EC4899" />
                   </View>
@@ -330,7 +347,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 <TouchableOpacity
                   onPress={() => setPreviewVisible(true)}
                   activeOpacity={0.7}
-                  className="mt-3 flex-row items-center justify-center rounded-xl border border-blue-500 py-2.5"
+                  className="mt-3 self-center flex-row items-center justify-center rounded-xl border border-blue-500 px-10 py-2.5"
                 >
                   <Ionicons name="eye" size={16} color="#3B82F6" />
                   <Text className="ml-2 text-sm font-semibold text-blue-500">
@@ -366,7 +383,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 <TouchableOpacity
                   onPress={() => setPreviewVisible(true)}
                   activeOpacity={0.7}
-                  className="mt-3 flex-row items-center justify-center rounded-xl border border-blue-500 py-2.5"
+                  className="mt-3 self-center flex-row items-center justify-center rounded-xl border border-blue-500 px-10 py-2.5"
                 >
                   <Ionicons name="eye" size={16} color="#3B82F6" />
                   <Text className="ml-2 text-sm font-semibold text-blue-500">
@@ -388,6 +405,13 @@ const UploadBankTransferSlip: React.FC = () => {
           className={`items-center rounded-full py-4 ${
             file ? "bg-amber-400" : "bg-gray-200"
           }`}
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 5,
+          }}
         >
           <Text
             className={`text-base font-bold ${
@@ -445,9 +469,7 @@ const UploadBankTransferSlip: React.FC = () => {
               />
             )}
 
-            {file?.type === "pdf" && (
-              <PdfViewer uri={file.uri} />
-            )}
+            {file?.type === "pdf" && <PdfViewer uri={file.uri} />}
           </View>
         </SafeAreaView>
       </Modal>

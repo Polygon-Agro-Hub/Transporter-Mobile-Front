@@ -120,7 +120,10 @@ const CashHandOver: React.FC = () => {
       />
 
       {loading ? (
-        <LoadingPage message="Loading Cash Handover Details..." fullScreen={true} />
+        <LoadingPage
+          message="Loading Cash Handover Details..."
+          fullScreen={true}
+        />
       ) : orders.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-sm">
@@ -152,9 +155,9 @@ const CashHandOver: React.FC = () => {
                 <Text className="text-xl font-bold mt-1">
                   Rs. {formatNumberWithCommas(totalReceived)}
                 </Text>
-                <View className=" bg-[#FEF3D4] rounded-md  px-2 py-0.5 mt-2">
+                <View className=" bg-[#FEF3D4] rounded-md  px-2 mb-6 py-0.5 mt-2" >
                   <Text className="text-[11px] text-[#7A4A0E]">
-                    Total : {orders.length} Orders
+                    Total : {orders.length} Orders 
                   </Text>
                 </View>
               </View>
@@ -173,7 +176,7 @@ const CashHandOver: React.FC = () => {
                 <Text className="text-xl font-bold mt-1">
                   Rs. {formatNumberWithCommas(totalEarnings)}
                 </Text>
-                <View className=" bg-[#D4FEE0] rounded-md px-2 py-0.5 mt-2">
+                <View className=" bg-[#D4FEE0] rounded-md px-2 mb-6 py-0.5 mt-2">
                   <Text className="text-[11px] text-[#076734]">
                     Rs. {formatNumberWithCommas(perOrderEarning)}.00 x{" "}
                     {orders.length} Orders
@@ -255,7 +258,13 @@ const CashHandOver: React.FC = () => {
               disabled={uploading}
               onPress={handleUploadSlip}
               className="bg-[#F7CA21] rounded-full py-3.5 flex-row items-center justify-center"
-              style={{ gap: 8 }}
+                style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}
             >
               {uploading ? (
                 <ActivityIndicator size="small" color="#1f2937" />
