@@ -42,6 +42,9 @@ const TRANSFER_DETAILS = {
   branchName: "Colombo Metro",
 };
 
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 type FileType = "image" | "pdf";
 
 interface UploadedFile {
@@ -66,16 +69,33 @@ const UploadBankTransferSlip: React.FC = () => {
   const [alertType, setAlertType] = useState<"success" | "error">("error");
   const [onAlertClose, setOnAlertClose] = useState<() => void>(() => () => {});
 
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setOnAlertClose(() => () => setAlertVisible(false));
+    setAlertVisible(true);
+  };
+
+  const showFileTooLargeAlert = () => {
+    showAlert(
+      "File Too Large",
+      "File is too large. Please upload an image smaller than 5 MB.",
+      "error",
+    );
+  };
+
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setAlertTitle("Permission Required");
-      setAlertMessage(
+      showAlert(
+        "Permission Required",
         "Please allow access to your photos to upload a transfer slip.",
       );
-      setAlertType("error");
-      setOnAlertClose(() => () => setAlertVisible(false));
-      setAlertVisible(true);
       return;
     }
 
@@ -86,6 +106,12 @@ const UploadBankTransferSlip: React.FC = () => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
+
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
+        showFileTooLargeAlert();
+        return;
+      }
+
       const sizeMB = asset.fileSize
         ? (asset.fileSize / (1024 * 1024)).toFixed(1)
         : "—";
@@ -109,12 +135,17 @@ const UploadBankTransferSlip: React.FC = () => {
     const asset = result.assets[0];
     const isPdf =
       asset.mimeType === "application/pdf" || asset.name?.endsWith(".pdf");
+
+    if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
+      showFileTooLargeAlert();
+      return;
+    }
+
     const sizeMB = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "—";
 
     let finalUri = asset.uri;
     if (isPdf) {
       try {
-        // Copy to local app cache to preserve read permissions on Android
         const localUri =
           FileSystem.cacheDirectory + (asset.name ?? "Transfer_Slip.pdf");
         await FileSystem.copyAsync({
@@ -124,6 +155,18 @@ const UploadBankTransferSlip: React.FC = () => {
         finalUri = localUri;
       } catch (err) {
         console.error("Failed to copy PDF file:", err);
+      }
+    }
+
+    if (!asset.size) {
+      try {
+        const info = await FileSystem.getInfoAsync(finalUri);
+        if (info.exists && info.size && info.size > MAX_FILE_SIZE_BYTES) {
+          showFileTooLargeAlert();
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to check file size:", err);
       }
     }
 
@@ -152,11 +195,10 @@ const UploadBankTransferSlip: React.FC = () => {
         await Linking.openURL(file.uri);
       }
     } catch (error) {
-      setAlertTitle("Couldn't open PDF");
-      setAlertMessage("Please make sure you have a PDF viewer app installed.");
-      setAlertType("error");
-      setOnAlertClose(() => () => setAlertVisible(false));
-      setAlertVisible(true);
+      showAlert(
+        "Couldn't open PDF",
+        "Please make sure you have a PDF viewer app installed.",
+      );
     }
   };
 
@@ -167,11 +209,7 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const token = await AsyncStorage.getItem("token");
       if (!token) {
-        setAlertTitle("Error");
-        setAlertMessage("Please login again");
-        setAlertType("error");
-        setOnAlertClose(() => () => setAlertVisible(false));
-        setAlertVisible(true);
+        showAlert("Error", "Please login again");
         return;
       }
 
@@ -217,22 +255,18 @@ const UploadBankTransferSlip: React.FC = () => {
         });
         setAlertVisible(true);
       } else {
-        setAlertTitle("Upload Failed");
-        setAlertMessage(response.data.message || "Please try again.");
-        setAlertType("error");
-        setOnAlertClose(() => () => setAlertVisible(false));
-        setAlertVisible(true);
+        showAlert(
+          "Upload Failed",
+          response.data.message || "Please try again.",
+        );
       }
     } catch (error: any) {
       console.log("Error uploading transfer slip:", error);
-      setAlertTitle("Upload Failed");
-      setAlertMessage(
+      showAlert(
+        "Upload Failed",
         error.response?.data?.message ||
           "Something went wrong. Please try again.",
       );
-      setAlertType("error");
-      setOnAlertClose(() => () => setAlertVisible(false));
-      setAlertVisible(true);
     } finally {
       setSubmitting(false);
     }
@@ -432,7 +466,15 @@ const UploadBankTransferSlip: React.FC = () => {
         <StatusBar barStyle="light-content" />
         <SafeAreaView className="flex-1 bg-gray-100">
           {/* Header */}
-          <View className="flex-row items-center justify-between bg-black px-4 py-3">
+          <View
+            className="flex-row items-center justify-between bg-black px-4 pb-3"
+            style={{
+              paddingTop:
+                Platform.OS === "android"
+                  ? (StatusBar.currentHeight ?? 0) + 12
+                  : 12,
+            }}
+          >
             <Text
               className="flex-1 pr-3 text-sm font-medium text-white"
               numberOfLines={1}

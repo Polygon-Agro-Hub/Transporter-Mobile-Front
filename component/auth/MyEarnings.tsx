@@ -125,17 +125,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
         const cashAmount = parseFloat(info.totalCashAmount) || 0;
         const txStatus = info.activeTransactionStatus;
 
-        if (txStatus === "To Review") {
-          navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
-        } else if (txStatus === "Rejected") {
-          navigation.navigate("BankTransferSlipStatus" as any, { status: "rejected" });
-        } else {
-          if (cashAmount > 0) {
-            navigation.navigate("CashHandOver" as any);
-          } else {
-            Alert.alert("Information", "No cash received. Your previous transfer is completed.");
-          }
-        }
+       
+       
       } else {
         navigation.navigate("CashHandOver" as any);
       }
@@ -225,6 +216,13 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
   const totalOrders = orders.length;
 
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
@@ -264,19 +262,31 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
             <Text className="text-[#000000] text-xs mb-1">To</Text>
             <TouchableOpacity
-              onPress={() => setShowToPicker(true)}
-              className="border border-[#D5D9E4] rounded-3xl px-4 mb-4 justify-center"
+              onPress={() => {
+                if (!fromDate) return;
+                setShowToPicker(true);
+              }}
+              disabled={!fromDate}
+              className={`border rounded-3xl px-4 mb-4 justify-center ${
+                fromDate ? "border-[#D5D9E4]" : "border-[#EFEFEF] bg-[#F5F5F5]"
+              }`}
               style={{ height: 50 }}
-              activeOpacity={0.7}
+              activeOpacity={fromDate ? 0.7 : 1}
             >
               <Text
                 className={
                   toDate
                     ? "text-black font-semibold text-sm"
-                    : "text-[#000000] text-sm"
+                    : fromDate
+                      ? "text-[#000000] text-sm"
+                      : "text-[#B0B0B0] text-sm"
                 }
               >
-                {toDate ? formatLongDate(toDate) : "--Select Here--"}
+                {toDate
+                  ? formatLongDate(toDate)
+                  : fromDate
+                    ? "--Select Here--"
+                    : "Select From Date first"}
               </Text>
             </TouchableOpacity>
 
@@ -286,7 +296,14 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
               className={`rounded-full items-center justify-center ${
                 canApply ? "bg-[#F7CA21]" : "bg-[#D9D9D9]"
               }`}
-              style={{ height: 50 }}
+              style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+                height: 50,
+              }}
               activeOpacity={0.7}
             >
               {isLoading ? (
@@ -364,7 +381,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                     Cash Earnings
                   </Text>
                   <Text className="text-black font-bold text-base mb-2">
-                    Rs. {summary.cashEarnings.toFixed(2)}
+                    Rs. {formatCurrency(summary.cashEarnings)}
                   </Text>
                   <View className="bg-[#FEF3D4] rounded-lg px-3 py-1">
                     <Text className="text-[#7A4A0E] text-xs font-medium">
@@ -388,7 +405,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                     Card Earnings
                   </Text>
                   <Text className="text-black font-bold text-base mb-2">
-                    Rs. {summary.cardEarnings.toFixed(2)}
+                    Rs. {formatCurrency(summary.cardEarnings)}
                   </Text>
                   <View className="bg-[#DAF2E2] rounded-lg px-3 py-1">
                     <Text className="text-[#0F6D40] text-xs font-medium">
@@ -463,7 +480,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                         </View>
 
                         <Text className="w-20 text-black text-xs text-right">
-                          Rs. {order.earnings.toFixed(2)}
+                          Rs. {formatCurrency(order.earnings)}
                         </Text>
                       </View>
                     ))}
