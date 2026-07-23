@@ -197,38 +197,25 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return reason.rsnEnglish || "Hold reason not specified";
   };
 
-  const getScheduleTimePriority = (time?: string) => {
+  const getScheduleTimePriority = (time?: string): number => {
     if (!time) return Number.MAX_SAFE_INTEGER;
-
     const lowerTime = time.toLowerCase();
 
-    if (
-      lowerTime.includes("8:00") ||
-      lowerTime.includes("8 am") ||
-      lowerTime.includes("8:00am") ||
-      lowerTime.includes("8:00 am") ||
-      lowerTime.includes("morning") ||
-      lowerTime.includes("early")
-    ) {
-      return 1;
+    // Fallback for purely descriptive text (no digits at all)
+    if (!/\d/.test(lowerTime)) {
+      if (lowerTime.includes("morning") || lowerTime.includes("early"))
+        return 1;
+      if (lowerTime.includes("afternoon")) return 2;
+      if (lowerTime.includes("evening") || lowerTime.includes("late")) return 3;
+      return Number.MAX_SAFE_INTEGER;
     }
 
-    if (
-      lowerTime.includes("2:00") ||
-      lowerTime.includes("2 pm") ||
-      lowerTime.includes("2:00pm") ||
-      lowerTime.includes("2:00 pm") ||
-      lowerTime.includes("afternoon") ||
-      lowerTime.includes("evening") ||
-      lowerTime.includes("late")
-    ) {
-      return 2;
-    }
+    const startPart = time.split("-")[0].trim();
+    const match = startPart.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
 
-    const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
     if (match) {
       let hour = parseInt(match[1], 10);
-      const period = match[2].toUpperCase();
+      const period = match[3]?.toUpperCase();
 
       if (period === "PM" && hour !== 12) hour += 12;
       if (period === "AM" && hour === 12) hour = 0;
@@ -239,7 +226,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return Number.MAX_SAFE_INTEGER;
   };
 
-  // ✅ NEW HELPER: always returns the earliest time slot among allScheduleTimes
   const getEarliestScheduleTime = (order: DriverOrder): string => {
     const allTimes = order.allScheduleTimes || [];
 
@@ -251,7 +237,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       return allTimes[0];
     }
 
-    // Sort by priority (lowest priority number = earliest slot) and return first
     const sorted = [...allTimes].sort(
       (a, b) => getScheduleTimePriority(a) - getScheduleTimePriority(b),
     );
@@ -269,7 +254,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       if (isHoldA && !isHoldB) return 1;
       if (!isHoldA && isHoldB) return -1;
 
-      // ✅ use earliest time slot for sorting
       const timeA = getEarliestScheduleTime(a);
       const timeB = getEarliestScheduleTime(b);
 
@@ -287,8 +271,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
       name: order.fullName || "Customer",
-      // ✅ FIX: display earliest time slot
-      time: formatScheduleTime(getEarliestScheduleTime(order)),
+
+      time: getEarliestScheduleTime(order),
       count: order.jobCount || 1,
       status: order.drvStatus,
       orderData: order,
@@ -305,7 +289,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     });
 
     const sortedOrders = [...todayCompletedOrders].sort((a, b) => {
-      // ✅ FIX: use earliest time slot for sorting
       const timeA = getEarliestScheduleTime(a);
       const timeB = getEarliestScheduleTime(b);
 
@@ -332,8 +315,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         id: (index + 1).toString().padStart(2, "0"),
         title: order.title || "",
         name: order.fullName || "Customer",
-        // ✅ FIX: display earliest time slot
-        time: formatScheduleTime(getEarliestScheduleTime(order)),
+
+        time: getEarliestScheduleTime(order),
         count: todayCompletedCount,
         status: "Completed",
         orderData: order,
@@ -401,7 +384,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     );
   }
 
-return (
+  return (
     <View className="flex-1 bg-white">
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
@@ -464,7 +447,9 @@ return (
             `}
           >
             <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-              <Text className="text-white font-bold">{getCompletedCount()}</Text>
+              <Text className="text-white font-bold">
+                {getCompletedCount()}
+              </Text>
             </View>
             <Text
               className={`text-md ${

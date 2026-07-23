@@ -20,6 +20,7 @@ import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import LoadingPage from "../common/LoadingPage";
 import LottieView from "lottie-react-native";
+import { AlertModal } from "../common/AlertModal";
 
 type CashHandOverNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -40,6 +41,13 @@ const CashHandOver: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<OrderCashItem[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [returnOrders, setReturnOrders] = useState<number>(0);
+  const [todoOrders, setTodoOrders] = useState<number>(0);
+
+  const [alertVisible, setAlertVisible] = useState<boolean>(false);
+  const [alertTitle, setAlertTitle] = useState<string>("");
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [alertType, setAlertType] = useState<"success" | "error">("error");
 
   const totalReceived = orders.reduce((sum, o) => sum + o.received, 0);
   const totalEarnings = orders.reduce((sum, o) => sum + o.earned, 0);
@@ -95,18 +103,65 @@ const CashHandOver: React.FC = () => {
     }
   }, []);
 
+  const fetchAmountStatusData = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-amount`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.data.status === "success") {
+        setReturnOrders(response.data.data?.returnOrders || 0);
+        setTodoOrders(response.data.data?.todoOrders || 0);
+      }
+    } catch (error: any) {
+      console.log("Error fetching amount status data:", error);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchCashHandOverData();
-    }, [fetchCashHandOverData]),
+      fetchAmountStatusData();
+    }, [fetchCashHandOverData, fetchAmountStatusData]),
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchCashHandOverData();
+    fetchAmountStatusData();
+  };
+
+  const onAlertClose = () => {
+    setAlertVisible(false);
   };
 
   const handleUploadSlip = () => {
+    if (todoOrders > 0) {
+      setAlertType("error");
+      setAlertTitle("Pending Orders");
+      setAlertMessage(
+        "You have pending orders. Please complete all orders first, then upload the transfer slip.",
+      );
+      setAlertVisible(true);
+      return;
+    }
+
+    if (returnOrders > 0) {
+      setAlertType("error");
+      setAlertTitle("Return Order Pending");
+      setAlertMessage(
+        "You have a return order. Please receive the return first, then upload the transfer slip.",
+      );
+      setAlertVisible(true);
+      return;
+    }
+
     navigation.navigate("UploadBankTransferSlip", { amount: amountToTransfer });
   };
 
@@ -120,7 +175,10 @@ const CashHandOver: React.FC = () => {
       />
 
       {loading ? (
-        <LoadingPage message="Loading Cash Handover Details..." fullScreen={true} />
+        <LoadingPage
+          message="Loading Cash Received Details"
+          fullScreen={true}
+        />
       ) : orders.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-sm">
@@ -152,7 +210,7 @@ const CashHandOver: React.FC = () => {
                 <Text className="text-xl font-bold mt-1">
                   Rs. {formatNumberWithCommas(totalReceived)}
                 </Text>
-                <View className=" bg-[#FEF3D4] rounded-md  px-2 py-0.5 mt-2">
+                <View className=" bg-[#FEF3D4] rounded-md  px-2 mb-6 py-0.5 mt-2">
                   <Text className="text-[11px] text-[#7A4A0E]">
                     Total : {orders.length} Orders
                   </Text>
@@ -173,7 +231,7 @@ const CashHandOver: React.FC = () => {
                 <Text className="text-xl font-bold mt-1">
                   Rs. {formatNumberWithCommas(totalEarnings)}
                 </Text>
-                <View className=" bg-[#D4FEE0] rounded-md px-2 py-0.5 mt-2">
+                <View className=" bg-[#D4FEE0] rounded-md px-2 mb-6 py-0.5 mt-2">
                   <Text className="text-[11px] text-[#076734]">
                     Rs. {formatNumberWithCommas(perOrderEarning)}.00 x{" "}
                     {orders.length} Orders
@@ -255,7 +313,13 @@ const CashHandOver: React.FC = () => {
               disabled={uploading}
               onPress={handleUploadSlip}
               className="bg-[#F7CA21] rounded-full py-3.5 flex-row items-center justify-center"
-              style={{ gap: 8 }}
+              style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}
             >
               {uploading ? (
                 <ActivityIndicator size="small" color="#1f2937" />
@@ -271,6 +335,15 @@ const CashHandOver: React.FC = () => {
           </View>
         </>
       )}
+
+      <AlertModal
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        onClose={onAlertClose}
+        autoClose={true}
+      />
     </View>
   );
 };

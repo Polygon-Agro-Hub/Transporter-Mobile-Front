@@ -7,9 +7,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RouteProp, useRoute } from "@react-navigation/native";
+import { RouteProp, useFocusEffect, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
@@ -86,6 +87,8 @@ const BankTransferSlipStatus: React.FC = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
+      console.log(response.data.data);
+
       if (response.data.status === "success" && response.data.data) {
         const result = response.data.data;
         let mappedStatus: SlipStatus = "pending";
@@ -95,9 +98,15 @@ const BankTransferSlipStatus: React.FC = () => {
         setData({
           status: mappedStatus,
           submittedAt: result.createdAt,
-          rejectedAt: result.transStatus === "Rejected" ? result.createdAt : undefined,
+
+          rejectedAt:
+            result.transStatus === "Rejected" ? result.updatedAt : undefined,
           amount: parseFloat(result.transAmount) || 0,
-          rejectionReason: result.transStatus === "Rejected" ? "Transfer slip is unclear or details mismatch." : undefined,
+
+          rejectionReason:
+            result.transStatus === "Rejected"
+              ? result.rejectReason || "No reason provided."
+              : undefined,
         });
       } else {
         throw new Error("No transaction found");
@@ -136,6 +145,22 @@ const BankTransferSlipStatus: React.FC = () => {
     });
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goHome();
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => backHandler.remove();
+    }, [navigation]),
+  );
+
   const reUpload = () => {
     navigation.navigate("UploadBankTransferSlip", { amount: data?.amount });
   };
@@ -146,7 +171,7 @@ const BankTransferSlipStatus: React.FC = () => {
         <CustomHeader
           title="Waiting for Approval"
           navigation={navigation}
-          onBackPress={() => navigation.goBack()}
+          onBackPress={() => goHome()}
           showBackButton={true}
         />
         <LoadingPage message="Fetching Status Details..." fullScreen={true} />
@@ -178,7 +203,7 @@ const BankTransferSlipStatus: React.FC = () => {
       <CustomHeader
         title={isRejected ? "Rejected" : "Waiting for Approval"}
         navigation={navigation}
-        onBackPress={() => navigation.goBack()}
+        onBackPress={() => goHome()}
         showBackButton={true}
       />
 
@@ -318,6 +343,13 @@ const BankTransferSlipStatus: React.FC = () => {
           onPress={isRejected ? reUpload : goHome}
           activeOpacity={0.8}
           className="flex-row items-center justify-center rounded-full bg-[#F7CA21] py-4"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 5,
+          }}
         >
           {isRejected && (
             <FontAwesome5

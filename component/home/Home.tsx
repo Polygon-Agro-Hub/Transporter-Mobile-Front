@@ -187,14 +187,21 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     const txStatus = amountData?.activeTransactionStatus;
 
     if (txStatus === "To Review") {
-      navigation.navigate("BankTransferSlipStatus" as any, { status: "pending" });
+      navigation.navigate("BankTransferSlipStatus" as any, {
+        status: "pending",
+      });
     } else if (txStatus === "Rejected") {
-      navigation.navigate("BankTransferSlipStatus" as any, { status: "rejected" });
+      navigation.navigate("BankTransferSlipStatus" as any, {
+        status: "rejected",
+      });
     } else {
       if (cashAmount > 0) {
         navigation.navigate("CashHandOver" as any);
       } else {
-        Alert.alert("Information", "No cash received. Your previous transfer is completed.");
+        Alert.alert(
+          "Information",
+          "No cash received. Your previous transfer is completed.",
+        );
       }
     }
   };
@@ -204,12 +211,12 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     const returnOrders = amountData?.returnOrders || 0;
     const txStatus = amountData?.activeTransactionStatus;
 
-    if (txStatus === "To Review" || txStatus === "Rejected") {
+    if (returnOrders > 0) {
+      navigation.navigate("ReturnOrders");
+    } else if (txStatus === "To Review" || txStatus === "Rejected") {
       handleCashNavigation();
     } else if (cashAmount > 0) {
       handleCashNavigation();
-    } else if (returnOrders > 0) {
-      navigation.navigate("ReturnOrders");
     }
   };
 
@@ -487,12 +494,12 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
         style={
           cashAmount > 0
             ? {
-              shadowColor: "#000",
-              shadowOffset: { width: 4, height: 0 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }
+                shadowColor: "#000",
+                shadowOffset: { width: 4, height: 0 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }
             : {}
         }
         onPress={handleCashReceivedPress}
@@ -547,16 +554,16 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
 
                   ...(action.disabled
                     ? {
-                      borderWidth: 1,
-                      borderColor: "#EBEBEB",
-                    }
+                        borderWidth: 1,
+                        borderColor: "#EBEBEB",
+                      }
                     : {
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 3,
-                    }),
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }),
 
                   opacity: 1,
                 }}
