@@ -20,6 +20,7 @@ import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import LoadingPage from "../common/LoadingPage";
 import LottieView from "lottie-react-native";
+import { AlertModal } from "../common/AlertModal";
 
 type CashHandOverNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -40,6 +41,13 @@ const CashHandOver: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<OrderCashItem[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [returnOrders, setReturnOrders] = useState<number>(0);
+  const [todoOrders, setTodoOrders] = useState<number>(0);
+
+  const [alertVisible, setAlertVisible] = useState<boolean>(false);
+  const [alertTitle, setAlertTitle] = useState<string>("");
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [alertType, setAlertType] = useState<"success" | "error">("error");
 
   const totalReceived = orders.reduce((sum, o) => sum + o.received, 0);
   const totalEarnings = orders.reduce((sum, o) => sum + o.earned, 0);
@@ -95,18 +103,65 @@ const CashHandOver: React.FC = () => {
     }
   }, []);
 
+  const fetchAmountStatusData = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-amount`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (response.data.status === "success") {
+        setReturnOrders(response.data.data?.returnOrders || 0);
+        setTodoOrders(response.data.data?.todoOrders || 0);
+      }
+    } catch (error: any) {
+      console.log("Error fetching amount status data:", error);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchCashHandOverData();
-    }, [fetchCashHandOverData]),
+      fetchAmountStatusData();
+    }, [fetchCashHandOverData, fetchAmountStatusData]),
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchCashHandOverData();
+    fetchAmountStatusData();
+  };
+
+  const onAlertClose = () => {
+    setAlertVisible(false);
   };
 
   const handleUploadSlip = () => {
+    if (todoOrders > 0) {
+      setAlertType("error");
+      setAlertTitle("Pending Orders");
+      setAlertMessage(
+        "You have pending orders. Please complete all orders first, then upload the transfer slip.",
+      );
+      setAlertVisible(true);
+      return;
+    }
+
+    if (returnOrders > 0) {
+      setAlertType("error");
+      setAlertTitle("Return Order Pending");
+      setAlertMessage(
+        "You have a return order. Please receive the return first, then upload the transfer slip.",
+      );
+      setAlertVisible(true);
+      return;
+    }
+
     navigation.navigate("UploadBankTransferSlip", { amount: amountToTransfer });
   };
 
@@ -280,6 +335,15 @@ const CashHandOver: React.FC = () => {
           </View>
         </>
       )}
+
+      <AlertModal
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        onClose={onAlertClose}
+        autoClose={true}
+      />
     </View>
   );
 };
