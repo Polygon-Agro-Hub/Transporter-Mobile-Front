@@ -267,25 +267,11 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
     const showEndShift = shouldShowEndShiftButton();
     const actions = [
       {
-        image: scanQRImage,
-        label: "Scan",
-        color: "#3B82F6",
-        action: () => navigation.navigate("AssignOrderQR"),
-        disabled: showEndShift,
-      },
-      {
         image: packsImage,
         label: `${packsCount} ${packsCount === 1 ? "Pack" : "Packs"}`,
         color: "#10B981",
         action: () => navigation.navigate("Jobs"),
         disabled: packsCount === 0 && (amountData?.completedOrders || 0) === 0,
-      },
-      {
-        image: myComplaintImage,
-        label: "My Complaints",
-        color: "#8B5CF6",
-        action: () => navigation.navigate("ComplaintsList"),
-        disabled: false,
       },
     ];
 
