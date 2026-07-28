@@ -179,6 +179,7 @@ function AppContent() {
     return () => backHandler.remove();
   }, []);
 
+  // Axios interceptor to handle 401/403 responses with specific status types
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
