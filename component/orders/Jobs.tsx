@@ -88,6 +88,16 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     fetchDriverOrders(todayStr);
   }, []);
 
+  // 🔒 Disable the iOS native swipe-back gesture on this screen.
+  // Without this, swiping from the left edge on iOS bypasses all JS-level
+  // back handling and pops directly to whatever screen is beneath Jobs
+  // in the stack (e.g. Digital Signature), instead of going to Home.
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+    });
+  }, [navigation]);
+
   const isToday = (dateInput: string | Date): boolean => {
     if (!dateInput) return false;
 
@@ -337,7 +347,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.navigate("Home");
+        navigation.replace("Home");
         return true;
       };
 
@@ -377,7 +387,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
-          onBackPress={() => navigation.navigate("Home")}
+          onBackPress={() => navigation.replace("Home")}
         />
         <LoadingPage message="Loading Jobs..." fullScreen={true} />
       </View>
