@@ -59,6 +59,16 @@ const UploadBankTransferSlip: React.FC = () => {
   const route = useRoute();
   const routeParams = route.params as { amount?: number } | undefined;
 
+  const rawAmount = routeParams?.amount;
+  const numAmount: number =
+    typeof rawAmount === "number" && !isNaN(rawAmount) && rawAmount > 0
+      ? rawAmount
+      : typeof rawAmount === "string" &&
+          !isNaN(parseFloat(rawAmount)) &&
+          parseFloat(rawAmount) > 0
+        ? parseFloat(rawAmount)
+        : (TRANSFER_DETAILS.amount ?? 9000.0);
+
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -91,7 +101,7 @@ const UploadBankTransferSlip: React.FC = () => {
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    if (!permission.granted && permission.status !== ("limited" as any)) {
       showAlert(
         "Permission Required",
         "Please allow access to your photos to upload a transfer slip.",
@@ -101,6 +111,7 @@ const UploadBankTransferSlip: React.FC = () => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
       quality: 0.8,
     });
 
@@ -112,11 +123,24 @@ const UploadBankTransferSlip: React.FC = () => {
         return;
       }
 
+      let finalUri = asset.uri;
+      try {
+        const ext = asset.fileName?.split(".").pop() || "png";
+        const localUri = `${FileSystem.cacheDirectory}transfer_slip_${Date.now()}.${ext}`;
+        await FileSystem.copyAsync({
+          from: asset.uri,
+          to: localUri,
+        });
+        finalUri = localUri;
+      } catch (e) {
+        console.log("Copy image cache error:", e);
+      }
+
       const sizeMB = asset.fileSize
         ? (asset.fileSize / (1024 * 1024)).toFixed(1)
         : "—";
       setFile({
-        uri: asset.uri,
+        uri: finalUri,
         name: asset.fileName ?? "Transfer_Slip.png",
         sizeMB: `${sizeMB} MB`,
         type: "image",
@@ -144,18 +168,16 @@ const UploadBankTransferSlip: React.FC = () => {
     const sizeMB = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "—";
 
     let finalUri = asset.uri;
-    if (isPdf) {
-      try {
-        const localUri =
-          FileSystem.cacheDirectory + (asset.name ?? "Transfer_Slip.pdf");
-        await FileSystem.copyAsync({
-          from: asset.uri,
-          to: localUri,
-        });
-        finalUri = localUri;
-      } catch (err) {
-        console.error("Failed to copy PDF file:", err);
-      }
+    try {
+      const ext = asset.name?.split(".").pop() || (isPdf ? "pdf" : "png");
+      const localUri = `${FileSystem.cacheDirectory}doc_${Date.now()}.${ext}`;
+      await FileSystem.copyAsync({
+        from: asset.uri,
+        to: localUri,
+      });
+      finalUri = localUri;
+    } catch (err) {
+      console.error("Failed to copy file:", err);
     }
 
     if (!asset.size) {
@@ -178,16 +200,46 @@ const UploadBankTransferSlip: React.FC = () => {
     });
   };
 
-  const handleUploadPress = () => pickDocument();
+  const handleUploadPress = () => {
+    Alert.alert(
+      "Select Upload Source",
+      "Choose how you want to upload your bank transfer slip",
+      [
+        {
+          text: "Photo Library",
+          onPress: pickImage,
+        },
+        {
+          text: "Browse Files / PDF",
+          onPress: pickDocument,
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+    );
+  };
 
   const removeFile = () => setFile(null);
 
   const openPdfExternally = async () => {
     if (!file || file.type !== "pdf") return;
     try {
+      let targetUri = file.uri;
+      if (targetUri.startsWith("http://") || targetUri.startsWith("https://")) {
+        const fileFilename = `pdf_share_${Date.now()}.pdf`;
+        const destination = `${FileSystem.cacheDirectory}${fileFilename}`;
+        const downloadResult = await FileSystem.downloadAsync(
+          targetUri,
+          destination,
+        );
+        targetUri = downloadResult.uri;
+      }
+
       const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(file.uri, {
+      if (canShare && targetUri.startsWith("file://")) {
+        await Sharing.shareAsync(targetUri, {
           mimeType: "application/pdf",
           dialogTitle: file.name,
         });
@@ -195,6 +247,7 @@ const UploadBankTransferSlip: React.FC = () => {
         await Linking.openURL(file.uri);
       }
     } catch (error) {
+      console.log("Error opening PDF externally:", error);
       showAlert(
         "Couldn't open PDF",
         "Please make sure you have a PDF viewer app installed.",
@@ -229,7 +282,7 @@ const UploadBankTransferSlip: React.FC = () => {
         type: fileMime,
       } as any);
 
-      const amountToTransfer = routeParams?.amount ?? TRANSFER_DETAILS.amount;
+      const amountToTransfer = numAmount;
       formData.append("amount", String(amountToTransfer));
 
       const response = await axios.post(
@@ -295,10 +348,7 @@ const UploadBankTransferSlip: React.FC = () => {
             className="mt-1 text-2xl font-bold text-gray-900"
             numberOfLines={1}
           >
-            Rs.{" "}
-            {formatNumberWithCommas(
-              (routeParams?.amount ?? TRANSFER_DETAILS.amount).toFixed(2),
-            )}
+            Rs. {formatNumberWithCommas(numAmount.toFixed(2))}
           </Text>
         </View>
 
@@ -322,21 +372,28 @@ const UploadBankTransferSlip: React.FC = () => {
 
         {/* Upload Area */}
         {!file ? (
-          <TouchableOpacity
-            onPress={handleUploadPress}
-            activeOpacity={0.7}
-            className="mt-6 items-center justify-center rounded-2xl border border-dashed border-blue-300 bg-white py-10"
-          >
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1FF]">
-              <FontAwesome5 name="cloud-upload-alt" size={26} color="#3B82F6" />
-            </View>
-            <Text className="mt-3 text-base font-semibold text-gray-900">
-              Tap to Upload
-            </Text>
-            <Text className="mt-1 text-xs text-gray-400">
-              JPG, PNG, PDF up to 5MB
-            </Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity
+              onPress={handleUploadPress}
+              activeOpacity={0.7}
+              className="mt-6 items-center justify-center rounded-2xl border border-dashed border-blue-300 bg-white py-10"
+            >
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1FF]">
+                <FontAwesome5
+                  name="cloud-upload-alt"
+                  size={26}
+                  color="#3B82F6"
+                />
+              </View>
+              <Text className="mt-3 text-base font-semibold text-gray-900">
+                Tap to Upload
+              </Text>
+              <Text className="mt-1 text-xs text-gray-400">
+                JPG, PNG, PDF up to 5MB
+              </Text>
+            </TouchableOpacity>
+
+          </View>
         ) : (
           <View className="mt-6 rounded-2xl border border-dashed border-blue-300 bg-white p-4">
             {/* File Uploaded badge */}
@@ -350,10 +407,14 @@ const UploadBankTransferSlip: React.FC = () => {
             {file.type === "image" ? (
               <>
                 {/* Image thumbnail */}
-                <View className="mt-3 items-center rounded-xl border border-gray-100 bg-white p-2">
+                <View
+                  className="mt-3 items-center rounded-xl border border-gray-100 bg-white p-2"
+                  style={{ width: "100%", height: 160 }}
+                >
                   <Image
                     source={{ uri: file.uri }}
-                    className="h-40 w-full rounded-lg"
+                    style={{ width: "100%", height: "100%" }}
+                    className="rounded-lg"
                     resizeMode="contain"
                   />
                 </View>
@@ -464,7 +525,7 @@ const UploadBankTransferSlip: React.FC = () => {
         onRequestClose={() => setPreviewVisible(false)}
       >
         <StatusBar barStyle="light-content" />
-        <SafeAreaView className="flex-1 bg-gray-100">
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
           {/* Header */}
           <View
             className="flex-row items-center justify-between bg-black px-4 pb-3"
@@ -502,11 +563,18 @@ const UploadBankTransferSlip: React.FC = () => {
           </View>
 
           {/* Body */}
-          <View className="flex-1">
+          <View
+            style={{
+              flex: 1,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "#f3f4f6",
+            }}
+          >
             {file?.type === "image" && (
               <Image
                 source={{ uri: file.uri }}
-                className="flex-1"
+                style={{ flex: 1, width: "100%", height: "100%" }}
                 resizeMode="contain"
               />
             )}

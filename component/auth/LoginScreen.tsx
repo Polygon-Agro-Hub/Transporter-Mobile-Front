@@ -380,16 +380,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View>
               {/* EMP ID */}
+              {/* EMP ID */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className={`flex-row items-center rounded-[30px] px-4 h-[58px] mb-3 gap-3 overflow-hidden border-2 ${empIdHasError ? "border-red-500" : "border-transparent"}`}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderRadius: 30,
+                  paddingHorizontal: 16,
+                  height: 58,
+                  marginBottom: 12,
+                  gap: 12,
+                  borderWidth: 2,
+                  borderColor: empIdHasError ? "#EF4444" : "transparent",
+                }}
               >
                 <FontAwesome6 name="user-large" size={18} color="#F7CA21" />
 
                 <TextInput
-                  className="flex-1 text-white text-base"
+                  style={{
+                    flex: 1,
+                    color: "white",
+                    paddingVertical: 0,
+                    includeFontPadding: false,
+                  }}
                   autoCapitalize="characters"
                   autoCorrect={false}
                   value={empid}

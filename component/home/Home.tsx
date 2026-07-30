@@ -122,6 +122,7 @@ const Home: React.FC<HomeProps> = ({ navigation }) => {
           },
         },
       );
+      console.log(response.data.data)
 
       if (response.data.status === "success" && response.data.data) {
         setAmountData({
