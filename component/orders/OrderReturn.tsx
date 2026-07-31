@@ -64,6 +64,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     string | React.ReactNode
   >("");
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
 
@@ -88,6 +90,25 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchReasons();
+  }, []);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const fetchReasons = async () => {
@@ -280,11 +301,9 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     return "காரணத்தை இங்கே குறிப்பிடவும்...";
   };
 
-  // Scrolls the ScrollView just enough to bring the focused TextInput
-  // into view, instead of jumping to the end of the content (which was
-  // causing the input to be pushed off-screen on iOS when combined with
-  // KeyboardAvoidingView's own offset).
   const handleTextInputFocus = () => {
+    const delay = Platform.OS === "android" ? 100 : 250;
+
     setTimeout(() => {
       const scrollNode = scrollViewRef.current;
       const inputNode = textInputRef.current;
@@ -294,27 +313,26 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       const scrollHandle = findNodeHandle(scrollNode);
       if (!inputHandle || !scrollHandle) return;
 
-      // @ts-ignore - measureLayout exists at runtime on native components
       inputNode.measureLayout(
         scrollHandle,
         (_x: number, y: number, _w: number, h: number) => {
+          const targetY = y + h - 120;
           scrollNode.scrollTo({
-            y: Math.max(y - 40, 0),
+            y: Math.max(targetY, 0),
             animated: true,
           });
         },
         () => {
-          // Fallback: measureLayout can fail on some RN versions/timing.
           scrollNode.scrollToEnd({ animated: true });
         },
       );
-    }, 250);
+    }, delay);
   };
 
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-white"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* Header - Using CustomHeader like in HoldOrder */}
@@ -333,7 +351,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           const mappedLang = mapLanguageCode(langCode as "EN" | "SI" | "TA");
           setSelectedLanguage(mappedLang);
         }}
-        onBackPress={handleBackPress} // Add back press handler
+        onBackPress={handleBackPress}
       />
 
       {loading ? (
@@ -345,7 +363,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingVertical: 24,
-            paddingBottom: 40,
+
+            paddingBottom: 40 + keyboardHeight,
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
