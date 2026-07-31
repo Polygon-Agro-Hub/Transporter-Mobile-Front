@@ -7,6 +7,7 @@ import {
   RefreshControl,
   BackHandler,
   StatusBar,
+  Platform,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -86,6 +87,16 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
     fetchDriverOrders(todayStr);
   }, []);
+
+  // 🔒 Disable the iOS native swipe-back gesture on this screen.
+  // Without this, swiping from the left edge on iOS bypasses all JS-level
+  // back handling and pops directly to whatever screen is beneath Jobs
+  // in the stack (e.g. Digital Signature), instead of going to Home.
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+    });
+  }, [navigation]);
 
   const isToday = (dateInput: string | Date): boolean => {
     if (!dateInput) return false;
@@ -196,38 +207,25 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return reason.rsnEnglish || "Hold reason not specified";
   };
 
-  const getScheduleTimePriority = (time?: string) => {
+  const getScheduleTimePriority = (time?: string): number => {
     if (!time) return Number.MAX_SAFE_INTEGER;
-
     const lowerTime = time.toLowerCase();
 
-    if (
-      lowerTime.includes("8:00") ||
-      lowerTime.includes("8 am") ||
-      lowerTime.includes("8:00am") ||
-      lowerTime.includes("8:00 am") ||
-      lowerTime.includes("morning") ||
-      lowerTime.includes("early")
-    ) {
-      return 1;
+    // Fallback for purely descriptive text (no digits at all)
+    if (!/\d/.test(lowerTime)) {
+      if (lowerTime.includes("morning") || lowerTime.includes("early"))
+        return 1;
+      if (lowerTime.includes("afternoon")) return 2;
+      if (lowerTime.includes("evening") || lowerTime.includes("late")) return 3;
+      return Number.MAX_SAFE_INTEGER;
     }
 
-    if (
-      lowerTime.includes("2:00") ||
-      lowerTime.includes("2 pm") ||
-      lowerTime.includes("2:00pm") ||
-      lowerTime.includes("2:00 pm") ||
-      lowerTime.includes("afternoon") ||
-      lowerTime.includes("evening") ||
-      lowerTime.includes("late")
-    ) {
-      return 2;
-    }
+    const startPart = time.split("-")[0].trim();
+    const match = startPart.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
 
-    const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
     if (match) {
       let hour = parseInt(match[1], 10);
-      const period = match[2].toUpperCase();
+      const period = match[3]?.toUpperCase();
 
       if (period === "PM" && hour !== 12) hour += 12;
       if (period === "AM" && hour === 12) hour = 0;
@@ -238,7 +236,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return Number.MAX_SAFE_INTEGER;
   };
 
-  // ✅ NEW HELPER: always returns the earliest time slot among allScheduleTimes
   const getEarliestScheduleTime = (order: DriverOrder): string => {
     const allTimes = order.allScheduleTimes || [];
 
@@ -250,7 +247,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       return allTimes[0];
     }
 
-    // Sort by priority (lowest priority number = earliest slot) and return first
     const sorted = [...allTimes].sort(
       (a, b) => getScheduleTimePriority(a) - getScheduleTimePriority(b),
     );
@@ -268,7 +264,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       if (isHoldA && !isHoldB) return 1;
       if (!isHoldA && isHoldB) return -1;
 
-      // ✅ use earliest time slot for sorting
       const timeA = getEarliestScheduleTime(a);
       const timeB = getEarliestScheduleTime(b);
 
@@ -286,8 +281,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       id: (index + 1).toString().padStart(2, "0"),
       title: order.title || "",
       name: order.fullName || "Customer",
-      // ✅ FIX: display earliest time slot
-      time: formatScheduleTime(getEarliestScheduleTime(order)),
+
+      time: getEarliestScheduleTime(order),
       count: order.jobCount || 1,
       status: order.drvStatus,
       orderData: order,
@@ -295,22 +290,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   };
 
   const getCompletedDisplayOrders = () => {
-    console.log(
-      "completedOrders full data:",
-      JSON.stringify(
-        completedOrders.map((o) => ({
-          driverOrderId: o.driverOrderId,
-          processOrderId: o.processOrderId,
-          fullName: o.fullName,
-          completeTime: o.completeTime,
-          allCompleteTimes: o.allCompleteTimes,
-          drvStatus: o.drvStatus,
-        })),
-        null,
-        2,
-      ),
-    );
-
     const todayCompletedOrders = completedOrders.filter((order) => {
       if (!order.completeTime) {
         return false;
@@ -320,7 +299,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     });
 
     const sortedOrders = [...todayCompletedOrders].sort((a, b) => {
-      // ✅ FIX: use earliest time slot for sorting
       const timeA = getEarliestScheduleTime(a);
       const timeB = getEarliestScheduleTime(b);
 
@@ -347,8 +325,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         id: (index + 1).toString().padStart(2, "0"),
         title: order.title || "",
         name: order.fullName || "Customer",
-        // ✅ FIX: display earliest time slot
-        time: formatScheduleTime(getEarliestScheduleTime(order)),
+
+        time: getEarliestScheduleTime(order),
         count: todayCompletedCount,
         status: "Completed",
         orderData: order,
@@ -369,7 +347,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.navigate("Home");
+        navigation.replace("Home");
         return true;
       };
 
@@ -393,8 +371,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     const processOrderId = orderData.processOrderId;
     const primaryOrderId = processOrderId || orderData.marketOrderId;
     const orderIds = orderData.allOrderIds || [orderData.marketOrderId];
-    const processOrderIds =
-      orderData.allProcessOrderIds ||
+    const processOrderIds = orderData.allProcessOrderIds ||
       orderData.processOrderIds || [primaryOrderId];
 
     navigation.navigate("OrderDetails", {
@@ -410,7 +387,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
-          onBackPress={() => navigation.navigate("Home")}
+          onBackPress={() => navigation.replace("Home")}
         />
         <LoadingPage message="Loading Jobs..." fullScreen={true} />
       </View>
@@ -446,55 +423,72 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         </View>
       )}
 
-      <View
-        className="flex-row mt-2 bg-white"
-        style={{
-          shadowColor: "#000",
-          shadowOffset: { width: 2, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 6,
-          elevation: 2,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => setActiveTab("todo")}
-          className={`
-            flex-1 flex-row items-center justify-center gap-x-2 
-            ${activeTab === "todo" ? " bg-[#F6F9FF]" : ""}
-            py-3
-          `}
+      <View className="mt-2 bg-white relative">
+        <View
+          className="flex-row"
+          style={Platform.OS === "android" ? { elevation: 5 } : undefined}
         >
-          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-            <Text className="text-white font-bold">{getTodoTabCount()}</Text>
-          </View>
-          <Text
-            className={`text-md ${
-              activeTab === "todo" ? "font-bold" : "font-medium"
-            }`}
+          <TouchableOpacity
+            onPress={() => setActiveTab("todo")}
+            className={`
+              flex-1 flex-row items-center justify-center gap-x-2 
+              ${activeTab === "todo" ? " bg-[#F6F9FF]" : ""}
+              py-3
+            `}
           >
-            To Do
-          </Text>
-        </TouchableOpacity>
+            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+              <Text className="text-white font-bold">{getTodoTabCount()}</Text>
+            </View>
+            <Text
+              className={`text-md ${
+                activeTab === "todo" ? "font-bold" : "font-medium"
+              }`}
+            >
+              To Do
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setActiveTab("completed")}
-          className={`
-            flex-1 flex-row items-center justify-center gap-x-2 
-            ${activeTab === "completed" ? "bg-[#F6F9FF] " : ""}
-            py-2
-          `}
-        >
-          <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-            <Text className="text-white font-bold">{getCompletedCount()}</Text>
-          </View>
-          <Text
-            className={`text-md ${
-              activeTab === "completed" ? "font-bold" : "font-medium"
-            }`}
+          <TouchableOpacity
+            onPress={() => setActiveTab("completed")}
+            className={`
+              flex-1 flex-row items-center justify-center gap-x-2 
+              ${activeTab === "completed" ? "bg-[#F6F9FF] " : ""}
+              py-2
+            `}
           >
-            Delivered
-          </Text>
-        </TouchableOpacity>
+            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+              <Text className="text-white font-bold">
+                {getCompletedCount()}
+              </Text>
+            </View>
+            <Text
+              className={`text-md ${
+                activeTab === "completed" ? "font-bold" : "font-medium"
+              }`}
+            >
+              Delivered
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* iOS-only: thin strip casts a bottom-only shadow instead of wrapping the whole bar */}
+        {Platform.OS === "ios" && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 1,
+              backgroundColor: "#fff",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+            }}
+          />
+        )}
       </View>
 
       {dataToShow.length > 0 ? (
@@ -519,22 +513,29 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             return (
               <TouchableOpacity
                 disabled={activeTab === "completed"}
-                style={
+                style={[
+                  {
+                    borderRadius: 10,
+                    borderWidth: 0.5,
+                    borderColor: isOnHold
+                      ? "#FF0000"
+                      : isOnTheWay && activeTab === "todo"
+                        ? "#F7CA21"
+                        : "#A4AAB7",
+                  },
                   activeTab === "todo" && {
-                    shadowColor: "#000",
+                    shadowColor: "#000000",
                     shadowOffset: { width: 2, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 6,
+                    shadowOpacity: 0.25,
+                    shadowRadius: 2,
                     elevation: 2,
-                  }
-                }
+                  },
+                ]}
                 key={index}
-                className={`rounded-xl px-5 py-2 mb-5 shadow-sm border flex-row justify-between items-center ${
+                className={`px-5 py-2 mb-5 flex-row justify-between items-center ${
                   isOnTheWay && activeTab === "todo"
-                    ? "bg-[#FFFBEA] border-[#F7CA21]"
-                    : isOnHold
-                    ? "bg-white border-[#FF0000]"
-                    : "bg-white border-[#A4AAB7]"
+                    ? "bg-[#FFFBEA]"
+                    : "bg-white"
                 }`}
                 onPress={() => {
                   if (activeTab === "todo") {
@@ -586,8 +587,8 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
                       isOnHold
                         ? "bg-[#FF0000]"
                         : activeTab === "todo"
-                        ? "bg-yellow-400"
-                        : "bg-[#F3F3F3]"
+                          ? "bg-yellow-400"
+                          : "bg-[#F3F3F3]"
                     }`}
                   >
                     <Text
@@ -614,7 +615,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
           {activeTab === "todo" ? (
             <>
-              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
                 No pending jobs
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">
@@ -623,7 +627,10 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
             </>
           ) : (
             <>
-              <Text className="text-gray-500 text-lg text-center" style={{ marginTop: -15 }}>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
                 No delivered jobs today
               </Text>
               <Text className="text-gray-400 text-center mt-2 px-10">

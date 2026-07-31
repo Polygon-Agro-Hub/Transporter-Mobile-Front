@@ -234,7 +234,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             return invoice;
           }
         } catch (e) {
-          console.log("Not valid JSON");
+          // Silent catch for non-JSON QR scan formats
         }
       }
 
@@ -336,9 +336,13 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       const scannedInvoiceNo = extractInvoiceNumber(data);
 
       if (!scannedInvoiceNo) {
-        setModalTitle("Invalid QR Code");
+        setModalTitle("Error");
         setModalMessage(
-          "The scanned QR code does not contain a valid invoice number.",
+          <View className="items-center">
+            <Text className="text-center text-[#4E4E4E] mb-2">
+              The QR code is not identified please check and try again
+            </Text>
+          </View>,
         );
         setModalType("error");
         setShowErrorModal(true);
@@ -347,12 +351,11 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
       // CRITICAL VALIDATION: Check if scanned invoice matches the order's invoice
       if (scannedInvoiceNo.toUpperCase() !== orderInvoiceNumber.toUpperCase()) {
-        setModalTitle("QR Code Mismatch");
+        setModalTitle("Error");
         setModalMessage(
           <View className="items-center">
             <Text className="text-center text-[#4E4E4E] mb-2">
-              The scanned QR code does not match this order.Please scan the
-              correct QR code for this order.
+              The QR code is not identified please check and try again
             </Text>
           </View>,
         );
@@ -387,18 +390,19 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       } else {
         // Set modal title based on the specific error message from backend
         let title = "Error";
-        const message = result.message || "Failed to update return order";
+        let modalMsg = result.message || "Failed to update return order";
 
-        if (message.includes("No return orders found")) {
+        if (modalMsg.includes("No return orders found")) {
           title = "Order Not Found";
-        } else if (message.includes("does not have permission")) {
+        } else if (modalMsg.includes("does not have permission")) {
           title = "Permission Denied";
-        } else if (message.includes("already marked as Return Received")) {
-          title = "Already Updated";
+        } else if (modalMsg.includes("already marked as Return Received")) {
+          title = "Already Already Returned!";
+          modalMsg = "This order has already been returned to the center and cannot proceed again!";
         }
 
         setModalTitle(title);
-        setModalMessage(message);
+        setModalMessage(modalMsg);
         setModalType("error");
         setShowErrorModal(true);
       }
@@ -418,8 +422,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         title = "Permission Denied";
         message = "You don't have permission to update this order.";
       } else if (message.includes("already marked as Return Received")) {
-        title = "Already Updated";
-        message = "This order is already marked as 'Return Received'.";
+        title = "Already Already Returned!";
+        message = "This order has already been returned to the center and cannot proceed again!";
       } else if (message.includes("Network error")) {
         title = "Network Error";
         message = "Please check your internet connection and try again.";
@@ -542,7 +546,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         message={modalMessage}
         type={modalType}
         onClose={handleErrorModalClose}
-        showRescanButton={false}
+        showRescanButton={true}
+        onRescan={handleErrorModalClose}
         duration={4000}
         autoClose={true}
       />
