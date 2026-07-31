@@ -36,6 +36,7 @@ interface ReturnOrder {
   invoiceNumber: string;
   amount: string;
   totalAmount: string;
+  cashAmountDue: number | null;   // ✅ ADDED
   isPaid: boolean;
   paymentMethod: string;
   customer: {
@@ -135,32 +136,42 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     return "#000000";
   };
 
+  // isPaid is checked FIRST, regardless of payment method,
+  // so a paid cash order shows the check icon, not the coin icon.
   const getPaymentIcon = (isPaid: boolean, paymentMethod: string) => {
-    if (!isPaid && paymentMethod === "Cash") {
-      return <FontAwesome6 name="coins" size={20} color="#F7CA21" />;
-    } else if (isPaid) {
+    if (isPaid) {
       return <FontAwesome name="check-circle" size={20} color="#F7CA21" />;
     }
-    return null;
+    return <FontAwesome6 name="coins" size={20} color="#F7CA21" />;
   };
 
-  const getAmountText = (
-    isPaid: boolean,
-    amount: string,
-    totalAmount: string,
-  ) => {
-    if (!isPaid && amount && parseFloat(amount) > 0) {
-      return `Rs. ${parseFloat(amount).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    } else if (!isPaid && totalAmount && parseFloat(totalAmount) > 0) {
-      return `Rs. ${parseFloat(totalAmount).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
+  const formatCurrency = (amount: number | string) => {
+    const numAmount =
+      typeof amount === "string" ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return "";
+    return `Rs. ${numAmount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  // Cash: (fullTotal - deliveryCharge) + todaysCityDeliveryCharge - creditPaid  (computed on backend, returned as cashAmountDue)
+  // Non-cash unpaid: falls back to amount, then totalAmount
+  // Paid: no amount shown
+  const getAmountText = (order: ReturnOrder) => {
+    if (order.isPaid) return "";
+
+    const paymentMethod = (order.paymentMethod || "").toLowerCase();
+
+    if (paymentMethod === "cash") {
+      return formatCurrency(order.cashAmountDue ?? 0);
     }
-    return "";
+
+    if (order.amount && parseFloat(order.amount) > 0) {
+      return formatCurrency(order.amount);
+    }
+
+    return formatCurrency(order.totalAmount);
   };
 
   const getReturnReasonDisplay = (
@@ -188,12 +199,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
       orderId: order.orderId,
     });
   };
-
-  useEffect(() => {
-    returnOrders.forEach((order, index) => {
-      const displayText = getReturnReasonDisplay(order.returnDetails);
-    });
-  }, [returnOrders]);
 
   useFocusEffect(
     useCallback(() => {
@@ -266,9 +271,9 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
             source={require("@/assets/json/no-data.json")}
             autoPlay
             loop
-            style={{ width: 200, height: 200 }}
+            style={{ width: 160, height: 160 }}
           />
-          <Text className="text-[#495D86] text-base">
+          <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
             -- No return orders found --
           </Text>
         </View>
@@ -329,7 +334,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                         color: getStatusColor(order.returnDetails.reason),
                       }}
                       speed={50}
-                    //   threshold={25}
                     />
                   </View>
                 </View>
@@ -339,10 +343,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
                   <View className="flex-row items-center">
                     {getPaymentIcon(order.isPaid, order.paymentMethod)}
 
-                    <Text
-                      className={`ml-2 mr-1 text-sm ${order.isPaid ? "text-[#8A8A8A]" : "text-[#8A8A8A]"
-                        }`}
-                    >
+                    <Text className="ml-2 mr-1 text-sm text-[#8A8A8A]">
                       {order.isPaid
                         ? "Already Paid!"
                         : order.paymentMethod || "Cash"}
@@ -355,11 +356,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
 
                   {!order.isPaid && (
                     <Text className="text-sm text-[#8A8A8A] ml-1">
-                      {getAmountText(
-                        order.isPaid,
-                        order.amount,
-                        order.totalAmount,
-                      )}
+                      {getAmountText(order)}
                     </Text>
                   )}
                 </View>

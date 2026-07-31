@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { environment } from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
+import { CameraPermissionView } from "../common/CameraPermissionView";
 import { useFocusEffect } from "@react-navigation/native";
 
 type AssignOrderQRNavigationProp = StackNavigationProp<
@@ -173,7 +174,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
             return invoice;
           }
         } catch (e) {
-          console.log("Not valid JSON");
+          // Silent catch for non-JSON QR scan formats
         }
       }
 
@@ -331,12 +332,6 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
 
-      console.log("Error details:", {
-        errorMessage,
-        statusCode,
-        currentStatus,
-      });
-
       if (currentStatus === "Return" || currentStatus === "Return Received") {
         title = "Order Already Returned!";
         message =
@@ -448,25 +443,10 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
   if (!permission.granted) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
-        <View className="bg-red-500/20 p-6 rounded-full mb-6">
-          <Ionicons name="camera" size={wp(15)} color="#EF4444" />
-        </View>
-        <Text className="text-white text-2xl font-bold mb-3 text-center">
-          Camera Permission Required
-        </Text>
-        <Text className="text-gray-400 text-center mb-8 px-4">
-          Please grant camera permission to scan QR codes.
-        </Text>
-        <TouchableOpacity
-          className="bg-[#F7CA21] py-4 px-12 rounded-xl"
-          onPress={requestPermission}
-        >
-          <Text className="text-black font-bold text-base">
-            Grant Permission
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <CameraPermissionView
+        onRequestPermission={requestPermission}
+        onBack={() => navigation.goBack()}
+      />
     );
   }
 
@@ -483,7 +463,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Assigning Order...
+              Checking Order...
             </Text>
           </View>
         </View>
@@ -498,7 +478,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         onClose={handleTimeoutModalClose}
         showRescanButton={true}
         onRescan={handleTimeoutRescan}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 
@@ -511,7 +491,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         onClose={handleErrorModalClose}
         showRescanButton={showRescanButton}
         onRescan={resetScanning}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 
@@ -523,7 +503,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         type={modalType}
         onClose={handleSuccessModalClose}
         showRescanButton={false}
-        duration={4000}
+        duration={7000}
         autoClose={true}
       />
 

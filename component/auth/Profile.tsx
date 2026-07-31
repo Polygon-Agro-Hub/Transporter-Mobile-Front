@@ -23,11 +23,12 @@ import {
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { environment } from "@/environment/environment";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { RefreshControl } from "react-native";
 import LoadingPage from "../common/LoadingPage";
+import LottieView from "lottie-react-native";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -38,8 +39,18 @@ interface ProfileScreenProps {
   navigation: ProfileScreenNavigationProp;
 }
 
+interface EarningsData {
+  todayDate: string;
+  totalEarnings: number;
+  cashEarnings: number;
+  cashOrders: number;
+  cardEarnings: number;
+  cardOrders: number;
+}
+
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [profileData, setProfileData] = useState<any>(null);
+  const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -117,8 +128,33 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const formatEarningsDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    } catch (error) {
+      return "";
+    }
+  };
+
   useEffect(() => {
     fetchProfileData();
+    fetchEarningsData();
   }, []);
 
   const fetchProfileData = async () => {
@@ -150,26 +186,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       } else {
         const errorMessage = data.message || "Failed to fetch profile data";
 
-        // Check for 404 - User not found or not approved
         if (
           response.status === 404 ||
           errorMessage.includes("User not found") ||
           errorMessage.includes("account not approved")
         ) {
-          // Clear storage first
           await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
           dispatch(logoutUser());
 
-          // Set error for UI (this will show on screen temporarily)
           setError("Account not found or not approved");
 
-          // Show modal with auto-navigation
           setAuthErrorMessage(
             "Your account is not found or not approved. Redirecting to login...",
           );
           setShowAuthErrorModal(true);
 
-          // Auto navigate after 3 seconds
           setTimeout(() => {
             setShowAuthErrorModal(false);
             navigation.reset({
@@ -178,16 +209,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             });
           }, 3000);
 
-          return; // Exit early
+          return;
         }
 
-        // For other errors
         setError(errorMessage);
       }
     } catch (error: unknown) {
       console.error("Error fetching profile:", error);
 
-      // Type guard to check error type
       const isErrorWithMessage = (
         err: unknown,
       ): err is { message?: string } => {
@@ -199,12 +228,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       if (isErrorWithMessage(error)) {
         errorMessage = error.message || errorMessage;
 
-        // Check for network errors that might indicate auth issues
         if (
           errorMessage.includes("Network") ||
           errorMessage.includes("Failed to fetch")
         ) {
-          // Try to clear storage and navigate to login
           try {
             await AsyncStorage.multiRemove([
               "token",
@@ -224,9 +251,56 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+  const fetchEarningsData = async (dateFilter?: string) => {
+    if (!token) return;
+
+    try {
+      const url = dateFilter
+        ? `${environment.API_BASE_URL}api/auth/get-earnings?date=${dateFilter}`
+        : `${environment.API_BASE_URL}api/auth/get-earnings`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEarningsData(data.data);
+      } else {
+        setEarningsData({
+          todayDate: new Date().toISOString(),
+          totalEarnings: 0,
+          cashEarnings: 0,
+          cashOrders: 0,
+          cardEarnings: 0,
+          cardOrders: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching earnings:", error);
+      setEarningsData({
+        todayDate: new Date().toISOString(),
+        totalEarnings: 0,
+        cashEarnings: 0,
+        cashOrders: 0,
+        cardEarnings: 0,
+        cardOrders: 0,
+      });
+    }
+  };
+
+  const handleFilterByDate = () => {
+    navigation.navigate("MyEarnings" as any);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProfileData();
+    await Promise.all([fetchProfileData(), fetchEarningsData()]);
     setRefreshing(false);
   };
 
@@ -253,7 +327,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -282,7 +356,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -389,8 +463,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     try {
       await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
       dispatch(logoutUser());
-      navigation.navigate("Login");
       setShowLogoutModal(false);
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
     } catch (error) {
       console.error("Error during logout:", error);
       setModalMessage("Failed to logout. Please try again.");
@@ -398,19 +476,41 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const InfoCard = ({ label, value }: { label: string; value: string }) => (
-    <View className="mb-4">
-      <Text className="text-[#495D86] mb-1 font-medium">{label}</Text>
-      <Text className="bg-[#F3F3F3] rounded-full px-5 py-4 text-[#000000] text-sm">
-        {value}
-      </Text>
-    </View>
-  );
-
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneCode && !phoneNumber) return "Not available";
     return `${phoneCode || ""} ${phoneNumber || ""}`.trim();
   };
+
+  const InfoRow = ({
+    icon,
+    iconSet = "material",
+    value,
+    isLast = false,
+  }: {
+    icon: string;
+    iconSet?: "material" | "community";
+    value: string;
+    isLast?: boolean;
+  }) => (
+    <View>
+      <View className="flex-row items-center py-4 px-4">
+        <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center mr-3">
+          {iconSet === "material" ? (
+            <MaterialIcons name={icon as any} size={18} color="#000000" />
+          ) : (
+            <FontAwesome5 name={icon as any} size={18} color="#000000" />
+          )}
+        </View>
+        <Text
+          className="text-black text-sm font-medium flex-1"
+          numberOfLines={1}
+        >
+          {value || "Not available"}
+        </Text>
+      </View>
+      {!isLast && <View className="h-[1px] bg-[#F0F0F0] mx-4" />}
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -433,7 +533,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         {/* Show retry button only if it's not an auth error */}
         {!error.includes("Account not found") &&
-          !error.includes("No authentication token") ? (
+        !error.includes("No authentication token") ? (
           <TouchableOpacity
             onPress={fetchProfileData}
             className="bg-[#FFC83D] px-6 py-3 rounded-full"
@@ -441,10 +541,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <Text className="font-semibold">Retry</Text>
           </TouchableOpacity>
         ) : (
-          // Show login button for auth errors
           <TouchableOpacity
             onPress={() => {
-              // Clear storage and navigate to login
               AsyncStorage.multiRemove(["token", "refreshToken", "userData"])
                 .then(() => {
                   dispatch(logoutUser());
@@ -475,6 +573,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
+        <CustomHeader
+          title="My Profile"
+          showBackButton={true}
+          showLanguageSelector={false}
+          showLogoutButton={true}
+          navigation={navigation}
+          onLogoutPress={handleLogoutConfirm}
+        />
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -484,20 +590,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               tintColor="#FFC83D"
             />
           }
+          showsVerticalScrollIndicator={false}
         >
-          <CustomHeader
-            title="My Profile"
-            showBackButton={true}
-            showLanguageSelector={false}
-            showLogoutButton={true}
-            navigation={navigation}
-            onLogoutPress={handleLogoutConfirm}
-          />
-
-          <View className="items-center">
+          {/* Avatar + joined date */}
+          <View className="items-center mt-2">
             <View style={{ position: "relative" }}>
               {uploading ? (
-                <View className="w-30 h-30 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
+                <View className="w-32 h-32 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
                   <ActivityIndicator size="large" color="#FFC83D" />
                   <Text className="text-xs text-gray-500 mt-2">
                     Uploading...
@@ -542,38 +641,173 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             )}
           </View>
 
-          <View className="px-6 mt-8">
-            <InfoCard
-              label="Full Name"
+          {/* Earnings card */}
+          <View
+            className="mx-4 mt-6 bg-white rounded-2xl border border-[#FFFFFF] p-4 "
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F3F3F3]">
+                  <FontAwesome5 name="wallet" size={18} color="#000" />
+                </View>
+                <Text className="text-black font-bold text-base ml-2">
+                  My Earnings
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleFilterByDate}
+                className="flex-row items-center"
+                activeOpacity={0.7}
+              >
+                <Text className="text-[#0122F5] font-medium mr-2 text-sm">
+                  Filter By Date
+                </Text>
+                <FontAwesome6
+                  name="arrow-up-right-from-square"
+                  size={14}
+                  color="#0122F5"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View className="bg-[#FFF8E6] rounded-xl px-4 py-3 mb-4">
+              <Text className="text-[#000000] text-xs mb-1">
+                Today's Earnings{"  |  "}
+                {formatEarningsDate(
+                  earningsData?.todayDate || new Date().toISOString(),
+                )}
+              </Text>
+              <Text className="text-black font-bold text-xl">
+                Rs. {(earningsData?.totalEarnings ?? 0).toFixed(2)}
+              </Text>
+            </View>
+
+            <View className="flex-row">
+              {/* Cash earnings */}
+              <View className="flex-1 items-center">
+                <LottieView
+                  source={require("@/assets/json/coin.json")}
+                  style={{
+                    width: 40,
+                    height: 40,
+                  }}
+                  autoPlay
+                  loop
+                />
+                <Text className="text-[#000000] text-xs mb-1">
+                  Cash Earnings
+                </Text>
+                <Text className="text-black font-bold  mb-2">
+                  Rs. {(earningsData?.cashEarnings ?? 0).toFixed(2)}
+                </Text>
+                <View className="bg-[#FFF3D6] rounded-md px-3 py-1">
+                  <Text className="text-[#8A6D1D] text-xs font-medium">
+                    {earningsData?.cashOrders ?? 0} Order
+                    {(earningsData?.cashOrders ?? 0) === 1 ? "" : "s"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View className="w-[1px] bg-[#000000] mx-2" />
+
+              {/* Card earnings */}
+              <View className="flex-1 items-center">
+                <LottieView
+                  source={require("@/assets/json/card.json")}
+                  style={{
+                    width: 40,
+                    height: 40,
+                  }}
+                  autoPlay
+                  loop
+                />
+                <Text className="text-[#000000] text-xs mb-1">
+                  Card Earnings
+                </Text>
+                <Text className="text-black font-bold mb-2">
+                  Rs. {(earningsData?.cardEarnings ?? 0).toFixed(2)}
+                </Text>
+                <View className="bg-[#E4F7EC] rounded-md px-3 py-1">
+                  <Text className="text-[#1E8449] text-xs font-medium">
+                    {earningsData?.cardOrders ?? 0} Order
+                    {(earningsData?.cardOrders ?? 0) === 1 ? "" : "s"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Info note */}
+          <View className="flex-row items-start mx-4 mt-3">
+            <FontAwesome6
+              name="circle-info"
+              size={14}
+              color="#5A6580"
+              style={{ marginTop: 2, marginRight: 4 }}
+            />
+            <Text className="text-[#5A6580] text-xs flex-1">
+              Card payment order earnings will be transferred within 7 days
+              after the delivered date.
+            </Text>
+          </View>
+
+          {/* Details list card */}
+          <View
+            className="mx-4 mt-4 mb-8 bg-white rounded-2xl border border-[#FFFFFF] "
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
+            <InfoRow
+              icon="person"
               value={
                 profileData
-                  ? `${profileData.firstNameEnglish || ""} ${profileData.lastNameEnglish || ""
+                  ? `${profileData.firstNameEnglish || ""} ${
+                      profileData.lastNameEnglish || ""
                     }`.trim()
                   : "Not available"
               }
             />
-            <InfoCard
-              label="Employee ID"
+            <InfoRow
+              icon="id-badge"
+              iconSet="community"
               value={profileData?.empId || "Not available"}
             />
-            <InfoCard
-              label="Phone Number"
+            <InfoRow
+              icon="phone"
               value={formatPhoneNumber(
                 profileData?.phoneCode01,
                 profileData?.phoneNumber01,
               )}
             />
-            <InfoCard
-              label="NIC Number"
+            <InfoRow
+              icon="shield-alt"
+              iconSet="community"
               value={profileData?.nic || "Not available"}
             />
-            <InfoCard
-              label="Vehicle"
+            <InfoRow
+              icon="truck"
+              iconSet="community"
               value={profileData?.vType || "Not available"}
             />
-            <InfoCard
-              label="Vehicle's Registration Number"
+            <InfoRow
+              icon="sticky-note-2"
+              iconSet="material"
               value={profileData?.vRegNo || "Not available"}
+              isLast
             />
           </View>
         </ScrollView>
@@ -629,6 +863,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 onPress={() => setShowLogoutModal(false)}
                 className="flex flex-row mr-2 py-3 px-4 rounded-full bg-[#DFE5F2] w-[48%] justify-center items-center"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
               >
                 <MaterialIcons name="close" size={20} color="black" />
                 <Text className="text-center font-medium ml-2">Cancel</Text>
@@ -637,6 +878,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 onPress={performLogout}
                 className="flex flex-row ml-2 py-3 px-4 bg-[#FF0000] rounded-full w-[48%] justify-center items-center"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
               >
                 <MaterialIcons name="logout" size={20} color="white" />
                 <Text className="text-center font-medium text-white ml-2">

@@ -1,16 +1,15 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   BackHandler,
   ActivityIndicator,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../types/types";
 import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
@@ -38,6 +37,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   const [loading, setLoading] = useState(false);
   const [empIdError, setEmpIdError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [empIdHasError, setEmpIdHasError] = useState(false);
+  const [passwordHasError, setPasswordHasError] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -56,7 +75,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const handleEmpIdChange = (text: string) => {
-    setEmpid(text);
+    const capitalized = text.toUpperCase();
+    setEmpid(capitalized);
+    setEmpIdHasError(false);
 
     if (empIdError) {
       setEmpIdError("");
@@ -65,199 +86,237 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
+    setPasswordHasError(false);
+    if (passwordError) {
+      setPasswordError("");
+    }
   };
 
- const handleLogin = async () => {
-  Keyboard.dismiss();
+  const handleLogin = async () => {
+    Keyboard.dismiss();
 
-  setEmpIdError("");
+    setEmpIdError("");
+    setPasswordError("");
+    setEmpIdHasError(false);
+    setPasswordHasError(false);
 
-  if (!empid && !password) {
-    showModal(
-      "Sorry",
-      "Password & Employee ID are not allowed to be empty",
-      "error",
-    );
-    return false;
-  }
-
-  if (empid && !password) {
-    showModal("Sorry", "Password is not allowed to be empty", "error");
-    return false;
-  }
-
-  if (!empid && password) {
-    showModal("Sorry", "Employee ID is not allowed to be empty", "error");
-    return false;
-  }
-
-  const trimmedEmpId = empid.trim();
-
-  const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
-
-  if (!empIdPatternRegex.test(trimmedEmpId)) {
-    const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
-
-    if (!startsWithDRV) {
+    if (!empid && !password) {
+      setEmpIdHasError(true);
+      setPasswordHasError(true);
+      setEmpIdError("Employee ID is not allowed to be empty");
+      setPasswordError("Password is not allowed to be empty");
       showModal(
-        "Unauthorized Access",
-        "You are not authorized to access this system. Please use a valid Employee ID.",
+        "Sorry",
+        "Password & Employee ID are not allowed to be empty",
         "error",
       );
-    } else {
-      showModal(
-        "Invalid EMP ID",
-        "Please enter a valid Employee ID.",
-        "error",
-      );
-    }
-    return false;
-  }
-
-  const uppercaseRegex = /^DRV\d{5}$/;
-
-  if (!uppercaseRegex.test(trimmedEmpId)) {
-    setEmpIdError("Please enter Employee ID in uppercase letters");
-    return false;
-  }
-
-  setLoading(true);
-
-  await AsyncStorage.removeItem("token");
-  await AsyncStorage.removeItem("empid");
-
-  try {
-    const response = await fetch(
-      `${environment.API_BASE_URL}api/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          empId: trimmedEmpId,
-          password,
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      setLoading(false);
-
-      const message = data.message?.toLowerCase() || "";
-      const statusCode = response.status;
-
-      if (
-        statusCode === 404 ||
-        message.includes("user not found") ||
-        message.includes("not found") ||
-        message.includes("not registered") ||
-        message.includes("does not exist")
-      ) {
-        showModal(
-          "EMP ID Not Registered",
-          "This Employee ID is not registered yet. ",
-          "error",
-        );
-      }
-
-      else if (
-        message.includes("rejected") ||
-        message.includes("emp id is rejected")
-      ) {
-        showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
-      }
-
-      else if (
-        message.includes("not approved") ||
-        message.includes("emp id not approved")
-      ) {
-        showModal(
-          "Not Approved EMP ID",
-          "This EMP ID is not approved.",
-          "error",
-        );
-      }
-
-      else if (
-        statusCode === 401 ||
-        message.includes("invalid") ||
-        message.includes("password") ||
-        message.includes("incorrect password")
-      ) {
-        showModal(
-          "Invalid Password!",
-          "Please check the Password and retry again.",
-          "error",
-        );
-      }
-
-      else {
-        showModal(
-          "Sorry",
-          "Something went wrong. Please try again.",
-          "error",
-        );
-      }
-
-      return;
+      return false;
     }
 
-    const {
-      firstNameEnglish,
-      lastNameEnglish,
-      image,
-      token,
-      passwordUpdated,
-      empId,
-    } = data.data;
-
-    await AsyncStorage.setItem("token", token);
-    await AsyncStorage.setItem("empid", empId.toString());
-
-    dispatch(setUser({ token, empId: empId.toString() }));
-
-    dispatch(
-      setUserProfile({
-        firstName: firstNameEnglish,
-        lastName: lastNameEnglish,
-        profileImg: image,
-        empId: empId.toString(),
-        passwordUpdated: passwordUpdated,
-      }),
-    );
-
-    if (token) {
-      const timestamp = new Date();
-      const expirationTime = new Date(
-        timestamp.getTime() + 8 * 60 * 60 * 1000,
-      );
-
-      await AsyncStorage.multiSet([
-        ["tokenStoredTime", timestamp.toISOString()],
-        ["tokenExpirationTime", expirationTime.toISOString()],
-      ]);
+    if (empid && !password) {
+      setPasswordHasError(true);
+      setPasswordError("Password is not allowed to be empty");
+      showModal("Sorry", "Password is not allowed to be empty", "error");
+      return false;
     }
 
-    setTimeout(() => {
-      setLoading(false);
+    if (!empid && password) {
+      setEmpIdHasError(true);
+      setEmpIdError("Employee ID is not allowed to be empty");
+      showModal("Sorry", "Employee ID is not allowed to be empty", "error");
+      return false;
+    }
 
-      if (passwordUpdated === 0) {
-        navigation.replace("ChangePassword", {
-          passwordUpdated: passwordUpdated,
-        });
+    const trimmedEmpId = empid.trim();
+
+    const empIdPatternRegex = /^[dD][rR][vV]\d{5}$/;
+
+    if (!empIdPatternRegex.test(trimmedEmpId)) {
+      setEmpIdHasError(true);
+      const startsWithDRV = /^[dD][rR][vV]/.test(trimmedEmpId);
+
+      if (!startsWithDRV) {
+        showModal(
+          "Unauthorized Access",
+          "You are not authorized to access this system. Please use a valid Employee ID.",
+          "error",
+        );
       } else {
-        navigation.replace("Home");
+        showModal(
+          "Invalid EMP ID",
+          "Please enter a valid Employee ID.",
+          "error",
+        );
       }
-    }, 4000);
-  } catch (error) {
-    setLoading(false);
-    console.error("Login error:", error);
-    showModal("Error", "Something went wrong. Please try again.", "error");
-  }
-};
+      return false;
+    }
+
+    const uppercaseRegex = /^DRV\d{5}$/;
+
+    if (!uppercaseRegex.test(trimmedEmpId)) {
+      setEmpIdHasError(true);
+      setEmpIdError("Please enter Employee ID in uppercase letters");
+      return false;
+    }
+
+    setLoading(true);
+
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("empid");
+
+    try {
+      const response = await fetch(
+        `${environment.API_BASE_URL}api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            empId: trimmedEmpId,
+            password,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setLoading(false);
+
+        const message = data.message?.toLowerCase() || "";
+        const statusCode = response.status;
+        const statusType = data.statusType;
+
+        if (
+          statusType === "rejected" ||
+          statusType === "not_approved" ||
+          statusType === "pending"
+        ) {
+          navigation.navigate("BannedScreen", {
+            statusType,
+            message: data.message,
+          });
+          return;
+        }
+
+        if (
+          statusCode === 404 ||
+          message.includes("user not found") ||
+          message.includes("not found") ||
+          message.includes("not registered") ||
+          message.includes("does not exist")
+        ) {
+          setEmpIdHasError(true);
+          showModal(
+            "EMP ID Not Registered",
+            "This Employee ID is not registered yet. ",
+            "error",
+          );
+        } else if (
+          message.includes("rejected") ||
+          message.includes("emp id is rejected")
+        ) {
+          setEmpIdHasError(true);
+          showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
+        } else if (
+          message.includes("not approved") ||
+          message.includes("emp id not approved")
+        ) {
+          setEmpIdHasError(true);
+          showModal(
+            "Not Approved EMP ID",
+            "This EMP ID is not approved.",
+            "error",
+          );
+        } else if (
+          statusCode === 401 ||
+          message.includes("invalid") ||
+          message.includes("password") ||
+          message.includes("incorrect password")
+        ) {
+          setPasswordHasError(true);
+          setPasswordError("Please check the Password and retry again.");
+          showModal(
+            "Invalid Password!",
+            "Please check the Password and retry again.",
+            "error",
+          );
+        } else if (
+          statusCode === 429 ||
+          message.includes("too many") ||
+          message.includes("attempts")
+        ) {
+          showModal(
+            "Too Many Attempts",
+            data.message ||
+              "Too many login attempts. Please try again after 15 minutes.",
+            "error",
+          );
+        } else {
+          showModal(
+            "Sorry",
+            "Something went wrong. Please try again.",
+            "error",
+          );
+        }
+
+        return;
+      }
+
+      const {
+        firstNameEnglish,
+        lastNameEnglish,
+        image,
+        token,
+        passwordUpdated,
+        empId,
+      } = data.data;
+
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("empid", empId.toString());
+
+      dispatch(setUser({ token, empId: empId.toString() }));
+
+      dispatch(
+        setUserProfile({
+          firstName: firstNameEnglish,
+          lastName: lastNameEnglish,
+          profileImg: image,
+          empId: empId.toString(),
+          passwordUpdated: passwordUpdated,
+        }),
+      );
+
+      if (token) {
+        const timestamp = new Date();
+        const expirationTime = new Date(
+          timestamp.getTime() + 8 * 60 * 60 * 1000,
+        );
+
+        await AsyncStorage.multiSet([
+          ["tokenStoredTime", timestamp.toISOString()],
+          ["tokenExpirationTime", expirationTime.toISOString()],
+        ]);
+      }
+
+      setTimeout(() => {
+        setLoading(false);
+
+        if (passwordUpdated === 0) {
+          navigation.replace("ChangePassword", {
+            passwordUpdated: passwordUpdated,
+          });
+        } else {
+          navigation.replace("Home");
+        }
+      }, 4000);
+    } catch (error) {
+      setLoading(false);
+      console.error("Login error:", error);
+      showModal("Error", "Something went wrong. Please try again.", "error");
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -272,16 +331,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   );
 
   return (
-    <KeyboardAvoidingView
-      enabled
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: "white" }}
-      className="bg-white"
+    <LinearGradient
+      colors={["#323232", "#0E0E0E"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+      <KeyboardAwareScrollView
+        style={{ flex: 1, backgroundColor: "#0E0E0E" }}
+        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
+        enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
         bounces={false}
+        showsVerticalScrollIndicator={false}
+        extraScrollHeight={Platform.OS === "android" ? 80 : 20}
+        enableAutomaticScroll={true}
+        keyboardOpeningTime={0}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
@@ -296,13 +361,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        <View className="flex-1">
+        <View className="flex-1" style={{ backgroundColor: "#0E0E0E" }}>
           {/* Form Section */}
           <LinearGradient
             colors={["#323232", "#0E0E0E"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="flex-1 px-6 py-8 rounded-t-3xl shadow-lg -mt-20 pt-10"
+            end={{ x: 0, y: 1 }}
+            className="flex-1 px-6 py-8 rounded-t-3xl overflow-hidden shadow-lg -mt-20 pt-10 justify-center"
           >
             <View>
               <Text className="text-3xl font-semibold text-center mt-42 mb-2 text-white">
@@ -314,23 +379,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <View>
+              {/* EMP ID */}
+              {/* EMP ID */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-1 py-3"
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderRadius: 30,
+                  paddingHorizontal: 16,
+                  height: 58,
+                  marginBottom: 12,
+                  gap: 12,
+                  borderWidth: 2,
+                  borderColor: empIdHasError ? "#EF4444" : "transparent",
+                }}
               >
-                <View className="flex-row items-center ml-4">
-                  <FontAwesome6 name="user-large" size={20} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1  text-base  text-white placeholder:ml-4"
-                    autoCapitalize="characters"
-                    value={empid}
-                    onChangeText={handleEmpIdChange}
-                    placeholder="Your EMP ID"
-                    placeholderTextColor={"#F6F9FF"}
-                  />
-                </View>
+                <FontAwesome6 name="user-large" size={18} color="#F7CA21" />
+
+                <TextInput
+                  style={{
+                    flex: 1,
+                    color: "white",
+                    paddingVertical: 0,
+                    includeFontPadding: false,
+                  }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  value={empid}
+                  onChangeText={handleEmpIdChange}
+                  placeholder="Your EMP ID"
+                  placeholderTextColor="#F6F9FF"
+                />
               </LinearGradient>
               {empIdError && (
                 <Text className="text-red-500 text-sm pl-3 mb-4">
@@ -342,32 +424,47 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center bg-[#F4F4F4] rounded-full mb-6 py-3 mt-3"
+                className={`flex-row items-center rounded-[30px] px-4 h-[62px] gap-3 border-2 ${
+                  passwordError ? "mb-3" : "mb-6"
+                } ${passwordHasError ? "border-red-500" : "border-transparent"}`}
+                // note: overflow-hidden removed here
               >
-                <View className="flex-row items-center ml-4">
-                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                  <TextInput
-                    className="flex-1 text-base placeholder:ml-2 text-white"
-                    secureTextEntry={secureTextEntry}
-                    value={password}
-                    onChangeText={handlePasswordChange}
-                    placeholder="Your Password"
-                    placeholderTextColor={"#F6F9FF"}
+                <MaterialIcons name="lock" size={22} color="#F7CA21" />
+
+                <TextInput
+                  className="flex-1 text-white text-base"
+                  style={{
+                    lineHeight: 24,
+                    paddingVertical: 10,
+                    includeFontPadding: true,
+                    textAlignVertical: "center",
+                    height: "100%",
+                    paddingBottom: Platform.OS === "ios" ? 15 : 10,
+                  }}
+                  secureTextEntry={secureTextEntry}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  placeholder="Your Password"
+                  placeholderTextColor="#F6F9FF"
+                />
+
+                <TouchableOpacity
+                  onPress={() => setSecureTextEntry(!secureTextEntry)}
+                >
+                  <FontAwesome5
+                    name={secureTextEntry ? "eye-slash" : "eye"}
+                    size={20}
+                    color="white"
                   />
-                  <TouchableOpacity
-                    onPress={() => setSecureTextEntry(!secureTextEntry)}
-                    className="mr-4"
-                  >
-                    <FontAwesome5
-                      name={secureTextEntry ? "eye-slash" : "eye"}
-                      size={24}
-                      color="white"
-                    />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
+              {passwordError && (
+                <Text className="text-red-500 text-sm pl-3 mb-4">
+                  {passwordError}
+                </Text>
+              )}
               <TouchableOpacity
-                className="rounded-full  overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
+                className="rounded-full overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
                 style={{ width: "100%" }}
                 disabled={loading}
                 onPress={handleLogin}
@@ -383,18 +480,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
           </LinearGradient>
         </View>
-      </ScrollView>
 
-      <AlertModal
-        visible={modalVisible}
-        title={modalTitle}
-        message={modalMessage}
-        type={modalType}
-        onClose={() => setModalVisible(false)}
-        duration={4000}
-        autoClose={true}
-      />
-    </KeyboardAvoidingView>
+        <AlertModal
+          visible={modalVisible}
+          title={modalTitle}
+          message={modalMessage}
+          type={modalType}
+          onClose={() => setModalVisible(false)}
+          duration={4000}
+          autoClose={true}
+        />
+      </KeyboardAwareScrollView>
+    </LinearGradient>
   );
 };
 

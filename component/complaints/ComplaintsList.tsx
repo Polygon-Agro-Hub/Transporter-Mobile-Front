@@ -23,8 +23,8 @@ import { environment } from "@/environment/environment";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../../store/authSlice";
-import LottieView from "lottie-react-native";
 import LoadingPage from "../common/LoadingPage";
+import NoData from "../common/NoDataModal";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -50,8 +50,6 @@ interface Complaint {
   categorySinhala: string;
   categoryTamil: string;
 }
-
-const NodataAnimation = require("@/assets/json/no-data.json");
 
 const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -140,8 +138,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       "Dec",
     ];
 
-    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${monthNames[date.getMonth()]
-      } ${date.getDate()}, ${date.getFullYear()}`;
+    return `Sent : At ${formattedHours}:${formattedMinutes}${ampm} on ${
+      monthNames[date.getMonth()]
+    } ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   const formatReplyDate = (dateString: string | null) => {
@@ -204,25 +203,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       />
 
       {complaints.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <View
-            className="items-center justify-center"
-            style={{
-              position: "absolute",
-              top: "30%",
-              transform: [{ translateY: -50 }],
-            }}
-          >
-            <LottieView
-              source={NodataAnimation}
-              autoPlay
-              loop={true}
-              style={{ width: 200, height: 200 }}
-            />
-            <Text className="text-[#495D86] text-base mb-2">
-              -- No Complaints Yet --
-            </Text>
-          </View>
+        <View className="flex-1">
+          <NoData text=" -- No Complaints Yet --" />
         </View>
       ) : (
         <ScrollView
@@ -281,8 +263,9 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
 
                     {/* Reply Button */}
                     <TouchableOpacity
-                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${isWaiting ? "bg-[#CBD7E8] " : "bg-black"
-                        }`}
+                      className={`flex-row items-center px-4 py-1.5 rounded-lg ${
+                        isWaiting ? "bg-[#CBD7E8] " : "bg-black"
+                      }`}
                       disabled={isWaiting}
                       onPress={() => handleReply(complaint)}
                     >
@@ -326,7 +309,8 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       >
         <View className="flex-1 bg-black/50 justify-center items-center">
           <View
-            className="bg-white rounded-3xl w-11/12 mx-4 h-3/4"
+            className="bg-white rounded-3xl w-11/12 mx-4"
+            style={{ maxHeight: "75%" }}
           >
             {/* Close Button */}
             <TouchableOpacity

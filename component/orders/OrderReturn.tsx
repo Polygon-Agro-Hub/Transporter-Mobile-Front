@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  findNodeHandle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -62,7 +63,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   const [successMessage, setSuccessMessage] = useState<
     string | React.ReactNode
   >("");
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const textInputRef = useRef<TextInput>(null);
@@ -88,23 +90,24 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchReasons();
+  }, []);
 
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => {
-        setKeyboardVisible(true);
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false);
-      },
-    );
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
 
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showSub.remove();
+      hideSub.remove();
     };
   }, []);
 
@@ -162,12 +165,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleBackPress = () => {
-    navigation.navigate("EndJourneyConfirmation", {
-      processOrderIds: orderIds,
-      allProcessOrderIds: allProcessOrderIds,
-      remainingOrders: remainingOrders,
-      onOrderComplete: onOrderComplete,
-    });
+    navigation.goBack();
   };
 
   const handleSubmit = async () => {
@@ -247,13 +245,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         if (onOrderComplete && orderIds && orderIds.length > 0) {
           onOrderComplete(orderIds[0]);
         }
-
-        setTimeout(() => {
-          if (showSuccessModal) {
-            setShowSuccessModal(false);
-            handleNavigationAfterSuccess();
-          }
-        }, 4000);
       } else {
         Alert.alert("Error", result.message || "Failed to submit return order");
       }
@@ -286,7 +277,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("Navigating to Jobs screen");
     navigation.navigate("Jobs");
   };
 
@@ -302,7 +292,6 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     setSelectedReason(null);
     setOtherReason("");
 
-    console.log("Error modal closed, navigating to Jobs");
     navigation.navigate("Jobs");
   };
 
@@ -313,15 +302,37 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleTextInputFocus = () => {
+    const delay = Platform.OS === "android" ? 100 : 250;
+
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 300);
+      const scrollNode = scrollViewRef.current;
+      const inputNode = textInputRef.current;
+      if (!scrollNode || !inputNode) return;
+
+      const inputHandle = findNodeHandle(inputNode);
+      const scrollHandle = findNodeHandle(scrollNode);
+      if (!inputHandle || !scrollHandle) return;
+
+      inputNode.measureLayout(
+        scrollHandle,
+        (_x: number, y: number, _w: number, h: number) => {
+          const targetY = y + h - 120;
+          scrollNode.scrollTo({
+            y: Math.max(targetY, 0),
+            animated: true,
+          });
+        },
+        () => {
+          scrollNode.scrollToEnd({ animated: true });
+        },
+      );
+    }, delay);
   };
 
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-white"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* Header - Using CustomHeader like in HoldOrder */}
@@ -340,7 +351,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           const mappedLang = mapLanguageCode(langCode as "EN" | "SI" | "TA");
           setSelectedLanguage(mappedLang);
         }}
-        onBackPress={handleBackPress} // Add back press handler
+        onBackPress={handleBackPress}
       />
 
       {loading ? (
@@ -352,7 +363,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingVertical: 24,
-            paddingBottom: keyboardVisible ? 400 : 24,
+
+            paddingBottom: 40 + keyboardHeight,
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -402,7 +414,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                   }`}
                 >
                   {selectedReason?.id === reason.id && (
-                    <Ionicons name="checkmark" size={16} color="white" />
+                    <Ionicons name="checkmark" size={14} color="white" />
                   )}
                 </View>
                 <Text
@@ -424,15 +436,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               <TextInput
                 ref={textInputRef}
                 value={otherReason}
-                onChangeText={(text) => {
-                  setOtherReason(text);
-                  // Keep text input visible while typing
-                  if (keyboardVisible) {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 100);
-                  }
-                }}
+                onChangeText={setOtherReason}
                 onFocus={handleTextInputFocus}
                 placeholder={getPlaceholderText()}
                 placeholderTextColor="#767F94"

@@ -1,6 +1,6 @@
 # .github/workflows/ios-deploy.yml
 #
-# iOS CI/CD Pipeline — GoVi-Transport
+# iOS CI/CD Pipeline — Sales Dash
 #
 # TRIGGERS:
 #   Push to dev-main → Upload to TestFlight (QA testing)
@@ -81,11 +81,13 @@ jobs:
         if: github.ref == 'refs/heads/dev-main'
         env:
           DEV_API_URL: ${{ secrets.DEV_API_URL }}
+          SHOUTOUT_API_KEY: ${{ secrets.DEV_SHOUTOUT_API_KEY }}
         run: |
           cat > environment/environment.ts << ENVEOF
           export const environment = {
             production: false,
-            API_BASE_URL: "${DEV_API_URL}"
+            API_BASE_URL: "${DEV_API_URL}",
+            SHOUTOUT_API_KEY: "${SHOUTOUT_API_KEY}"
           };
           ENVEOF
           echo "✅ DEV environment.ts written with API: ${DEV_API_URL}"
@@ -97,11 +99,13 @@ jobs:
         if: github.ref == 'refs/heads/main'
         env:
           PROD_API_URL: ${{ secrets.PROD_API_URL }}
+          SHOUTOUT_API_KEY: ${{ secrets.PROD_SHOUTOUT_API_KEY }}
         run: |
           cat > environment/environment.ts << ENVEOF
           export const environment = {
             production: true,
-            API_BASE_URL: "${PROD_API_URL}"
+            API_BASE_URL: "${PROD_API_URL}",
+            SHOUTOUT_API_KEY: "${SHOUTOUT_API_KEY}"
           };
           ENVEOF
           echo "✅ PROD environment.ts written with API: ${PROD_API_URL}"
@@ -132,13 +136,12 @@ jobs:
           # restore-keys: |
           #   pods-
           path: |
-            ios/Pods
-            ~/Library/Caches/CocoaPods
-            ~/.cocoapods
-          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+              ~/Library/Caches/CocoaPods
+              ~/.cocoapods
+          key: pods-v2-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
-            pods-${{ runner.os }}-
-
+            pods-v2-${{ runner.os }}-
+#
       # ─────────────────────────────────────────────────────────────────
       # STEP 8: Install CocoaPods dependencies
       # Installs native iOS packages defined in the Podfile
@@ -147,6 +150,9 @@ jobs:
       - name: "🍫 Install CocoaPods dependencies"
         run: |
           cd ios
+          # Clear the stale React-Core-prebuilt podspec that causes version conflicts
+          # after React Native upgrades (Expo 54→55 / RN 0.77→0.83)
+          pod cache clean "React-Core-prebuilt" 2>/dev/null || true
           pod install
           cd ..
 

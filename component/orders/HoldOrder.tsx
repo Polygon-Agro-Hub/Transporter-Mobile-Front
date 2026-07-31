@@ -150,7 +150,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
         note: isOtherReason(selectedReason) ? otherReason.trim() : null,
       };
 
-
       const response = await axios.post(
         `${environment.API_BASE_URL}api/hold/submit`,
         payload,
@@ -163,7 +162,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
       );
 
       const result = response.data;
-   
 
       if (result.status === "success") {
         const invoiceNumbers: string[] = result.data.invoiceNumbers || [];
@@ -248,7 +246,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("Navigating to Jobs screen");
     navigation.navigate("Jobs");
   };
 
@@ -264,7 +261,6 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
     setSelectedReason(null);
     setOtherReason("");
 
-    console.log("Error modal closed, navigating to Jobs");
     navigation.navigate("Jobs");
   };
 
@@ -285,6 +281,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
               ? "ඇණවුම රඳවා ගන්න"
               : "ஆர்டரை வைத்திருங்கள்"
         }
+        titleStyle={selectedLanguage === "Ta" ? { fontSize: 12 } : undefined}
         navigation={navigation}
         showBackButton={true}
         showLanguageSelector={true}
@@ -293,12 +290,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           setSelectedLanguage(mappedLang);
         }}
         onBackPress={() => {
-          navigation.navigate("EndJourneyConfirmation", {
-            processOrderIds: orderIds,
-            allProcessOrderIds: allProcessOrderIds,
-            remainingOrders: remainingOrders,
-            onOrderComplete: onOrderComplete,
-          });
+          navigation.goBack();
         }}
       />
 
@@ -355,7 +347,7 @@ const HoldOrder: React.FC<OrderReturnProps> = ({ navigation, route }) => {
                   }`}
                 >
                   {selectedReason?.id === reason.id && (
-                    <Ionicons name="checkmark" size={16} color="white" />
+                    <Ionicons name="checkmark" size={14} color="white" />
                   )}
                 </View>
                 <Text

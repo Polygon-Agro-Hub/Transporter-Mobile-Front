@@ -14,6 +14,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Location from "expo-location";
 import CustomHeader from "../common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -122,13 +123,10 @@ export default function SignatureScreen({
   } = route.params;
 
   const handleBackPress = () => {
-    navigation.navigate("EndJourneyConfirmation", {
-      processOrderIds: processOrderIds,
-      allProcessOrderIds: allProcessOrderIds,
-      remainingOrders: remainingOrders,
-      onOrderComplete: onOrderComplete,
-    });
+    navigation.goBack();
   };
+
+  const [isOrientationLocked, setIsOrientationLocked] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -140,13 +138,16 @@ export default function SignatureScreen({
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
         );
+        if (isActive) {
+          setIsOrientationLocked(true);
+        }
       };
 
       setupOrientation();
 
       return () => {
         isActive = false;
-
+        setIsOrientationLocked(false);
         ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP,
         );
@@ -184,6 +185,24 @@ export default function SignatureScreen({
         return;
       }
 
+      // ── Get current GPS location ──────────────────────────────────────────
+      let latitude: string = "";
+      let longitude: string = "";
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
+          latitude = location.coords.latitude.toString();
+          longitude = location.coords.longitude.toString();
+        } else {
+          console.warn("Location permission denied – coordinates will not be saved.");
+        }
+      } catch (locErr) {
+        console.warn("Could not fetch location:", locErr);
+      }
+
       const base64Data = signatureBase64.includes(",")
         ? signatureBase64.split(",")[1]
         : signatureBase64;
@@ -199,6 +218,10 @@ export default function SignatureScreen({
       processOrderIds.forEach((id, index) => {
         parameters[`processOrderIds[${index}]`] = id.toString();
       });
+
+      // Attach GPS coordinates if available
+      if (latitude) parameters["latitude"] = latitude;
+      if (longitude) parameters["longitude"] = longitude;
 
       const uploadResult = await FileSystem.uploadAsync(
         `${environment.API_BASE_URL}api/order/save-signature`,
@@ -293,8 +316,6 @@ export default function SignatureScreen({
   };
 
   const handleNavigationAfterSuccess = () => {
-    console.log("Navigating back to OrderDetails");
-
     navigation.navigate("Jobs");
   };
 
@@ -420,18 +441,25 @@ export default function SignatureScreen({
 
             {/* SIGNATURE CANVAS */}
             <View style={{ flex: 1 }}>
-              <Signature
-                ref={signatureRef}
-                onOK={handleOK}
-                onEnd={handleSignatureChange}
-                webStyle={signatureStyle}
-                autoClear={false}
-                descriptionText=""
-                style={{
-                  flex: 1,
-                  backgroundColor: "#DFEDFC",
-                }}
-              />
+              {isOrientationLocked ? (
+                <Signature
+                  ref={signatureRef}
+                  onOK={handleOK}
+                  onEnd={handleSignatureChange}
+                  webStyle={signatureStyle}
+                  autoClear={false}
+                  descriptionText=""
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#DFEDFC",
+                  }}
+                />
+              ) : (
+                <View className="flex-1 justify-center items-center bg-[#DFEDFC]">
+                  <ActivityIndicator size="large" color="#2D7BFF" />
+                  <Text className="mt-2 text-[#2D7BFF] font-semibold">Preparing signature canvas...</Text>
+                </View>
+              )}
             </View>
           </DashedBorder>
         </View>

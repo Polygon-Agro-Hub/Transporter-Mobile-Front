@@ -70,6 +70,7 @@ interface ProcessOrder {
   amount: string;
   isPaid: boolean;
   status: string;
+  cashAmountDue: number | null;
 }
 
 interface OrderItem {
@@ -129,7 +130,6 @@ const formatAddressWithLabels = (address: string) => {
       }
     }
 
-    // If no label found, return as black text
     return (
       <Text key={index} style={{ color: "#000000" }}>
         {part}
@@ -137,6 +137,24 @@ const formatAddressWithLabels = (address: string) => {
       </Text>
     );
   });
+};
+
+const parseScheduleStartMinutes = (time: string): number => {
+  if (!time) return Number.MAX_SAFE_INTEGER;
+
+  const startPart = time.split("-")[0].trim();
+
+  const match = startPart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  return hour * 60 + minute;
 };
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
@@ -183,6 +201,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   }, [navigation]);
 
   useEffect(() => {
+    scrollX.setValue(0);
+
     if (orders.length > 0) {
       const timeText = getScheduleTimeDisplay();
       const textLength = timeText.length;
@@ -253,54 +273,12 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           throw new Error("No data found");
         }
 
-        const getScheduleTimePriority = (time: string) => {
-          if (!time) return 999;
-
-          const lowerTime = time.toLowerCase();
-
-          if (
-            lowerTime.includes("8:00") ||
-            lowerTime.includes("8 am") ||
-            lowerTime.includes("8:00am") ||
-            lowerTime.includes("8:00 am") ||
-            lowerTime.includes("morning") ||
-            lowerTime.includes("early")
-          ) {
-            return 1;
-          }
-
-          if (
-            lowerTime.includes("2:00") ||
-            lowerTime.includes("2 pm") ||
-            lowerTime.includes("2:00pm") ||
-            lowerTime.includes("2:00 pm") ||
-            lowerTime.includes("afternoon") ||
-            lowerTime.includes("evening") ||
-            lowerTime.includes("late")
-          ) {
-            return 2;
-          }
-
-          const match = time.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)/i);
-          if (match) {
-            let hour = parseInt(match[1], 10);
-            const period = match[2].toUpperCase();
-
-            if (period === "PM" && hour !== 12) hour += 12;
-            if (period === "AM" && hour === 12) hour = 0;
-
-            return hour;
-          }
-
-          return 999;
-        };
-
         const sortedOrders = [...data.orders].sort((a, b) => {
-          const priorityA = getScheduleTimePriority(a.sheduleTime);
-          const priorityB = getScheduleTimePriority(b.sheduleTime);
+          const startA = parseScheduleStartMinutes(a.sheduleTime);
+          const startB = parseScheduleStartMinutes(b.sheduleTime);
 
-          if (priorityA !== priorityB) {
-            return priorityA - priorityB;
+          if (startA !== startB) {
+            return startA - startB;
           }
 
           return a.orderId - b.orderId;
@@ -423,8 +401,16 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const getScheduleTimeDisplay = () => {
     if (!orders || orders.length === 0) return "Not Scheduled";
 
-    const firstOrder = orders[0];
-    return firstOrder?.sheduleTime || "Not Scheduled";
+    const uniqueTimes: string[] = [];
+    orders.forEach((order) => {
+      if (order.sheduleTime && !uniqueTimes.includes(order.sheduleTime)) {
+        uniqueTimes.push(order.sheduleTime);
+      }
+    });
+
+    if (uniqueTimes.length === 0) return "Not Scheduled";
+
+    return uniqueTimes.join(" | ");
   };
 
   const getJourneyButtonText = (status: string) => {
@@ -540,7 +526,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       if (currentStatus === "hold") {
         const payload = {
           orderIds: processOrderId.toString(),
-          isProcessOrderIds: 1,
         };
 
         const response = await axios.post(
@@ -584,7 +569,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
       const payload = {
         orderIds: processOrderId.toString(),
-        isProcessOrderIds: 1,
       };
 
       const response = await axios.post(
@@ -623,10 +607,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       if (error.response) {
         console.error("Error response data:", error.response.data);
         console.error("Error response status:", error.response.status);
-        console.log(
-          "Full error response:",
-          JSON.stringify(error.response.data, null, 2),
-        );
       }
 
       const errorMessage =
@@ -669,13 +649,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     setCompletedOrders((prev) => {
       const newCompleted = [...prev, completedId];
 
-      // Check if all orders are completed
       const allOrderIds = orders.map((order) => order.processOrder.id);
       const allCompleted = allOrderIds.every((id) => newCompleted.includes(id));
 
-      if (allCompleted) {
-        console.log("All orders completed - Staying on OrderDetails screen");
-      } else {
+      if (!allCompleted) {
         setShowContinueButton(true);
       }
 
@@ -812,7 +789,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   <Ionicons name="location-sharp" size={18} color="black" />
                   {formatAddressWithLabels(userDetails.address)}
                 </Text>
-                =
               </View>
             )}
         </View>
@@ -830,21 +806,32 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
             <View className="mt-2 max-w-full overflow-hidden">
-              <Animated.Text
-                className="text-md font-semibold whitespace-nowrap"
-                style={{
-                  transform: [{ translateX: scrollX }],
-                }}
-                numberOfLines={1}
-              >
-                {formatScheduleTime(getScheduleTimeDisplay())}
-              </Animated.Text>
+              {(() => {
+                const displayText = formatScheduleTime(
+                  getScheduleTimeDisplay(),
+                );
+                const needsScroll = displayText.length > 15;
+
+                return needsScroll ? (
+                  <Animated.Text
+                    className="text-md font-semibold whitespace-nowrap"
+                    style={{ transform: [{ translateX: scrollX }] }}
+                    numberOfLines={1}
+                  >
+                    {displayText}
+                  </Animated.Text>
+                ) : (
+                  <Text className="text-md font-semibold" numberOfLines={1}>
+                    {displayText}
+                  </Text>
+                );
+              })()}
             </View>
           </View>
         </View>
 
         {/* Orders List */}
-        <View className="mt-6 space-y-4">
+        <View className="mt-6 gap-y-4">
           {orders.map((order, index) => {
             const hasPhone2 = order.phonecode2 && order.phone2;
             const hasLocation = order.latitude && order.longitude;
@@ -864,7 +851,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               isCompleted ||
               !isButtonActive;
 
-            // ✅ Must be inside the map callback where `order` is in scope
             const sameLocationOrders = findOrdersWithSameLocation(
               order.orderId,
             );
@@ -899,7 +885,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
                   {/* Payment Info */}
                   <View className="flex-row items-center mb-4">
-                    {order.processOrder.isPaid ? (
+                    {order.processOrder.paymentMethod?.toLowerCase() ===
+                    "cash" ? (
+                      <FontAwesome6 name="coins" size={16} color="#F7CA21" />
+                    ) : order.processOrder.isPaid ? (
                       <FontAwesome
                         name="check-circle"
                         size={16}
@@ -909,7 +898,14 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                       <FontAwesome6 name="coins" size={16} color="#F7CA21" />
                     )}
                     <Text className="ml-2 text-sm text-black">
-                      {order.processOrder.isPaid ? (
+                      {order.processOrder.paymentMethod?.toLowerCase() ===
+                      "cash" ? (
+                        <Text>
+                          {formatCurrency(
+                            (order.processOrder.cashAmountDue ?? 0).toString(),
+                          )}
+                        </Text>
+                      ) : order.processOrder.isPaid ? (
                         <Text className="text-black">Already Paid!</Text>
                       ) : (
                         <Text>{formatCurrency(order.pricing)}</Text>
@@ -987,7 +983,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                   {startingJourney === order.orderId.toString() ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
-                    <Text className="text-base font-bold">{buttonText}</Text>
+                    <Text
+                      className="text-base font-bold"
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
+                      {buttonText}
+                    </Text>
                   )}
                 </TouchableOpacity>
                 {showSameLocationNotice && (

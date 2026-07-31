@@ -4,14 +4,17 @@ export type RootStackParamList = {
   Lanuage: undefined;
   Splash: undefined;
   ComplaintsList: undefined;
-  ReceivedCash: { scannedOfficerId?: string } | undefined;
+  DeliverySuccessful: undefined;
   AddComplaint: undefined;
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
+  BannedScreen: {
+    statusType: string;
+    message: string;
+  };
   Profile: undefined;
   ReturnOrders: undefined;
   AssignOrderQR: undefined;
-  ReceivedCashQR: { amount: number; selectedCount: number };
   ReturnOrderQR: {
     invoiceNumber: string;
     orderId: number;
@@ -45,7 +48,6 @@ export type RootStackParamList = {
     remainingOrders?: number[];
     onOrderComplete?: (completedId: number) => void;
   };
-  DeliverySuccessful: undefined;
   OrderDetailsLoadingScreen: {
     processOrderIds: number[];
     allProcessOrderIds: number[];
@@ -56,4 +58,16 @@ export type RootStackParamList = {
     longitude: string | null;
     address?: string;
   };
+  MyEarnings:{
+    
+  };
+  CashHandOver:{
+
+  };
+  UploadBankTransferSlip: {
+    amount?: number;
+  } | undefined;
+  BankTransferSlipStatus:{
+    
+  }
 };

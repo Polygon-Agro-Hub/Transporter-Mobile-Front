@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, Modal, Animated, TouchableOpacity } from "react-native";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
@@ -11,6 +11,7 @@ interface AlertModalProps {
   onClose: () => void;
   showRescanButton?: boolean;
   onRescan?: () => void;
+  rescanButtonText?: string;
   showOpenOngoingButton?: boolean;
   onOpenOngoing?: () => void;
   duration?: number;
@@ -25,12 +26,13 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   onClose,
   showRescanButton = false,
   onRescan,
+  rescanButtonText,
   showOpenOngoingButton = false,
   onOpenOngoing,
   duration = 4000,
   autoClose = true,
 }) => {
-  const loadingBarWidth = new Animated.Value(300);
+  const loadingBarWidth = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
     if (visible && autoClose) {
@@ -115,15 +117,17 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 
           {renderMessage()}
 
-          <View className="w-full space-y-3">
+          <View className="w-full gap-y-3">
             {showRescanButton && onRescan && (
               <TouchableOpacity
                 onPress={onRescan}
                 activeOpacity={0.8}
-                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center space-x-2 shadow-md"
+                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
                 <FontAwesome5 name="undo" size={18} color="black" />
-                <Text className="text-black font-bold text-base">Re-Scan</Text>
+                <Text className="text-black font-bold text-base">
+                  {rescanButtonText || "Re-Scan"}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -132,7 +136,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
               <TouchableOpacity
                 onPress={onOpenOngoing}
                 activeOpacity={0.8}
-                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center space-x-2 shadow-md"
+                className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
                 <Text className="text-black font-bold text-base">
                   Open Ongoing Activity
