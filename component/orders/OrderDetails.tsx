@@ -139,20 +139,9 @@ const formatAddressWithLabels = (address: string) => {
   });
 };
 
-/**
- * Parses the START time of a schedule range like:
- *   "08:00 AM - 12:00 PM"  -> 480   (8 * 60)
- *   "12:00 PM - 04:00 PM"  -> 720   (12 * 60)
- *   "04:00 PM - 09:00 PM"  -> 960   (16 * 60)
- *
- * Returns minutes-since-midnight for reliable chronological sorting.
- * Falls back to a very large number (so unparsable/empty values sort last).
- */
 const parseScheduleStartMinutes = (time: string): number => {
   if (!time) return Number.MAX_SAFE_INTEGER;
 
-  // Take only the part BEFORE the first "-" (the start time of the range),
-  // so we never accidentally match against the end time.
   const startPart = time.split("-")[0].trim();
 
   const match = startPart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
@@ -212,6 +201,8 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   }, [navigation]);
 
   useEffect(() => {
+    scrollX.setValue(0);
+
     if (orders.length > 0) {
       const timeText = getScheduleTimeDisplay();
       const textLength = timeText.length;
@@ -282,10 +273,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           throw new Error("No data found");
         }
 
-        // Sort strictly by the parsed start time of the schedule range,
-        // so "08:00 AM - 12:00 PM" always comes before
-        // "12:00 PM - 04:00 PM" which always comes before
-        // "04:00 PM - 09:00 PM", regardless of exact wording.
         const sortedOrders = [...data.orders].sort((a, b) => {
           const startA = parseScheduleStartMinutes(a.sheduleTime);
           const startB = parseScheduleStartMinutes(b.sheduleTime);
@@ -411,22 +398,20 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     return orders.length;
   };
 
- const getScheduleTimeDisplay = () => {
-  if (!orders || orders.length === 0) return "Not Scheduled";
+  const getScheduleTimeDisplay = () => {
+    if (!orders || orders.length === 0) return "Not Scheduled";
 
-  // Collect all distinct schedule times (not just the first order's).
-  // Orders are already sorted by start time, so this stays in order.
-  const uniqueTimes: string[] = [];
-  orders.forEach((order) => {
-    if (order.sheduleTime && !uniqueTimes.includes(order.sheduleTime)) {
-      uniqueTimes.push(order.sheduleTime);
-    }
-  });
+    const uniqueTimes: string[] = [];
+    orders.forEach((order) => {
+      if (order.sheduleTime && !uniqueTimes.includes(order.sheduleTime)) {
+        uniqueTimes.push(order.sheduleTime);
+      }
+    });
 
-  if (uniqueTimes.length === 0) return "Not Scheduled";
+    if (uniqueTimes.length === 0) return "Not Scheduled";
 
-  return uniqueTimes.join(" | ");
-};
+    return uniqueTimes.join(" | ");
+  };
 
   const getJourneyButtonText = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
@@ -821,15 +806,26 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
           <View className="w-[48%] rounded-xl bg-[#F3F3F3] p-3 items-center">
             <Ionicons name="time" size={30} color="black" />
             <View className="mt-2 max-w-full overflow-hidden">
-              <Animated.Text
-                className="text-md font-semibold whitespace-nowrap"
-                style={{
-                  transform: [{ translateX: scrollX }],
-                }}
-                numberOfLines={1}
-              >
-                {formatScheduleTime(getScheduleTimeDisplay())}
-              </Animated.Text>
+              {(() => {
+                const displayText = formatScheduleTime(
+                  getScheduleTimeDisplay(),
+                );
+                const needsScroll = displayText.length > 15;
+
+                return needsScroll ? (
+                  <Animated.Text
+                    className="text-md font-semibold whitespace-nowrap"
+                    style={{ transform: [{ translateX: scrollX }] }}
+                    numberOfLines={1}
+                  >
+                    {displayText}
+                  </Animated.Text>
+                ) : (
+                  <Text className="text-md font-semibold" numberOfLines={1}>
+                    {displayText}
+                  </Text>
+                );
+              })()}
             </View>
           </View>
         </View>
