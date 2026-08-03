@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../types/types";
@@ -29,6 +30,7 @@ import axios from "axios";
 import { RefreshControl } from "react-native";
 import LoadingPage from "../common/LoadingPage";
 import LottieView from "lottie-react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -304,6 +306,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const formatCurrency = (value: number) => {
+    return (value ?? 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   const handleAuthErrorModalClose = () => {
     setShowAuthErrorModal(false);
     navigation.reset({
@@ -476,6 +485,26 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
+    const handleBackPress = () => {
+    navigation.navigate("Home");
+  };
+
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          navigation.navigate("Home");
+          return true;
+        };
+  
+        const backHandler = BackHandler.addEventListener(
+          "hardwareBackPress",
+          onBackPress,
+        );
+  
+        return () => backHandler.remove();
+      }, [navigation]),
+    );
+
   const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
     if (!phoneCode && !phoneNumber) return "Not available";
     return `${phoneCode || ""} ${phoneNumber || ""}`.trim();
@@ -567,6 +596,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     );
   }
 
+  
+
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
@@ -579,6 +610,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           showLanguageSelector={false}
           showLogoutButton={true}
           navigation={navigation}
+          onBackPress={handleBackPress}
           onLogoutPress={handleLogoutConfirm}
         />
         <ScrollView
@@ -686,7 +718,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 )}
               </Text>
               <Text className="text-black font-bold text-xl">
-                Rs. {(earningsData?.totalEarnings ?? 0).toFixed(2)}
+                Rs. {formatCurrency(earningsData?.totalEarnings ?? 0)}
               </Text>
             </View>
 
@@ -706,7 +738,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   Cash Earnings
                 </Text>
                 <Text className="text-black font-bold  mb-2">
-                  Rs. {(earningsData?.cashEarnings ?? 0).toFixed(2)}
+                  Rs. {formatCurrency(earningsData?.cashEarnings ?? 0)}
                 </Text>
                 <View className="bg-[#FFF3D6] rounded-md px-3 py-1">
                   <Text className="text-[#8A6D1D] text-xs font-medium">
@@ -734,7 +766,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   Card Earnings
                 </Text>
                 <Text className="text-black font-bold mb-2">
-                  Rs. {(earningsData?.cardEarnings ?? 0).toFixed(2)}
+                  Rs. {formatCurrency(earningsData?.cardEarnings ?? 0)}
                 </Text>
                 <View className="bg-[#E4F7EC] rounded-md px-3 py-1">
                   <Text className="text-[#1E8449] text-xs font-medium">

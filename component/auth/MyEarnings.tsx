@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  BackHandler,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -20,6 +21,7 @@ import { selectAuthToken } from "@/store/authSlice";
 import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 type MyEarningsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -124,15 +126,12 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
         const info = data.data;
         const cashAmount = parseFloat(info.totalCashAmount) || 0;
         const txStatus = info.activeTransactionStatus;
-
-       
-       
       } else {
-        navigation.navigate("CashHandOver" as any);
+        navigation.navigate("Profile");
       }
     } catch (err) {
       console.log("Error checking cash handover status:", err);
-      navigation.navigate("CashHandOver" as any);
+      navigation.navigate("Profile");
     } finally {
       setIsLoading(false);
     }
@@ -223,6 +222,26 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
     });
   };
 
+  const handleBackPress = () => {
+    navigation.navigate("Profile");
+  };
+  
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Profile");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => backHandler.remove();
+    }, [navigation]),
+  );
+
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
@@ -234,6 +253,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
           showBackButton={true}
           showLanguageSelector={false}
           navigation={navigation}
+          onBackPress={handleBackPress}
         />
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Date range card */}
@@ -286,7 +306,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   ? formatLongDate(toDate)
                   : fromDate
                     ? "--Select Here--"
-                    : "Select From Date first"}
+                    : "--Select From Date First--"}
               </Text>
             </TouchableOpacity>
 
@@ -363,11 +383,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
               {/* Cash / Card earnings cards */}
               <View className="flex-row mx-4 mt-3" style={{ gap: 12 }}>
-                <TouchableOpacity
-                  onPress={handleCashEarningsPress}
-                  activeOpacity={0.7}
-                  className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white"
-                >
+                <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
                   <LottieView
                     source={require("@/assets/json/coin.json")}
                     style={{
@@ -389,7 +405,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                       {summary.cashOrders === 1 ? "" : "s"}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
                   <LottieView
@@ -437,13 +453,13 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   <View>
                     {/* Table header */}
                     <View className="flex-row px-4 py-2 bg-[#FAFAFA] border-t border-[#F0F0F0]">
-                      <Text className="flex-1 text-[#7A7A7A] text-xs font-medium">
+                      <Text className="flex-1 text-[#7A7A7A] text-xs font-medium text-left">
                         Order ID
                       </Text>
-                      <Text className="w-16 text-[#7A7A7A] text-xs font-medium">
+                      <Text className="w-20 text-[#7A7A7A] text-xs font-medium text-left">
                         Method
                       </Text>
-                      <Text className="w-20 text-[#7A7A7A] text-xs font-medium text-right">
+                      <Text className="w-14 text-[#7A7A7A] text-xs font-medium text-left">
                         Earnings (Rs.)
                       </Text>
                     </View>

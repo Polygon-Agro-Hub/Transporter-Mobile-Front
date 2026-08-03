@@ -605,40 +605,50 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           })}
         </ScrollView>
       ) : (
-        <View className="flex-1 justify-center items-center px-5">
-          <LottieView
-            source={require("@/assets/json/no-data.json")}
-            autoPlay
-            loop
-            style={{ width: 160, height: 160 }}
-          />
+         <View
+    style={{
+      flex: 1,
+      width: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 40,
+    }}
+  >
+    <LottieView
+      source={require("@/assets/json/no-data.json")}
+      autoPlay
+      loop
+      style={{ width: 160, height: 160 }}
+    />
 
-          {activeTab === "todo" ? (
-            <>
-              <Text
-                className="text-gray-500 text-lg text-center"
-                style={{ marginTop: -15 }}
-              >
-                No pending jobs
-              </Text>
-              <Text className="text-gray-400 text-center mt-2 px-10">
-                Scan QR codes to assign jobs to your list
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text
-                className="text-gray-500 text-lg text-center"
-                style={{ marginTop: -15 }}
-              >
-                No delivered jobs today
-              </Text>
-              <Text className="text-gray-400 text-center mt-2 px-10">
-                Today's delivered jobs will appear here
-              </Text>
-            </>
-          )}
-        </View>
+    {activeTab === "todo" ? (
+      <>
+        <Text
+          style={{ fontSize: 18, color: "#6B7280", textAlign: "center", marginTop: 8 }}
+        >
+          No pending jobs
+        </Text>
+        <Text
+          style={{ color: "#9CA3AF", textAlign: "center", marginTop: 8 }}
+        >
+          Scan QR codes to assign jobs to your list
+        </Text>
+      </>
+    ) : (
+      <>
+        <Text
+          style={{ fontSize: 18, color: "#6B7280", textAlign: "center", marginTop: 8 }}
+        >
+          No delivered jobs today
+        </Text>
+        <Text
+          style={{ color: "#9CA3AF", textAlign: "center", marginTop: 8 }}
+        >
+          Today's delivered jobs will appear here
+        </Text>
+      </>
+    )}
+  </View>
       )}
     </View>
   );

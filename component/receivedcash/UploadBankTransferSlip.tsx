@@ -94,7 +94,7 @@ const UploadBankTransferSlip: React.FC = () => {
   const showFileTooLargeAlert = () => {
     showAlert(
       "File Too Large",
-      "File is too large. Please upload an image smaller than 5 MB.",
+      "File is too large. Please upload an image or file smaller than 5 MB.",
       "error",
     );
   };
