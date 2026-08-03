@@ -548,7 +548,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           title="My Profile"
           showBackButton={true}
           showLanguageSelector={false}
+          showLogoutButton={true}
           navigation={navigation}
+          onBackPress={handleBackPress}
+          onLogoutPress={handleLogoutConfirm}
         />
         <LoadingPage message="Loading Profile..." fullScreen={true} />
       </View>
