@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -20,6 +23,7 @@ import { selectAuthToken } from "@/store/authSlice";
 import { environment } from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 type MyEarningsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -96,6 +100,9 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
+  const [tempFromDate, setTempFromDate] = useState<Date>(new Date());
+  const [tempToDate, setTempToDate] = useState<Date>(new Date());
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
@@ -104,61 +111,60 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
   const canApply = !!fromDate && !!toDate;
 
-  const handleCashEarningsPress = async () => {
-    if (!token) return;
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `${environment.API_BASE_URL}api/home/get-amount`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const data = await response.json();
-      if (response.ok && data.status === "success" && data.data) {
-        const info = data.data;
-        const cashAmount = parseFloat(info.totalCashAmount) || 0;
-        const txStatus = info.activeTransactionStatus;
-
-       
-       
-      } else {
-        navigation.navigate("CashHandOver" as any);
-      }
-    } catch (err) {
-      console.log("Error checking cash handover status:", err);
-      navigation.navigate("CashHandOver" as any);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleOpenFromPicker = () => {
+    setTempFromDate(fromDate || new Date());
+    setShowFromPicker((prev) => !prev);
+    setShowToPicker(false);
   };
 
-  const onChangeFromDate = (
+  const handleOpenToPicker = () => {
+    if (!fromDate) return;
+    setTempToDate(toDate || fromDate || new Date());
+    setShowToPicker((prev) => !prev);
+    setShowFromPicker(false);
+  };
+
+  const onChangeFromDateAndroid = (
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ) => {
-    setShowFromPicker(Platform.OS === "ios");
+    setShowFromPicker(false);
     if (event.type === "set" && selectedDate) {
       setFromDate(selectedDate);
+      if (toDate && selectedDate > toDate) {
+        setToDate(null);
+      }
     }
-    if (Platform.OS === "android") setShowFromPicker(false);
   };
 
-  const onChangeToDate = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowToPicker(Platform.OS === "ios");
+  const onChangeToDateAndroid = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    setShowToPicker(false);
     if (event.type === "set" && selectedDate) {
       setToDate(selectedDate);
     }
-    if (Platform.OS === "android") setShowToPicker(false);
+  };
+
+  const onConfirmFromDateIOS = () => {
+    setFromDate(tempFromDate);
+    if (toDate && tempFromDate > toDate) {
+      setToDate(null);
+    }
+    setShowFromPicker(false);
+  };
+
+  const onConfirmToDateIOS = () => {
+    setToDate(tempToDate);
+    setShowToPicker(false);
   };
 
   const handleApply = async () => {
     if (!canApply || !token) return;
+
+    setShowFromPicker(false);
+    setShowToPicker(false);
 
     try {
       setIsLoading(true);
@@ -223,6 +229,26 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
     });
   };
 
+  const handleBackPress = () => {
+    navigation.navigate("Profile");
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate("Profile");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => backHandler.remove();
+    }, [navigation]),
+  );
+
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
@@ -234,6 +260,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
           showBackButton={true}
           showLanguageSelector={false}
           navigation={navigation}
+          onBackPress={handleBackPress}
         />
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Date range card */}
@@ -244,7 +271,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
             <Text className="text-[#000000] text-xs mb-1">From</Text>
             <TouchableOpacity
-              onPress={() => setShowFromPicker(true)}
+              onPress={handleOpenFromPicker}
               className="border border-[#D5D9E4] rounded-3xl px-4 mb-4 justify-center"
               style={{ height: 50 }}
               activeOpacity={0.7}
@@ -262,10 +289,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
             <Text className="text-[#000000] text-xs mb-1">To</Text>
             <TouchableOpacity
-              onPress={() => {
-                if (!fromDate) return;
-                setShowToPicker(true);
-              }}
+              onPress={handleOpenToPicker}
               disabled={!fromDate}
               className={`border rounded-3xl px-4 mb-4 justify-center ${
                 fromDate ? "border-[#D5D9E4]" : "border-[#EFEFEF] bg-[#F5F5F5]"
@@ -286,7 +310,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   ? formatLongDate(toDate)
                   : fromDate
                     ? "--Select Here--"
-                    : "Select From Date first"}
+                    : "--Select From Date First--"}
               </Text>
             </TouchableOpacity>
 
@@ -312,28 +336,139 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                 <Text className="font-semibold text-black">Apply</Text>
               )}
             </TouchableOpacity>
+          </View>
 
-            {showFromPicker && (
+          {/* From Date Picker  */}
+          {Platform.OS === "android" ? (
+            showFromPicker && (
               <DateTimePicker
                 value={fromDate || new Date()}
                 mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onChangeFromDate}
+                display="default"
+                onChange={onChangeFromDateAndroid}
                 maximumDate={new Date()}
               />
-            )}
+            )
+          ) : (
+            <Modal
+              transparent
+              visible={showFromPicker}
+              animationType="fade"
+              onRequestClose={() => setShowFromPicker(false)}
+            >
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowFromPicker(false)}
+                className="flex-1 bg-black/50 justify-center items-center p-4"
+              >
+                <TouchableWithoutFeedback>
+                  <View className="bg-white rounded-2xl p-4 w-full max-w-[340px] shadow-lg">
+                    <Text className="text-black font-bold text-base mb-2 px-2">
+                      Select From Date
+                    </Text>
+                    <DateTimePicker
+                      value={tempFromDate}
+                      mode="date"
+                      display="inline"
+                      onChange={(_, selectedDate) => {
+                        if (selectedDate) setTempFromDate(selectedDate);
+                      }}
+                      maximumDate={new Date()}
+                      themeVariant="light"
+                    />
+                    <View
+                      className="flex-row justify-end mt-3 pr-2"
+                      style={{ gap: 12 }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => setShowFromPicker(false)}
+                        className="px-4 py-2 rounded-lg"
+                      >
+                        <Text className="text-[#007AFF] font-semibold text-sm">
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={onConfirmFromDateIOS}
+                        className="bg-[#F7CA21] px-5 py-2 rounded-full"
+                      >
+                        <Text className="text-black font-semibold text-sm">
+                          OK
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </TouchableOpacity>
+            </Modal>
+          )}
 
-            {showToPicker && (
+          {/* To Date Picker  */}
+          {Platform.OS === "android" ? (
+            showToPicker && (
               <DateTimePicker
                 value={toDate || new Date()}
                 mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onChangeToDate}
+                display="default"
+                onChange={onChangeToDateAndroid}
                 minimumDate={fromDate || undefined}
                 maximumDate={new Date()}
               />
-            )}
-          </View>
+            )
+          ) : (
+            <Modal
+              transparent
+              visible={showToPicker}
+              animationType="fade"
+              onRequestClose={() => setShowToPicker(false)}
+            >
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowToPicker(false)}
+                className="flex-1 bg-black/50 justify-center items-center p-4"
+              >
+                <TouchableWithoutFeedback>
+                  <View className="bg-white rounded-2xl p-4 w-full max-w-[340px] shadow-lg">
+                    <Text className="text-black font-bold text-base mb-2 px-2">
+                      Select To Date
+                    </Text>
+                    <DateTimePicker
+                      value={tempToDate}
+                      mode="date"
+                      display="inline"
+                      onChange={(_, selectedDate) => {
+                        if (selectedDate) setTempToDate(selectedDate);
+                      }}
+                      minimumDate={fromDate || undefined}
+                      maximumDate={new Date()}
+                      themeVariant="light"
+                    />
+                    <View
+                      className="flex-row justify-end mt-3 pr-2"
+                      style={{ gap: 12 }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => setShowToPicker(false)}
+                        className="px-4 py-2 rounded-lg"
+                      >
+                        <Text className="text-[#007AFF] font-semibold text-sm">
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={onConfirmToDateIOS}
+                        className="bg-[#F7CA21] px-5 py-2 rounded-full"
+                      >
+                        <Text className="text-black font-semibold text-sm">
+                          OK
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </TouchableOpacity>
+            </Modal>
+          )}
 
           {hasApplied && summary && (
             <>
@@ -363,11 +498,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
 
               {/* Cash / Card earnings cards */}
               <View className="flex-row mx-4 mt-3" style={{ gap: 12 }}>
-                <TouchableOpacity
-                  onPress={handleCashEarningsPress}
-                  activeOpacity={0.7}
-                  className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white"
-                >
+                <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
                   <LottieView
                     source={require("@/assets/json/coin.json")}
                     style={{
@@ -389,7 +520,7 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                       {summary.cashOrders === 1 ? "" : "s"}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
                   <LottieView
@@ -437,13 +568,13 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   <View>
                     {/* Table header */}
                     <View className="flex-row px-4 py-2 bg-[#FAFAFA] border-t border-[#F0F0F0]">
-                      <Text className="flex-1 text-[#7A7A7A] text-xs font-medium">
+                      <Text className="flex-1 text-[#7A7A7A] text-xs font-medium text-left">
                         Order ID
                       </Text>
-                      <Text className="w-16 text-[#7A7A7A] text-xs font-medium">
+                      <Text className="w-20 text-[#7A7A7A] text-xs font-medium text-left">
                         Method
                       </Text>
-                      <Text className="w-20 text-[#7A7A7A] text-xs font-medium text-right">
+                      <Text className="w-14 text-[#7A7A7A] text-xs font-medium text-left">
                         Earnings (Rs.)
                       </Text>
                     </View>

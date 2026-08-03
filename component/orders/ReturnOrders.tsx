@@ -36,7 +36,7 @@ interface ReturnOrder {
   invoiceNumber: string;
   amount: string;
   totalAmount: string;
-  cashAmountDue: number | null;   // ✅ ADDED
+  cashAmountDue: number | null;
   isPaid: boolean;
   paymentMethod: string;
   customer: {
@@ -136,8 +136,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     return "#000000";
   };
 
-  // isPaid is checked FIRST, regardless of payment method,
-  // so a paid cash order shows the check icon, not the coin icon.
   const getPaymentIcon = (isPaid: boolean, paymentMethod: string) => {
     if (isPaid) {
       return <FontAwesome name="check-circle" size={20} color="#F7CA21" />;
@@ -146,8 +144,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
   };
 
   const formatCurrency = (amount: number | string) => {
-    const numAmount =
-      typeof amount === "string" ? parseFloat(amount) : amount;
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
     if (isNaN(numAmount)) return "";
     return `Rs. ${numAmount.toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -155,9 +152,6 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     })}`;
   };
 
-  // Cash: (fullTotal - deliveryCharge) + todaysCityDeliveryCharge - creditPaid  (computed on backend, returned as cashAmountDue)
-  // Non-cash unpaid: falls back to amount, then totalAmount
-  // Paid: no amount shown
   const getAmountText = (order: ReturnOrder) => {
     if (order.isPaid) return "";
 
@@ -266,20 +260,48 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
       />
 
       {returnOrders.length === 0 ? (
-        <View className="flex-1 justify-center items-center">
-          <LottieView
-            source={require("@/assets/json/no-data.json")}
-            autoPlay
-            loop
-            style={{ width: 160, height: 160 }}
-          />
-          <Text className="text-[#495D86] text-base" style={{ marginTop: -15 }}>
-            -- No return orders found --
-          </Text>
-        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: -90,
+            }}
+          >
+            <LottieView
+              source={require("@/assets/json/no-data.json")}
+              autoPlay
+              loop
+              style={{ width: 160, height: 160 }}
+            />
+            <Text
+              className="text-[#495D86] text-base text-center"
+              style={{ marginTop: -15 }}
+            >
+              -- No return orders yet --
+            </Text>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView
-          className="flex-1 px-4 pt-4"
+          style={{ flex: 1 }}
+          className="px-4 pt-4"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={

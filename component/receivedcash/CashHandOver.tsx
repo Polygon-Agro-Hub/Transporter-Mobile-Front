@@ -41,8 +41,11 @@ const CashHandOver: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [orders, setOrders] = useState<OrderCashItem[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
+
   const [returnOrders, setReturnOrders] = useState<number>(0);
   const [todoOrders, setTodoOrders] = useState<number>(0);
+  const [holdOrders, setHoldOrders] = useState<number>(0);
+  const [onTheWayOrders, setOnTheWayOrders] = useState<number>(0);
 
   const [alertVisible, setAlertVisible] = useState<boolean>(false);
   const [alertTitle, setAlertTitle] = useState<string>("");
@@ -53,6 +56,16 @@ const CashHandOver: React.FC = () => {
   const totalEarnings = orders.reduce((sum, o) => sum + o.earned, 0);
   const amountToTransfer = totalReceived - totalEarnings;
   const perOrderEarning = orders.length > 0 ? orders[0].earned : 0;
+
+  
+  const pendingCategories = [
+    { key: "todo", count: todoOrders, label: "Pending Orders" },
+    { key: "hold", count: holdOrders, label: "Hold Orders" },
+    { key: "ongoing", count: onTheWayOrders, label: "On The Way Orders" },
+    { key: "return", count: returnOrders, label: "Return Orders" },
+  ].filter((c) => c.count > 0);
+
+  const hasPendingOrders = pendingCategories.length > 0;
 
   const fetchCashHandOverData = useCallback(async () => {
     try {
@@ -116,8 +129,11 @@ const CashHandOver: React.FC = () => {
       );
 
       if (response.data.status === "success") {
-        setReturnOrders(response.data.data?.returnOrders || 0);
-        setTodoOrders(response.data.data?.todoOrders || 0);
+        const data = response.data.data || {};
+        setReturnOrders(data.returnOrders || 0);
+        setTodoOrders(data.todoOrders || 0);
+        setHoldOrders(data.holdOrders || 0);
+        setOnTheWayOrders(data.onTheWayOrders || 0);
       }
     } catch (error: any) {
       console.log("Error fetching amount status data:", error);
@@ -142,21 +158,14 @@ const CashHandOver: React.FC = () => {
   };
 
   const handleUploadSlip = () => {
-    if (todoOrders > 0) {
+    if (hasPendingOrders) {
+      const summary = pendingCategories
+        .map((c) => `${c.count} ${c.label}`)
+        .join(", ");
       setAlertType("error");
       setAlertTitle("Pending Orders");
       setAlertMessage(
-        "You have pending orders. Please complete all orders first, then upload the transfer slip.",
-      );
-      setAlertVisible(true);
-      return;
-    }
-
-    if (returnOrders > 0) {
-      setAlertType("error");
-      setAlertTitle("Return Order Pending");
-      setAlertMessage(
-        "You have a return order. Please receive the return first, then upload the transfer slip.",
+        `You still have ${summary}. Please complete, receive, or clear these first before uploading the transfer slip.`,
       );
       setAlertVisible(true);
       return;
@@ -233,7 +242,7 @@ const CashHandOver: React.FC = () => {
                 </Text>
                 <View className=" bg-[#D4FEE0] rounded-md px-2 mb-6 py-0.5 mt-2">
                   <Text className="text-[11px] text-[#076734]">
-                    Rs. {formatNumberWithCommas(perOrderEarning)}.00 x{" "}
+                    Rs. {formatNumberWithCommas(perOrderEarning)} x{" "}
                     {orders.length} Orders
                   </Text>
                 </View>

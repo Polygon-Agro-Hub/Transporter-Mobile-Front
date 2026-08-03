@@ -13,7 +13,7 @@ interface GlobalSearchModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
-  data: Array<{ label: string; value: string;[key: string]: any }>;
+  data: Array<{ label: string; value: string; [key: string]: any }>;
   selectedItems: string[];
   onSelect: (items: string[]) => void;
   searchPlaceholder?: string;
@@ -24,7 +24,7 @@ interface GlobalSearchModalProps {
     item: any,
     isSelected: boolean,
     index: number,
-    isLast: boolean
+    isLast: boolean,
   ) => React.ReactNode;
   searchKeys?: string[];
 }
@@ -106,7 +106,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const renderDefaultItem = (
     item: any,
     isSelected: boolean,
-    isLast: boolean
+    isLast: boolean,
   ) => (
     <TouchableOpacity
       className={`px-4 py-3 flex-row items-center justify-between ${
@@ -115,9 +115,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
       onPress={() => handleItemPress(item.value)}
     >
       <Text className="text-base text-gray-800">{item.label}</Text>
-      {isSelected && (
-        <MaterialIcons name="check" size={20} color="#21202B" />
-      )}
+      {isSelected && <MaterialIcons name="check" size={20} color="#21202B" />}
     </TouchableOpacity>
   );
 
@@ -130,10 +128,17 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           placeholder={searchPlaceholder}
           value={searchValue}
           onChangeText={setSearchValue}
-          className="flex-1 ml-2 text-base h-full"
           placeholderTextColor="#666"
           autoCapitalize="none"
           autoCorrect={false}
+          style={{
+            flex: 1,
+            marginLeft: 8,
+            fontSize: 16,
+            height: 50,
+            paddingVertical: 0,
+            includeFontPadding: false,
+          }}
         />
 
         {searchValue ? (
@@ -180,7 +185,12 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               const isSelected = selectedValues.includes(item.value);
               const isLast = index === filteredData.length - 1;
               if (renderItem) {
-                return renderItem(item, isSelected, index, isLast) as React.ReactElement | null;
+                return renderItem(
+                  item,
+                  isSelected,
+                  index,
+                  isLast,
+                ) as React.ReactElement | null;
               }
               return renderDefaultItem(item, isSelected, isLast);
             }}
@@ -188,14 +198,12 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             className="max-h-64"
             ListEmptyComponent={
               <View className="px-4 py-8 items-center">
-                <Text className="text-gray-500 text-base">
-                  {noResultsText}
-                </Text>
+                <Text className="text-gray-500 text-base">{noResultsText}</Text>
               </View>
             }
           />
 
-          {/* Done Button (only for multi-select) */}
+          {/* Done Button */}
           {multiSelect && (
             <View className="px-4 py-3 border-t border-gray-200">
               <TouchableOpacity
