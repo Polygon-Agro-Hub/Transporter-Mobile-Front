@@ -88,10 +88,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     fetchDriverOrders(todayStr);
   }, []);
 
-  // 🔒 Disable the iOS native swipe-back gesture on this screen.
-  // Without this, swiping from the left edge on iOS bypasses all JS-level
-  // back handling and pops directly to whatever screen is beneath Jobs
-  // in the stack (e.g. Digital Signature), instead of going to Home.
   useEffect(() => {
     navigation.setOptions({
       gestureEnabled: false,
@@ -471,7 +467,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* iOS-only: thin strip casts a bottom-only shadow instead of wrapping the whole bar */}
         {Platform.OS === "ios" && (
           <View
             pointerEvents="none"
@@ -605,50 +600,56 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           })}
         </ScrollView>
       ) : (
-         <View
-    style={{
-      flex: 1,
-      width: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    }}
-  >
-    <LottieView
-      source={require("@/assets/json/no-data.json")}
-      autoPlay
-      loop
-      style={{ width: 160, height: 160 }}
-    />
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 40,
+            paddingBottom: 100,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
+          <LottieView
+            source={require("@/assets/json/no-data.json")}
+            autoPlay
+            loop
+            style={{ width: 160, height: 160 }}
+          />
 
-    {activeTab === "todo" ? (
-      <>
-        <Text
-          style={{ fontSize: 18, color: "#6B7280", textAlign: "center", marginTop: 8 }}
-        >
-          No pending jobs
-        </Text>
-        <Text
-          style={{ color: "#9CA3AF", textAlign: "center", marginTop: 8 }}
-        >
-          Scan QR codes to assign jobs to your list
-        </Text>
-      </>
-    ) : (
-      <>
-        <Text
-          style={{ fontSize: 18, color: "#6B7280", textAlign: "center", marginTop: 8 }}
-        >
-          No delivered jobs today
-        </Text>
-        <Text
-          style={{ color: "#9CA3AF", textAlign: "center", marginTop: 8 }}
-        >
-          Today's delivered jobs will appear here
-        </Text>
-      </>
-    )}
-  </View>
+          {activeTab === "todo" ? (
+            <>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
+                No pending jobs
+              </Text>
+              <Text className="text-gray-400 text-center mt-2 px-10">
+                Scan QR codes to assign jobs to your list
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text
+                className="text-gray-500 text-lg text-center"
+                style={{ marginTop: -15 }}
+              >
+                No delivered jobs today
+              </Text>
+              <Text className="text-gray-400 text-center mt-2 px-10">
+                Today's delivered jobs will appear here
+              </Text>
+            </>
+          )}
+        </ScrollView>
       )}
     </View>
   );

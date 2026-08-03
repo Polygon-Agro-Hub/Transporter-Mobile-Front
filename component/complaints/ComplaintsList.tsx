@@ -203,9 +203,20 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
       />
 
       {complaints.length === 0 ? (
-        <View className="flex-1">
-          <NoData text=" -- No Complaints Yet --" />
-        </View>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingBottom: 100,
+          }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <NoData text="-- No Complaints Yet --" />
+        </ScrollView>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
