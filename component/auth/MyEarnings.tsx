@@ -11,6 +11,7 @@ import {
   BackHandler,
   Modal,
   TouchableWithoutFeedback,
+  Dimensions,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -49,6 +50,9 @@ interface OrderItem {
   method: "cash" | "card";
   earnings: number;
 }
+
+const screenWidth = Dimensions.get("window").width;
+const PICKER_WIDTH = Math.min(screenWidth - 40, 340);
 
 const formatLongDate = (date: Date | null) => {
   if (!date) return "";
@@ -359,11 +363,18 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
               <TouchableOpacity
                 activeOpacity={1}
                 onPress={() => setShowFromPicker(false)}
-                className="flex-1 bg-black/50 justify-center items-center p-4"
+                className="flex-1 bg-black/50 justify-center items-center"
               >
                 <TouchableWithoutFeedback>
-                  <View className="bg-white rounded-2xl p-4 w-full max-w-[340px] shadow-lg">
-                    <Text className="text-black font-bold text-base mb-2 px-2">
+                  <View
+                    className="bg-white rounded-2xl shadow-lg"
+                    style={{
+                      width: PICKER_WIDTH,
+                      paddingTop: 16,
+                      paddingBottom: 16,
+                    }}
+                  >
+                    <Text className="text-black font-bold text-base mb-2 px-4">
                       Select From Date
                     </Text>
                     <DateTimePicker
@@ -375,9 +386,10 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                       }}
                       maximumDate={new Date()}
                       themeVariant="light"
+                      style={{ width: PICKER_WIDTH, alignSelf: "center" }}
                     />
                     <View
-                      className="flex-row justify-end mt-3 pr-2"
+                      className="flex-row justify-end mt-3 px-4"
                       style={{ gap: 12 }}
                     >
                       <TouchableOpacity
@@ -425,11 +437,18 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
               <TouchableOpacity
                 activeOpacity={1}
                 onPress={() => setShowToPicker(false)}
-                className="flex-1 bg-black/50 justify-center items-center p-4"
+                className="flex-1 bg-black/50 justify-center items-center"
               >
                 <TouchableWithoutFeedback>
-                  <View className="bg-white rounded-2xl p-4 w-full max-w-[340px] shadow-lg">
-                    <Text className="text-black font-bold text-base mb-2 px-2">
+                  <View
+                    className="bg-white rounded-2xl shadow-lg"
+                    style={{
+                      width: PICKER_WIDTH,
+                      paddingTop: 16,
+                      paddingBottom: 16,
+                    }}
+                  >
+                    <Text className="text-black font-bold text-base mb-2 px-4">
                       Select To Date
                     </Text>
                     <DateTimePicker
@@ -442,9 +461,10 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                       minimumDate={fromDate || undefined}
                       maximumDate={new Date()}
                       themeVariant="light"
+                      style={{ width: PICKER_WIDTH, alignSelf: "center" }}
                     />
                     <View
-                      className="flex-row justify-end mt-3 pr-2"
+                      className="flex-row justify-end mt-3 px-4"
                       style={{ gap: 12 }}
                     >
                       <TouchableOpacity
@@ -567,15 +587,21 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                 {showAllOrders && totalOrders > 0 && (
                   <View>
                     {/* Table header */}
-                    <View className="flex-row px-4 py-2 bg-[#FAFAFA] border-t border-[#F0F0F0]">
+                    <View className="flex-row items-center px-4 py-2 bg-[#FAFAFA] border-t border-[#F0F0F0]">
                       <Text className="flex-1 text-[#7A7A7A] text-xs font-medium text-left">
                         Order ID
                       </Text>
-                      <Text className="w-20 text-[#7A7A7A] text-xs font-medium text-left">
+                      <Text
+                        className="w-16 text-[#7A7A7A] text-xs font-medium text-left"
+                        numberOfLines={1}
+                      >
                         Method
                       </Text>
-                      <Text className="w-14 text-[#7A7A7A] text-xs font-medium text-left">
-                        Earnings (Rs.)
+                      <Text
+                        className="w-24 text-[#7A7A7A] text-xs font-medium text-left"
+                        numberOfLines={1}
+                      >
+                        Earnings (Rs)
                       </Text>
                     </View>
 
@@ -610,7 +636,10 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                           </Text>
                         </View>
 
-                        <Text className="w-20 text-black text-xs text-right">
+                        <Text
+                          className="w-24 text-black text-xs text-left"
+                          numberOfLines={1}
+                        >
                           Rs. {formatCurrency(order.earnings)}
                         </Text>
                       </View>

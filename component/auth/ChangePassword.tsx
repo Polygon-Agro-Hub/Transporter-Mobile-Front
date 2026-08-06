@@ -216,6 +216,19 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }, [passwordUpdated]),
   );
 
+  const passwordInputStyle = {
+    flex: 1,
+    color: "white",
+    fontSize: 16,
+    lineHeight: 24,
+    borderRadius: 30,
+    paddingVertical: 10,
+    includeFontPadding: true,
+    textAlignVertical: "center" as const,
+    height: "100%" as const,
+    paddingBottom: Platform.OS === "ios" ? 15 : 10,
+  };
+
   return (
     <LinearGradient
       colors={["#323232", "#0E0E0E"]}
@@ -265,15 +278,18 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
             </View>
 
             <View>
+              {/* Current Password */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-4 gap-3 overflow-hidden"
+                className="flex-row items-center rounded-full px-4 h-[62px] mb-4 gap-3"
+                // note: overflow-hidden removed — it was clipping descenders (j, y, g, p, q)
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="flex-1 text-base text-white"
+                  className="text-base"
+                  style={passwordInputStyle}
                   secureTextEntry={secureCurrent}
                   onChangeText={setCurrentPassword}
                   value={currentPassword}
@@ -291,15 +307,17 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </LinearGradient>
 
+              {/* New Password */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
+                className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="flex-1 text-base text-white"
+                  className="text-base"
+                  style={passwordInputStyle}
                   secureTextEntry={secureNew}
                   value={newPassword}
                   onChangeText={(text) => {
@@ -318,15 +336,17 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </LinearGradient>
 
+              {/* Confirm New Password */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[58px] mb-6 gap-3 overflow-hidden"
+                className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="flex-1 text-base text-white"
+                  className="text-base"
+                  style={passwordInputStyle}
                   secureTextEntry={secureConfirm}
                   onChangeText={(text) => {
                     const cleanText = text.replace(/\s/g, "");
