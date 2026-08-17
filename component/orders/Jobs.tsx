@@ -88,10 +88,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     fetchDriverOrders(todayStr);
   }, []);
 
-  // 🔒 Disable the iOS native swipe-back gesture on this screen.
-  // Without this, swiping from the left edge on iOS bypasses all JS-level
-  // back handling and pops directly to whatever screen is beneath Jobs
-  // in the stack (e.g. Digital Signature), instead of going to Home.
   useEffect(() => {
     navigation.setOptions({
       gestureEnabled: false,
@@ -471,7 +467,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* iOS-only: thin strip casts a bottom-only shadow instead of wrapping the whole bar */}
         {Platform.OS === "ios" && (
           <View
             pointerEvents="none"
@@ -605,7 +600,23 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           })}
         </ScrollView>
       ) : (
-        <View className="flex-1 justify-center items-center px-5">
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 40,
+            paddingBottom: 100,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
           <LottieView
             source={require("@/assets/json/no-data.json")}
             autoPlay
@@ -638,7 +649,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
               </Text>
             </>
           )}
-        </View>
+        </ScrollView>
       )}
     </View>
   );

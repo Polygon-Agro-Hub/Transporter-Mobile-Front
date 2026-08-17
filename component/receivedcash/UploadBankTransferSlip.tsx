@@ -94,7 +94,7 @@ const UploadBankTransferSlip: React.FC = () => {
   const showFileTooLargeAlert = () => {
     showAlert(
       "File Too Large",
-      "File is too large. Please upload an image smaller than 5 MB.",
+      "File is too large. Please upload an image or file smaller than 5 MB.",
       "error",
     );
   };
@@ -268,13 +268,22 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const formData = new FormData();
       const fileUri = file.uri;
-      const fileExt =
-        fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg");
+      const fileExt = (
+        fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg")
+      ).toLowerCase();
       const fileName = file.name || `transfer_slip.${fileExt}`;
+
+      const IMAGE_MIME_MAP: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        heic: "image/heic",
+        heif: "image/heif",
+      };
       const fileMime =
         file.type === "pdf"
           ? "application/pdf"
-          : `image/${fileExt === "png" ? "png" : "jpeg"}`;
+          : (IMAGE_MIME_MAP[fileExt] ?? "image/jpeg");
 
       formData.append("slip", {
         uri: fileUri,
@@ -392,7 +401,6 @@ const UploadBankTransferSlip: React.FC = () => {
                 JPG, PNG, PDF up to 5MB
               </Text>
             </TouchableOpacity>
-
           </View>
         ) : (
           <View className="mt-6 rounded-2xl border border-dashed border-blue-300 bg-white p-4">

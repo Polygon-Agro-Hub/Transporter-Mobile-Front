@@ -331,9 +331,8 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-white"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      style={{ flex: 1, backgroundColor: "white" }}
     >
       {/* Header - Using CustomHeader like in HoldOrder */}
       <CustomHeader
@@ -363,8 +362,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingVertical: 24,
-
-            paddingBottom: 40 + keyboardHeight,
+            paddingBottom: 40, // no + keyboardHeight
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
