@@ -52,11 +52,24 @@ interface DriverOrder {
   allScheduleTimes: string[];
   primaryScheduleTime: string;
   sequenceNumber: string;
+  longitude?: number | null;
+  latitude?: number | null;
   allProcessOrderIds?: number[];
   processOrderIds?: number[];
   holdReasons?: HoldReason[] | null;
   completeTime?: string | Date;
   allCompleteTimes?: (string | Date)[];
+}
+
+interface OptimizedOrderItem {
+  routeOrder: number;
+  driverOrderId: number | null;
+  allDriverOrderIds: number[];
+  allProcessOrderIds: number[];
+  drvStatus: string | null;
+  orderData: DriverOrder | null;
+  legDistanceMeters: number;
+  cumulativeDistanceMeters: number;
 }
 
 interface OrderStatistics {
@@ -77,6 +90,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const [statistics, setStatistics] = useState<OrderStatistics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string>("");
+  const [optimizedOrders, setOptimizedOrders] = useState<OptimizedOrderItem[]>([]);
 
   useEffect(() => {
     const now = new Date();
@@ -155,6 +169,33 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         setTodoOrders(todo);
         setHoldOrders(hold);
         setStatistics(todoHoldResponse.data.data.statistics);
+
+        // Fetch optimized route for todo orders
+        try {
+          //console.log("[Jobs] Fetching optimized route from API...");
+          const optimizedResponse = await axios.get(
+            `${environment.API_BASE_URL}api/order/get-optimized-route`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+        //  console.log("[Jobs] Optimized Route API Response:", JSON.stringify(optimizedResponse.data, null, 2));
+
+          if (
+            optimizedResponse.data.status === "success" &&
+            optimizedResponse.data.data?.optimizedOrders
+          ) {
+            setOptimizedOrders(optimizedResponse.data.data.optimizedOrders);
+          } else {
+            setOptimizedOrders([]);
+          }
+        } catch (routeError: any) {
+          console.warn("[Jobs] Route optimization unavailable, using default order:", routeError.message);
+          setOptimizedOrders([]);
+        }
       }
 
       const completedResponse = await axios.get(
@@ -253,6 +294,47 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
   const getTodoDisplayOrders = () => {
     const allOrders = [...todoOrders, ...holdOrders];
 
+    // If we have optimized route data, use it to sort orders
+    if (optimizedOrders.length > 0) {
+      // Create a map of driverOrderId -> routeOrder for quick lookup
+      const routeOrderMap = new Map<number, number>();
+      optimizedOrders.forEach((opt) => {
+        if (opt.driverOrderId) {
+          routeOrderMap.set(opt.driverOrderId, opt.routeOrder);
+        }
+        // Also map all driver order IDs from the optimized data
+        opt.allDriverOrderIds?.forEach((id) => {
+          routeOrderMap.set(id, opt.routeOrder);
+        });
+      });
+
+      const sortedOrders = allOrders.sort((a, b) => {
+        const isHoldA = a.drvStatus.toLowerCase() === "hold";
+        const isHoldB = b.drvStatus.toLowerCase() === "hold";
+
+        // Hold orders always go to the bottom
+        if (isHoldA && !isHoldB) return 1;
+        if (!isHoldA && isHoldB) return -1;
+
+        // Sort by optimized route order
+        const routeOrderA = routeOrderMap.get(a.driverOrderId) ?? Number.MAX_SAFE_INTEGER;
+        const routeOrderB = routeOrderMap.get(b.driverOrderId) ?? Number.MAX_SAFE_INTEGER;
+
+        return routeOrderA - routeOrderB;
+      });
+
+      return sortedOrders.map((order, index) => ({
+        id: (index + 1).toString().padStart(2, "0"),
+        title: order.title || "",
+        name: order.fullName || "Customer",
+        time: getEarliestScheduleTime(order),
+        count: order.jobCount || 1,
+        status: order.drvStatus,
+        orderData: order,
+      }));
+    }
+
+    // Fallback: original schedule-time-based sorting
     const sortedOrders = allOrders.sort((a, b) => {
       const isHoldA = a.drvStatus.toLowerCase() === "hold";
       const isHoldB = b.drvStatus.toLowerCase() === "hold";
