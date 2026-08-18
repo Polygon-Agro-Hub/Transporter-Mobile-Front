@@ -94,24 +94,46 @@ Once the server starts:
 
 ---
 
-## 📦 Deployment & Publishing
+## 📦 Deployment & Building
 
-### EAS Build
-The application is set up for Expo Application Services (EAS). To trigger a build:
+### 1. EAS Build (Cloud Build)
+Make sure you have EAS CLI installed and are logged in:
+```bash
+npm install -g eas-cli
+eas login
+```
 
-1. Install the EAS CLI globally:
-   ```bash
-   npm install -g eas-cli
-   ```
-2. Log in to your Expo account:
-   ```bash
-   eas login
-   ```
-3. Run the build command:
-   ```bash
-   eas build --platform android --profile preview
-   ```
-*(Review [eas.json](eas.json) for the available profiles).*
+#### 📦 Build AAB (Android App Bundle for Google Play Store)
+Generates an `.aab` file required for uploading/updating on Google Play Console:
+```bash
+eas build --platform android --profile production
+```
+
+#### 📱 Build APK (Android Package for Direct Installation / Testing)
+Generates an `.apk` file for direct installation on physical Android devices for testing:
+```bash
+eas build --platform android --profile preview
+```
+
+---
+
+### 2. Local Gradle Build (On Your Machine)
+
+#### 📦 Build AAB Locally
+```bash
+npx expo prebuild --platform android
+cd android
+./gradlew bundleRelease
+```
+*Output path*: `android/app/build/outputs/bundle/release/app-release.aab`
+
+#### 📱 Build APK Locally
+```bash
+npx expo prebuild --platform android
+cd android
+./gradlew assembleRelease
+```
+*Output path*: `android/app/build/outputs/apk/release/app-release.apk`
 
 ---
 
