@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 17,
+      "versionCode": 19,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
@@ -31,14 +31,16 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CALL_PHONE",
+        "android.permission.CALL_PHONE"
+      ],
+      "blockedPermissions": [
         "com.google.android.gms.permission.AD_ID"
       ]
     },
     "ios": {
       "icon": "./assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
-      "buildNumber": "17",
+      "buildNumber": "19",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -68,7 +70,9 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           },
           "ios": {
             "deploymentTarget": "15.1"
@@ -97,7 +101,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "22942fb0-3fba-4eba-89b5-74fafd5207b0"
+        "projectId": ""
       }
     }
   }
