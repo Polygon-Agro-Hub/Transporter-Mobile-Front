@@ -33,9 +33,7 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CALL_PHONE"
       ],
-      "blockedPermissions": [
-        "com.google.android.gms.permission.AD_ID"
-      ]
+      "blockedPermissions": ["com.google.android.gms.permission.AD_ID"]
     },
     "ios": {
       "icon": "./src/assets/images/app-icon-ios.png",

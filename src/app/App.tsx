@@ -37,7 +37,7 @@ import MyEarnings from "@/component/auth/MyEarnings";
 import CashHandOver from "@/component/receivedcash/CashHandOver";
 import UploadBankTransferSlip from "@/component/receivedcash/UploadBankTransferSlip";
 import BankTransferSlipStatus from "@/component/receivedcash/BankTransferSlipStatus";
-import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
+import { requestTrackingIfNeeded } from "@/utils/ios/trackingPermissions";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
