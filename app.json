@@ -3,11 +3,11 @@
     "name": "GoVi-Transport",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./src/assets/images/app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/app-icon.png",
+      "image": "./src/assets/images/app-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F7CA21"
     },
@@ -20,7 +20,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon.png",
+        "foregroundImage": "./src/assets/images/app-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -35,10 +35,13 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CALL_PHONE"
+      ],
+      "blockedPermissions": [
+        "com.google.android.gms.permission.AD_ID"
       ]
     },
     "ios": {
-      "icon": "./assets/images/app-icon-ios.png",
+      "icon": "./src/assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "16",
       "supportsTablet": false,
@@ -54,13 +57,20 @@
       }
     },
     "web": {
-      "favicon": "./assets/images/app-icon.png"
+      "favicon": "./src/assets/images/app-icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-build-properties",
         {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          },
           "ios": {
             "deploymentTarget": "15.1"
           }
@@ -69,7 +79,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/app-icon.png",
+          "icon": "./src/assets/images/app-icon.png",
           "color": "#ffffff",
           "defaultChannel": "default",
           "enableBackgroundRemoteNotifications": false
