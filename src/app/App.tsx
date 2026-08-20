@@ -37,6 +37,7 @@ import MyEarnings from "@/component/auth/MyEarnings";
 import CashHandOver from "@/component/receivedcash/CashHandOver";
 import UploadBankTransferSlip from "@/component/receivedcash/UploadBankTransferSlip";
 import BankTransferSlipStatus from "@/component/receivedcash/BankTransferSlipStatus";
+import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -58,6 +59,10 @@ function AppContent() {
   const token = useSelector(selectAuthToken);
   const empId = useSelector(selectEmpId);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    requestTrackingIfNeeded();
+  }, []);
 
   useEffect(() => {
     if (!token || !empId) return;
