@@ -21,7 +21,7 @@ import { RootStackParamList } from "../../types/types";
 import CustomHeader from "../common/CustomHeader";
 import { useSelector } from "react-redux";
 import { selectAuthToken } from "@/store/authSlice";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";

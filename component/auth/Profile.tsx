@@ -23,7 +23,7 @@ import {
   updateProfileImage,
 } from "@/store/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";

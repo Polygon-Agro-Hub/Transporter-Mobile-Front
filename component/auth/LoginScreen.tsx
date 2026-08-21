@@ -15,7 +15,7 @@ import { RootStackParamList } from "../../types/types";
 import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";

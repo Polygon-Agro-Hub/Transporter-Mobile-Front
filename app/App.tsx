@@ -10,7 +10,7 @@ import { LogBox } from "react-native";
 import { RootStackParamList } from "@/types/types";
 import store from "@/services/store";
 import { selectAuthToken, selectEmpId, logoutUser } from "@/store/authSlice";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import NetInfo from "@react-native-community/netinfo";
 import Splash from "@/component/common/Splash";
 import ComplaintsList from "@/component/complaints/ComplaintsList";

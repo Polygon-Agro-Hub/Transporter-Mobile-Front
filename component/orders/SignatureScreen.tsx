@@ -18,7 +18,7 @@ import * as Location from "expo-location";
 import CustomHeader from "../common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 
 type SignatureScreenNavigationProp = StackNavigationProp<
