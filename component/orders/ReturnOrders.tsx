@@ -14,7 +14,7 @@ import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/core";
 import FixedMarqueeText from "@/component/common/MarqueeText";
