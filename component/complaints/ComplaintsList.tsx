@@ -19,7 +19,7 @@ import {
 } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "../../store/authSlice";

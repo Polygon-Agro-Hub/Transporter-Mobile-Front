@@ -27,7 +27,7 @@ import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LoadingPage from "../common/LoadingPage";
