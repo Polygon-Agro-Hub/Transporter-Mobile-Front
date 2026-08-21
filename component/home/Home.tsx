@@ -16,7 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSelector, useDispatch } from "react-redux";
 import { selectUserProfile, logoutUser } from "../../store/authSlice";
 import axios from "axios";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";

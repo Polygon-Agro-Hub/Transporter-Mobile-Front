@@ -18,7 +18,7 @@ import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertModal } from "../common/AlertModal";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import axios from "axios";
 import GlobalSearchModal from "@/component/common/GlobalSearchModal";
 import { MaterialIcons } from "@expo/vector-icons";
