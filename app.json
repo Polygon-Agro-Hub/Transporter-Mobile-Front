@@ -1,21 +1,16 @@
 {
   "expo": {
     "name": "GoVi-Transport",
+    "slug": "GoVi-Transport",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/app-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7CA21"
-    },
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 19,
-      "edgeToEdgeEnabled": true,
+      "versionCode": 17,
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.png",
         "backgroundColor": "#ffffff"
@@ -31,16 +26,14 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CALL_PHONE"
-      ],
-      "blockedPermissions": [
+        "android.permission.CALL_PHONE",
         "com.google.android.gms.permission.AD_ID"
       ]
     },
     "ios": {
       "icon": "./assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
-      "buildNumber": "19",
+      "buildNumber": "17",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -57,7 +50,12 @@
       "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Tracking is used to improve app experience."
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -66,10 +64,12 @@
             "targetSdkVersion": 36,
             "minSdkVersion": 24,
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true,
+            "extraProguardRules": "-keep class expo.modules.** { *; }\n-keep class expo.** { *; }"
           },
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           }
         }
       ],
@@ -88,14 +88,19 @@
         {
           "initialOrientation": "PORTRAIT_UP"
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/app-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F7CA21"
+        }
       ]
     ],
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
-        "projectId": ""
+        "projectId": "22942fb0-3fba-4eba-89b5-74fafd5207b0"
       }
     }
   }
