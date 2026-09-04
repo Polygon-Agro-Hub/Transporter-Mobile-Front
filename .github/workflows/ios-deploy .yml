@@ -1,6 +1,6 @@
-# .github/workflows/ios-deploy.yml
+# .github/workflows/ios-deploy .yml
 #
-# iOS CI/CD Pipeline — Sales Dash
+# iOS CI/CD Pipeline — Transporter
 #
 # TRIGGERS:
 #   Push to dev-main → Upload to TestFlight (QA testing)
@@ -75,7 +75,7 @@ jobs:
       # - Fails if package-lock.json is out of sync
       # ─────────────────────────────────────────────────────────────────
       - name: "📦 Install Node.js dependencies"
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       # ─────────────────────────────────────────────────────────────────
       # STEP 4b: Apply patches (expo-modules-jsi RuntimeScheduler fix)
