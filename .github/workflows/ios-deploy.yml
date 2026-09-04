@@ -75,7 +75,7 @@ jobs:
       # - Fails if package-lock.json is out of sync
       # ─────────────────────────────────────────────────────────────────
       - name: "📦 Install Node.js dependencies"
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       # ─────────────────────────────────────────────────────────────────
       # STEP 4b: Apply patches (expo-modules-jsi RuntimeScheduler fix)
