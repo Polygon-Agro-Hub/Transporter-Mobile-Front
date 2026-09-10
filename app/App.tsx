@@ -54,6 +54,7 @@ LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+// AppContent component handles the main application logic, including navigation, authentication checks, and network status monitoring.
 function AppContent() {
   const [isOfflineAlertShown, setIsOfflineAlertShown] = useState(false);
   const token = useSelector(selectAuthToken);
