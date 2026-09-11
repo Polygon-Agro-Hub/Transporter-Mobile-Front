@@ -158,7 +158,7 @@ const Splash: React.FC = () => {
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <Image source={splashscreen} style={styles.image} resizeMode="cover" />
       <View style={styles.poweredByContainer}>
-        <Text style={styles.poweredByText}>Powered By Polygon</Text>
+        <Text style={styles.poweredByText}>POWERED BY POLYGON</Text>
       </View>
     </View>
   );

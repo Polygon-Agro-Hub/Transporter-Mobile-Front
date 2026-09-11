@@ -37,6 +37,8 @@ import MyEarnings from "@/component/auth/MyEarnings";
 import CashHandOver from "@/component/receivedcash/CashHandOver";
 import UploadBankTransferSlip from "@/component/receivedcash/UploadBankTransferSlip";
 import BankTransferSlipStatus from "@/component/receivedcash/BankTransferSlipStatus";
+import CameraAccess from "@/component/permission/CameraAccess";
+import LocationAccess from "@/component/permission/LocationAccess";
 import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
 
 LogBox.ignoreAllLogs(true);
@@ -263,6 +265,8 @@ function AppContent() {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Splash" component={Splash} />
             <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="CameraAccess" component={CameraAccess} />
+            <Stack.Screen name="LocationAccess" component={LocationAccess} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
             <Stack.Screen name="AddComplaint" component={AddComplaint} />

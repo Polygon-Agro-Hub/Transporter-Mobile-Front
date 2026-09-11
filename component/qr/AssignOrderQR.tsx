@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
 import { AlertModal } from "../common/AlertModal";
-import { CameraPermissionView } from "../common/CameraPermissionView";
+import CameraAccess from "../permission/CameraAccess";
 import { useFocusEffect } from "@react-navigation/native";
 
 type AssignOrderQRNavigationProp = StackNavigationProp<
@@ -443,9 +443,10 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
   if (!permission.granted) {
     return (
-      <CameraPermissionView
+      <CameraAccess
+        navigation={navigation as any}
         onRequestPermission={requestPermission}
-        onBack={() => navigation.goBack()}
+        onClose={() => navigation.goBack()}
       />
     );
   }
