@@ -9,7 +9,6 @@
     "android": {
       "package": "com.polygonagro.Transporter",
       "versionCode": 17,
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -97,7 +96,6 @@
           "initialOrientation": "PORTRAIT_UP"
         }
       ],
-      "expo-tracking-transparency",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       "expo-asset",
@@ -105,16 +103,20 @@
         "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": false,
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Photo library access is required to upload related images."
+          "photosPermission": "Photo library access is required to upload related images.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": false
         }
       ],
       "expo-location",
+      "./plugins/withCustomAndroidPermissions",
       [
         "expo-splash-screen",
         {
@@ -126,7 +128,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "a62523fb-6678-4960-99ff-fa89fcd2cf20"
       }
     }
   }
