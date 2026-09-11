@@ -97,12 +97,7 @@
           "initialOrientation": "PORTRAIT_UP"
         }
       ],
-      [
-        "expo-tracking-transparency",
-        {
-          "userTrackingPermission": "Tracking is used to improve app experience."
-        }
-      ],
+      "expo-tracking-transparency",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       "expo-asset",
