@@ -18,7 +18,7 @@ import CameraAccess from "@/screens/light-weight/permission/CameraAccess";
 import LocationAccess from "@/screens/light-weight/permission/LocationAccess";
 
 // --- Light Weight Driver Screens ---
-import Home from "@/screens/light-weight/home/Home";
+import LightDriverHome from "@/screens/light-weight/home/LightDriverHome";
 import ComplaintsList from "@/screens/common/complaints/ComplaintsList";
 import AddComplaint from "@/screens/common/complaints/AddComplaint";
 import ReturnOrders from "@/screens/light-weight/orders/ReturnOrders";
@@ -174,7 +174,7 @@ export const SHARED_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
 // 3. LIGHT WEIGHT DRIVER ROUTES (Current operational routes)
 // ============================================================================
 export const LIGHT_WEIGHT_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
-  { name: "Home", component: Home, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
+  { name: "Home", component: LightDriverHome, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "Jobs", component: Jobs, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "OrderDetails", component: OrderDetails, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "OrderDetailsLoadingScreen", component: OrderDetailsLoadingScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },

@@ -3,12 +3,11 @@ import authReducer from '@/store/authSlice';
 
 const appReducer = combineReducers({
   auth: authReducer,
-  // settings: settingsReducer,
 });
 
 const rootReducer = (state: any, action: any) => {
   if (action.type === 'auth/logoutUser') {
-    state = undefined; // clears all slices
+    state = undefined;
   }
   return appReducer(state, action);
 };

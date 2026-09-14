@@ -25,7 +25,7 @@ import { useSelector } from "react-redux";
 import { selectUserProfile, selectJobRole } from "@/store/authSlice";
 import { ROLES } from "@/constants/user-roles";
 import LoadingPage from "@/component/common/LoadingPage";
-import NoData from "@/component/common/NoDataModal";
+import NoDataScreen from "@/component/common/NoDataScreen";
 
 type ComplaintsListNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -225,7 +225,7 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          <NoData text="-- No Complaints Yet --" />
+          <NoDataScreen text="-- No Complaints Yet --" />
         </ScrollView>
       ) : (
         <ScrollView

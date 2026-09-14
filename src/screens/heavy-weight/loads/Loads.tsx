@@ -13,6 +13,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import { useFocusEffect } from "@react-navigation/native";
+import NoDataScreen from "@/component/common/NoDataScreen";
 
 type LoadsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -222,11 +223,22 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
           ))}
         </ScrollView>
       ) : (
-        <View className="flex-1 justify-center items-center px-6">
-          <Text className="text-gray-400 text-base font-medium">
-            No {activeTab === "todo" ? "to do" : "delivered"} loads available
-          </Text>
-        </View>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#F7CA21"]}
+              tintColor="#F7CA21"
+            />
+          }
+        >
+          <NoDataScreen
+            text={`-- No ${activeTab === "todo" ? "To Do" : "Delivered"} Loads Yet --`}
+          />
+        </ScrollView>
       )}
     </View>
   );
