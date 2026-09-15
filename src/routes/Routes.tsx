@@ -16,6 +16,7 @@ import ProfileScreen from "@/screens/common/auth/Profile";
 import MyQRCode from "@/screens/common/auth/MyQRCode";
 import CameraAccess from "@/screens/light-weight/permission/CameraAccess";
 import LocationAccess from "@/screens/light-weight/permission/LocationAccess";
+import MediaAccess from "@/screens/light-weight/permission/MediaAccess";
 
 // --- Light Weight Driver Screens ---
 import LightDriverHome from "@/screens/light-weight/home/LightDriverHome";
@@ -147,6 +148,7 @@ export const PUBLIC_STACK_SCREENS: StackRouteConfig[] = [
   { name: "Profile", component: ProfileScreen, allowedRoles: "PUBLIC" },
   { name: "CameraAccess", component: CameraAccess as any, allowedRoles: "PUBLIC" },
   { name: "LocationAccess", component: LocationAccess as any, allowedRoles: "PUBLIC" },
+  { name: "MediaAccess", component: MediaAccess as any, allowedRoles: "PUBLIC" },
 ];
 
 // ============================================================================

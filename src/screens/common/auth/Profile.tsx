@@ -33,6 +33,7 @@ import { RefreshControl } from "react-native";
 import LoadingPage from "@/component/common/LoadingPage";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import MediaAccess from "@/screens/light-weight/permission/MediaAccess";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -65,6 +66,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [showAuthErrorModal, setShowAuthErrorModal] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState("");
+  const [showMediaAccessModal, setShowMediaAccessModal] = useState(false);
 
   const token = useSelector(selectAuthToken);
   const jobRole = useSelector(selectJobRole);
@@ -324,20 +326,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     });
   };
 
-  const handleImageUpload = async () => {
+  const openImagePicker = async () => {
     try {
-      const hasPermission = await requestPermissions();
-
-      if (!hasPermission) {
-        setModalMessage(
-          Platform.OS === "ios"
-            ? "Please allow access to your photo library to update your profile picture."
-            : "Please allow access to your photos to update your profile picture.",
-        );
-        setShowErrorModal(true);
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
         allowsEditing: true,
@@ -350,7 +340,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
-
         uploadProfileImage(selectedImage);
       }
     } catch (error) {
@@ -360,33 +349,31 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleImageUploadAndroidPicker = async () => {
-    if (Platform.OS !== "android") {
-      handleImageUpload();
-      return;
-    }
-
+  const handleProfileImagePress = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        exif: false,
-        base64: false,
-      });
+      const { status, granted } =
+        await ImagePicker.getMediaLibraryPermissionsAsync();
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const selectedImage = result.assets[0];
-
-        uploadProfileImage(selectedImage);
+      if (granted || status === "granted") {
+        await openImagePicker();
+      } else {
+        setShowMediaAccessModal(true);
       }
     } catch (error) {
-      console.error("Image picker error:", error);
-      setModalMessage("Failed to open image picker");
-      setShowErrorModal(true);
+      console.error("Error checking media library permissions:", error);
+      setShowMediaAccessModal(true);
     }
   };
+
+  const handleMediaPermissionGranted = () => {
+    setShowMediaAccessModal(false);
+    setTimeout(() => {
+      openImagePicker();
+    }, 300);
+  };
+
+  const handleImageUpload = handleProfileImagePress;
+  const handleImageUploadAndroidPicker = handleProfileImagePress;
 
   const uploadProfileImage = async (
     selectedImage: ImagePicker.ImagePickerAsset,
@@ -650,18 +637,24 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   </Text>
                 </View>
               ) : (
-                <Image
-                  source={
-                    profileData?.image
-                      ? { uri: profileData.image }
-                      : require("@/assets/images/home/profile.webp")
-                  }
-                  className="w-32 h-32 rounded-full border-2 border-[#FFC83D]"
-                />
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={uploading}
+                  onPress={handleProfileImagePress}
+                >
+                  <Image
+                    source={
+                      profileData?.image
+                        ? { uri: profileData.image }
+                        : require("@/assets/images/home/profile.webp")
+                    }
+                    className="w-32 h-32 rounded-full border-2 border-[#FFC83D]"
+                  />
+                </TouchableOpacity>
               )}
 
               <TouchableOpacity
-                onPress={handleImageUploadAndroidPicker}
+                onPress={handleProfileImagePress}
                 disabled={uploading}
                 style={{
                   position: "absolute",
@@ -945,6 +938,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* File and Media Access Permission Modal */}
+      <Modal
+        visible={showMediaAccessModal}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setShowMediaAccessModal(false)}
+      >
+        <MediaAccess
+          onClose={() => setShowMediaAccessModal(false)}
+          onNotNow={() => setShowMediaAccessModal(false)}
+          onPermissionGranted={handleMediaPermissionGranted}
+        />
       </Modal>
     </View>
   );

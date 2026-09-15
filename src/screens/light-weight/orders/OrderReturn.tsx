@@ -340,7 +340,7 @@ const OrderReturn: React.FC<OrderReturnProps> = ({ navigation, route }) => {
           selectedLanguage === "En"
             ? "Return Order"
             : selectedLanguage === "Si"
-              ? "ඇණවුම ආපසු"
+              ? "ඇණවුම ආපසු යැවීම"
               : "ஆர்டரைத் திருப்பி"
         }
         navigation={navigation}

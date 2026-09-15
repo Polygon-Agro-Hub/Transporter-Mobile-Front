@@ -185,19 +185,19 @@ export default function SignatureScreen({
         return;
       }
 
-      // ── Get current GPS location ──────────────────────────────────────────
+      // ── Get current GPS location (only if permission was already granted) ──
       let latitude: string = "";
       let longitude: string = "";
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === "granted") {
+        const { status, granted } = await Location.getForegroundPermissionsAsync();
+        if (granted || status === "granted") {
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
           });
           latitude = location.coords.latitude.toString();
           longitude = location.coords.longitude.toString();
         } else {
-          console.warn("Location permission denied – coordinates will not be saved.");
+          console.warn("Location permission not granted – coordinates will not be saved.");
         }
       } catch (locErr) {
         console.warn("Could not fetch location:", locErr);

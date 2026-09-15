@@ -288,7 +288,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         await AsyncStorage.setItem("@user_qr", qrCodeUrl);
       }
 
-      dispatch(setUser({ token, empId: empId.toString(), jobRole: userJobRole }));
+      dispatch(
+        setUser({ token, empId: empId.toString(), jobRole: userJobRole }),
+      );
 
       dispatch(
         setUserProfile({
@@ -396,7 +398,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View>
               {/* EMP ID */}
-              {/* EMP ID */}
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
@@ -448,14 +449,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <MaterialIcons name="lock" size={22} color="#F7CA21" />
 
                 <TextInput
-                  className="flex-1 text-white text-base"
                   style={{
-                    lineHeight: 24,
-                    paddingVertical: 10,
-                    includeFontPadding: true,
-                    textAlignVertical: "center",
-                    height: "100%",
-                    paddingBottom: Platform.OS === "ios" ? 15 : 10,
+                    flex: 1,
+                    color: "white",
+                    fontSize: 16,
+                    paddingVertical: 0,
+                    ...(Platform.OS === "android"
+                      ? { textAlignVertical: "center" }
+                      : {}),
                   }}
                   secureTextEntry={secureTextEntry}
                   value={password}

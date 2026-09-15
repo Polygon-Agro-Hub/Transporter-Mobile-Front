@@ -10,6 +10,9 @@ export type RootStackParamList = {
     returnScreen?: keyof RootStackParamList;
     blockBackNavigation?: boolean;
   };
+  MediaAccess?: {
+    returnScreen?: keyof RootStackParamList;
+  };
   Lanuage: undefined;
   Splash: undefined;
   ComplaintsList: undefined;
