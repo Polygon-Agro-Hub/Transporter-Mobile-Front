@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Animated, ScrollView, StatusBar } from "react-native";
+import { View, Animated, ScrollView} from "react-native";
 
 export const HomeSkeleton: React.FC = () => {
   const pulseAnim = useRef(new Animated.Value(0.3)).current;
@@ -23,7 +23,6 @@ export const HomeSkeleton: React.FC = () => {
 
   return (
     <ScrollView className="flex-1 bg-white" showsVerticalScrollIndicator={false}>
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
 
       {/* Header Profile Skeleton - matches real header */}
       <Animated.View

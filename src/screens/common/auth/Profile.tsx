@@ -33,7 +33,7 @@ import { RefreshControl } from "react-native";
 import LoadingPage from "@/component/common/LoadingPage";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import MediaAccess from "@/screens/light-weight/permission/MediaAccess";
+import MediaAccess from "@/screens/common/permission/MediaAccess";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,

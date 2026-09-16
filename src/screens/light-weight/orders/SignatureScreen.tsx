@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
+import LocationAccess from "@/screens/common/permission/LocationAccess";
 
 type SignatureScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -126,24 +127,50 @@ export default function SignatureScreen({
     navigation.goBack();
   };
 
+  const [hasLocationPermission, setHasLocationPermission] = useState<
+    boolean | null
+  >(null);
   const [isOrientationLocked, setIsOrientationLocked] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
 
-      const setupOrientation = async () => {
-        if (!isActive) return;
+      const checkPermissionAndOrientation = async () => {
+        try {
+          const { status, granted } =
+            await Location.getForegroundPermissionsAsync();
+          if (!isActive) return;
 
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
-        );
-        if (isActive) {
-          setIsOrientationLocked(true);
+          if (granted || status === "granted") {
+            setHasLocationPermission(true);
+            await ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
+            );
+            if (isActive) {
+              setIsOrientationLocked(true);
+            }
+          } else {
+            await ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.PORTRAIT_UP,
+            );
+            if (isActive) {
+              setIsOrientationLocked(false);
+              setHasLocationPermission(false);
+            }
+          }
+        } catch {
+          if (isActive) {
+            await ScreenOrientation.lockAsync(
+              ScreenOrientation.OrientationLock.PORTRAIT_UP,
+            );
+            setIsOrientationLocked(false);
+            setHasLocationPermission(false);
+          }
         }
       };
 
-      setupOrientation();
+      checkPermissionAndOrientation();
 
       return () => {
         isActive = false;
@@ -162,6 +189,14 @@ export default function SignatureScreen({
       );
     };
   }, []);
+
+  const handleLocationPermissionGranted = async () => {
+    setHasLocationPermission(true);
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT,
+    );
+    setIsOrientationLocked(true);
+  };
 
   const handleClear = () => {
     signatureRef.current?.clearSignature();
@@ -399,6 +434,26 @@ export default function SignatureScreen({
       touch-action: none;
     }
   `;
+
+  if (hasLocationPermission === null) {
+    return (
+      <View className="flex-1 bg-[#121212] justify-center items-center">
+        <ActivityIndicator size="large" color="#F7CA21" />
+      </View>
+    );
+  }
+
+  if (hasLocationPermission === false) {
+    return (
+      <View className="flex-1 bg-[#121212]">
+        <LocationAccess
+          onClose={handleBackPress}
+          onNotNow={handleBackPress}
+          onPermissionGranted={handleLocationPermissionGranted}
+        />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">

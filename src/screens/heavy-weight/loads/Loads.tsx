@@ -6,7 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   BackHandler,
-  StatusBar,
   Platform,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -86,7 +85,6 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
 
       {/* Header */}
       <CustomHeader

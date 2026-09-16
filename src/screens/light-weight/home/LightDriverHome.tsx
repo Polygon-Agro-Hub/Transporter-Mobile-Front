@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
-  StatusBar,
   Alert,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -366,7 +365,6 @@ const LightDriverHome: React.FC<LightDriverHomeProps> = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       {/* Header */}
       <View className="bg-white px-4 mt-4">
         <TouchableOpacity

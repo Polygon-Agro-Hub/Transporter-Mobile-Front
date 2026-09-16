@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Image, Animated, StatusBar, StyleSheet, Text } from "react-native";
+import { View, Image, Animated, StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/types/types";
@@ -183,7 +183,6 @@ const Splash: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <Image source={splashscreen} style={styles.image} resizeMode="cover" />
       <View style={styles.poweredByContainer}>
         <Text style={styles.poweredByText}>Powered By Polygon</Text>
@@ -196,15 +195,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeTop: {
-    flex: 0,
-  },
   image: {
     flex: 1,
     width: "100%",
-  },
-  safeBottom: {
-    flex: 0,
   },
   poweredByContainer: {
     position: "absolute",

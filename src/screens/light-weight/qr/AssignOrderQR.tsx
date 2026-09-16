@@ -6,7 +6,6 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -16,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
-import CameraAccess from "../permission/CameraAccess";
+import CameraAccess from "@/screens/common/permission/CameraAccess";
 import { useFocusEffect } from "@react-navigation/native";
 
 type AssignOrderQRNavigationProp = StackNavigationProp<
@@ -432,12 +431,12 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
   if (!permission) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
+      <View className="flex-1 bg-gray-900 justify-center items-center">
         <View className="bg-black/50 p-8 rounded-full">
           <ActivityIndicator size="large" color="#F7CA21" />
         </View>
         <Text className="text-white text-lg mt-4">Loading camera...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 

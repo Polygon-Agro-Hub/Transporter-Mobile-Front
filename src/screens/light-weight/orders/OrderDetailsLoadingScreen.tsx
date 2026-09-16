@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import {
   View,
-  StatusBar,
   AppStateStatus,
   AppState,
   Linking,
@@ -105,7 +104,6 @@ const OrderDetailsLoadingScreen: React.FC<OrderDetailsLoadingScreenProps> = ({
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Order Details"
         navigation={navigation}

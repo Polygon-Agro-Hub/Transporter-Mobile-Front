@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  StatusBar,
   Linking,
   Alert,
   AppState,
@@ -148,7 +147,6 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
 
       {/* Header */}
       <CustomHeader

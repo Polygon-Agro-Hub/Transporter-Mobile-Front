@@ -10,9 +10,7 @@ import {
   Alert,
   Platform,
   Animated,
-  StatusBar,
   BackHandler,
-  Modal,
 } from "react-native";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -32,8 +30,6 @@ import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LoadingPage from "@/component/common/LoadingPage";
-import * as Location from "expo-location";
-import LocationAccess from "@/screens/light-weight/permission/LocationAccess";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -183,8 +179,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const prevProcessOrderIdsRef = useRef<number[]>([]);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const pendingJourneyActionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const hasParamsChanged =
@@ -237,58 +231,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
       scrollX.setValue(0);
     };
   }, [orders]);
-
-  /**
-   * Checks whether location permission is already granted.
-   * If yes, runs the action immediately.
-   * If not, shows the LocationAccess disclosure modal and stores the action
-   * to run once the driver grants permission.
-   */
-  const checkLocationAndRun = async (action: () => void) => {
-    try {
-      const { granted, status } = await Location.getForegroundPermissionsAsync();
-      if (granted || status === "granted") {
-        action();
-      } else {
-        pendingJourneyActionRef.current = action;
-        setShowLocationModal(true);
-      }
-    } catch {
-      // If we can't check, still show the disclosure
-      pendingJourneyActionRef.current = action;
-      setShowLocationModal(true);
-    }
-  };
-
-  const handleLocationPermissionGranted = () => {
-    setShowLocationModal(false);
-    if (pendingJourneyActionRef.current) {
-      const action = pendingJourneyActionRef.current;
-      pendingJourneyActionRef.current = null;
-      // Small delay so modal fully closes before navigating
-      setTimeout(() => action(), 300);
-    }
-  };
-
-  const hasCheckedInitialLocationRef = useRef(false);
-
-  useEffect(() => {
-    const checkInitialLocationPermission = async () => {
-      if (orders.length > 0 && !loading && !hasCheckedInitialLocationRef.current) {
-        hasCheckedInitialLocationRef.current = true;
-        try {
-          const { status, granted } = await Location.getForegroundPermissionsAsync();
-          if (!granted && status !== "granted") {
-            setShowLocationModal(true);
-          }
-        } catch {
-          // Ignore
-        }
-      }
-    };
-
-    checkInitialLocationPermission();
-  }, [orders.length, loading]);
 
   const fetchOrderUserDetails = async () => {
     try {
@@ -702,14 +644,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     }
   };
 
-  /**
-   * Entry point for the journey button: checks location permission first,
-   * then runs the actual API call + navigation only after permission is OK.
-   */
-  const handleStartJourneyWithLocationCheck = (orderId: number) => {
-    checkLocationAndRun(() => handleStartJourneyForOrder(orderId));
-  };
-
   const handleOrderComplete = (completedId: number) => {
     setCompletedOrders((prev) => {
       const newCompleted = [...prev, completedId];
@@ -750,7 +684,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (loading) {
     return (
       <View className="flex-1 bg-white">
-        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -765,7 +698,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (error) {
     return (
       <View className="flex-1 bg-white">
-        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -791,7 +723,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   if (!userDetails || orders.length === 0) {
     return (
       <View className="flex-1 bg-white">
-        <StatusBar backgroundColor="#fff" barStyle="dark-content" />
         <CustomHeader
           title="Order Details"
           navigation={navigation}
@@ -807,7 +738,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Order Details"
         navigation={navigation}
@@ -1039,7 +969,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     shadowRadius: 5,
                     elevation: !shouldDisableButton ? 4 : 0,
                   }}
-                  onPress={() => handleStartJourneyWithLocationCheck(order.orderId)}
+                  onPress={() => handleStartJourneyForOrder(order.orderId)}
                   disabled={
                     startingJourney === order.orderId.toString() ||
                     shouldDisableButton
@@ -1084,29 +1014,6 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             : undefined
         }
       />
-
-      {/* Location Access Disclosure Modal */}
-      <Modal
-        visible={showLocationModal}
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => {
-          setShowLocationModal(false);
-          pendingJourneyActionRef.current = null;
-        }}
-      >
-        <LocationAccess
-          onClose={() => {
-            setShowLocationModal(false);
-            pendingJourneyActionRef.current = null;
-          }}
-          onNotNow={() => {
-            setShowLocationModal(false);
-            pendingJourneyActionRef.current = null;
-          }}
-          onPermissionGranted={handleLocationPermissionGranted}
-        />
-      </Modal>
     </View>
   );
 };

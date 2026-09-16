@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StatusBar,
   BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -46,7 +45,6 @@ const LoadQR: React.FC<LoadQRProps> = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
 
       {/* Header with Load Code as Title */}
       <CustomHeader

@@ -7,7 +7,6 @@ import {
   Image,
   Alert,
   Modal,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Platform,
@@ -532,8 +531,7 @@ const UploadBankTransferSlip: React.FC = () => {
         animationType="slide"
         onRequestClose={() => setPreviewVisible(false)}
       >
-        <StatusBar barStyle="light-content" />
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
+        <View style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
           {/* Header */}
           <View
             className="flex-row items-center justify-between bg-black px-4 pb-3"
@@ -589,7 +587,7 @@ const UploadBankTransferSlip: React.FC = () => {
 
             {file?.type === "pdf" && <PdfViewer uri={file.uri} />}
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       <AlertModal

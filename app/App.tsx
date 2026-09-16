@@ -224,16 +224,33 @@ function AppContent() {
     };
   }, []);
 
+  const [currentRoute, setCurrentRoute] = useState<string>("Splash");
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView
+        edges={
+          currentRoute === "Splash"
+            ? []
+            : ["top", "bottom", "left", "right"]
+        }
         style={{
           flex: 1,
           backgroundColor: "#fff",
         }}
       >
         <StatusBar backgroundColor="#fff" barStyle="dark-content" />
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            const routeName = navigationRef.getCurrentRoute()?.name;
+            if (routeName) setCurrentRoute(routeName);
+          }}
+          onStateChange={() => {
+            const routeName = navigationRef.getCurrentRoute()?.name;
+            if (routeName) setCurrentRoute(routeName);
+          }}
+        >
           <RootStackNavigator />
         </NavigationContainer>
       </SafeAreaView>

@@ -9,10 +9,8 @@ import {
   Linking,
   ScrollView,
   Platform,
-  StatusBar,
   LayoutChangeEvent,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { LinearGradient } from "expo-linear-gradient";
@@ -159,8 +157,7 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#121212" />
+    <View style={{ flex: 1, backgroundColor: "#121212" }}>
       <ScrollView
         className="flex-1 px-5"
         onLayout={(e: LayoutChangeEvent) =>
@@ -306,7 +303,7 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

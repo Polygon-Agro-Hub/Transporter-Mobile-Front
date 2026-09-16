@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import LottieView from "lottie-react-native";
 import { RootStackParamList } from "@/types/types";
@@ -24,7 +23,7 @@ const DeliverySuccessful: React.FC<DeliverySuccessfulProps> = ({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -67,7 +66,7 @@ const DeliverySuccessful: React.FC<DeliverySuccessfulProps> = ({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -6,7 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   BackHandler,
-  StatusBar,
   Platform,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -474,7 +473,6 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
 
   return (
     <View className="flex-1 bg-white">
-      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
       <CustomHeader
         title="Jobs"
         navigation={navigation}

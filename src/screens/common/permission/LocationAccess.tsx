@@ -9,10 +9,8 @@ import {
   Linking,
   ScrollView,
   Platform,
-  StatusBar,
   LayoutChangeEvent,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -153,8 +151,7 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#121212" />
+    <View style={{ flex: 1, backgroundColor: "#121212" }}>
       <ScrollView
         className="flex-1 px-5"
         onLayout={(e: LayoutChangeEvent) =>
@@ -300,7 +297,7 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

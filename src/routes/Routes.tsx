@@ -14,9 +14,9 @@ import ChangePassword from "@/screens/common/auth/ChangePassword";
 import BannedScreen from "@/screens/common/auth/BannedScreen";
 import ProfileScreen from "@/screens/common/auth/Profile";
 import MyQRCode from "@/screens/common/auth/MyQRCode";
-import CameraAccess from "@/screens/light-weight/permission/CameraAccess";
-import LocationAccess from "@/screens/light-weight/permission/LocationAccess";
-import MediaAccess from "@/screens/light-weight/permission/MediaAccess";
+import CameraAccess from "@/screens/common/permission/CameraAccess";
+import LocationAccess from "@/screens/common/permission/LocationAccess";
+import MediaAccess from "@/screens/common/permission/MediaAccess";
 
 // --- Light Weight Driver Screens ---
 import LightDriverHome from "@/screens/light-weight/home/LightDriverHome";
