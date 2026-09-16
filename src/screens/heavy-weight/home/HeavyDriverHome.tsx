@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,12 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { useSelector } from "react-redux";
 import { selectUserProfile } from "@/store/authSlice";
+import { useFocusEffect } from "@react-navigation/native";
 import LottieView from "lottie-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import environment from "@/environment/environment";
+import HeavyHomeSkeleton from "@/component/common/HeavyHomeSkeleton";
 
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
@@ -30,16 +35,50 @@ interface HeavyDriverHomeProps {
 const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loadsCount, setLoadsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const userProfile = useSelector(selectUserProfile);
 
+  const fetchLoadsCount = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/load/get-driver-loads-count`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data && response.data.status === "success" && response.data.data) {
+        const count =
+          response.data.data.todoLoads ??
+          response.data.data.todoLoadsCount ??
+          response.data.data.todoCount ??
+          0;
+        setLoadsCount(Number(count));
+      }
+    } catch (error) {
+      console.warn("Could not fetch heavy driver loads count:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLoadsCount();
+    }, [fetchLoadsCount])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Refresh logic for heavy weight driver data can be added here
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 800);
-  }, []);
+    await fetchLoadsCount();
+    setRefreshing(false);
+  }, [fetchLoadsCount]);
 
   const buttons = [
     {
@@ -78,15 +117,23 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
 
   const buttonRows = chunkArray(buttons, 2);
 
+  if (loading && !refreshing) {
+    return <HeavyHomeSkeleton />;
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-white"
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#F7CA21"]}
+          tintColor="#F7CA21"
+        />
       }
     >
-
       {/* Profile Header */}
       <View className="bg-white px-4 mt-4 flex-row items-center justify-between">
         <TouchableOpacity
