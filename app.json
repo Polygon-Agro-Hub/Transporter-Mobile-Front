@@ -4,7 +4,7 @@
     "slug": "GoVi-Transport",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./src/assets/images/app-icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.polygonagro.Transporter",
@@ -12,50 +12,66 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon.png",
+        "foregroundImage": "./src/assets/images/app-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.CAMERA",
-        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.CHANGE_WIFI_STATE",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "blockedPermissions": [
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.CALL_PHONE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CALL_PHONE",
-        "com.google.android.gms.permission.AD_ID"
+        "android.permission.CHANGE_WIFI_STATE",
+        "android.permission.CHANGE_NETWORK_STATE"
       ]
     },
     "ios": {
-      "icon": "./assets/images/app-icon-ios.png",
+      "icon": "./src/assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "17",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Camera access is required to scan documents and capture images.",
-        "NSMicrophoneUsageDescription": "Microphone access is required for in-app communication.",
-        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport-related images.",
-        "NSLocationWhenInUseUsageDescription": "Location access is required to track transport activity.",
-        "NSUserTrackingUsageDescription": "Tracking is used to improve app experience.",
-        "NSUserNotificationUsageDescription": "Notifications are used to send important transport updates.",
-        "NSPhoneUsageDescription": "Phone access is used to call drivers or customers directly."
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "NSCameraUsageDescription": "Camera access is required to scan QR codes and capture delivery photos.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport and delivery proof images.",
+        "NSPhotoLibraryAddUsageDescription": "Photo library access is required to save related images.",
+        "NSLocationWhenInUseUsageDescription": "Location access is required to verify delivery location during order completion.",
+        "NSUserTrackingUsageDescription": "Tracking is used to improve app experience."
       }
     },
     "web": {
-      "favicon": "./assets/images/app-icon.png"
+      "favicon": "./src/assets/images/app-icon.png"
     },
     "plugins": [
-      [
-        "expo-tracking-transparency",
-        {
-          "userTrackingPermission": "Tracking is used to improve app experience."
-        }
-      ],
       [
         "expo-build-properties",
         {
@@ -73,15 +89,6 @@
           }
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/app-icon.png",
-          "color": "#ffffff",
-          "defaultChannel": "default",
-          "enableBackgroundRemoteNotifications": false
-        }
-      ],
       "expo-font",
       [
         "expo-screen-orientation",
@@ -89,10 +96,31 @@
           "initialOrientation": "PORTRAIT_UP"
         }
       ],
+      "expo-web-browser",
+      "@react-native-community/datetimepicker",
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Photo library access is required to upload related images.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": false
+        }
+      ],
+      "expo-location",
+      "./plugins/withCustomAndroidPermissions",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app-icon.png",
+          "image": "./src/assets/images/app-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#F7CA21"
         }
@@ -100,7 +128,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "22942fb0-3fba-4eba-89b5-74fafd5207b0"
+        "projectId": ""
       }
     }
   }
