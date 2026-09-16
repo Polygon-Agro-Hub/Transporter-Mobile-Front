@@ -216,19 +216,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }, [passwordUpdated]),
   );
 
-  const passwordInputStyle = {
-    flex: 1,
-    color: "white",
-    fontSize: 16,
-    lineHeight: 24,
-    borderRadius: 30,
-    paddingVertical: 10,
-    includeFontPadding: true,
-    textAlignVertical: "center" as const,
-    height: "100%" as const,
-    paddingBottom: Platform.OS === "ios" ? 15 : 10,
-  };
-
+ 
   return (
     <LinearGradient
       colors={["#323232", "#0E0E0E"]}
@@ -288,8 +276,12 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="text-base"
-                  style={passwordInputStyle}
+                  style={{
+                    flex: 1,
+                    color: "white",
+                    paddingVertical: 0,
+                    includeFontPadding: false,
+                  }}
                   secureTextEntry={secureCurrent}
                   onChangeText={setCurrentPassword}
                   value={currentPassword}
@@ -316,8 +308,12 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="text-base"
-                  style={passwordInputStyle}
+                 style={{
+                    flex: 1,
+                    color: "white",
+                    paddingVertical: 0,
+                    includeFontPadding: false,
+                  }}
                   secureTextEntry={secureNew}
                   value={newPassword}
                   onChangeText={(text) => {
@@ -345,8 +341,12 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
               >
                 <MaterialIcons name="lock" size={26} color="#F7CA21" />
                 <TextInput
-                  className="text-base"
-                  style={passwordInputStyle}
+                 style={{
+                    flex: 1,
+                    color: "white",
+                    paddingVertical: 0,
+                    includeFontPadding: false,
+                  }}
                   secureTextEntry={secureConfirm}
                   onChangeText={(text) => {
                     const cleanText = text.replace(/\s/g, "");
