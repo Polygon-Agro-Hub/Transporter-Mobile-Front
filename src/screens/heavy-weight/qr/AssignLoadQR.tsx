@@ -14,6 +14,9 @@ import { widthPercentageToDP as wp } from "react-native-responsive-screen";
 import { AlertModal } from "@/component/common/AlertModal";
 import CameraAccess from "@/screens/common/permission/CameraAccess";
 import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import environment from "@/environment/environment";
 
 type AssignLoadQRNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -146,48 +149,39 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
 
   const extractLoadNumber = (qrData: string): string | null => {
     try {
-      const loadPattern = /(LOAD|INV)[0-9]+/gi;
-      const match = qrData.match(loadPattern);
+      if (!qrData || typeof qrData !== "string") return null;
+      const trimmed = qrData.trim();
+
+      const loadPattern = /L-[A-Z0-9]+-[0-9]+|L-[A-Z0-9]+|(LOAD|INV)[0-9]+/gi;
+      const match = trimmed.match(loadPattern);
       if (match) {
         return match[0];
       }
 
-      if (qrData.startsWith("{") && qrData.endsWith("}")) {
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
         try {
-          const parsed = JSON.parse(qrData);
-          if (
+          const parsed = JSON.parse(trimmed);
+          const code =
+            parsed.transferCode ||
+            parsed.loadCode ||
             parsed.loadNo ||
             parsed.loadNumber ||
             parsed.invoiceNo ||
-            parsed.invNo
-          ) {
-            return (
-              parsed.loadNo ||
-              parsed.loadNumber ||
-              parsed.invoiceNo ||
-              parsed.invNo
-            );
+            parsed.invNo;
+          if (code) {
+            return String(code).trim();
           }
         } catch (e) {
           // Silent catch
         }
       }
 
-      const simplePattern = /^[A-Z0-9]{4,25}$/;
-      if (simplePattern.test(qrData)) {
-        return qrData;
+      const simplePattern = /^[A-Za-z0-9\-_]{4,50}$/;
+      if (simplePattern.test(trimmed)) {
+        return trimmed;
       }
 
-      const alphanumericPattern = /[A-Z0-9]{4,}/gi;
-      const alphanumericMatches = qrData.match(alphanumericPattern);
-      if (alphanumericMatches && alphanumericMatches.length > 0) {
-        const longestMatch = alphanumericMatches.reduce((a, b) =>
-          a.length > b.length ? a : b,
-        );
-        return longestMatch;
-      }
-
-      return null;
+      return trimmed;
     } catch (error) {
       console.error("Error extracting load number:", error);
       return null;
@@ -214,7 +208,7 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       if (!loadNo) {
         setModalTitle("Error!");
         setModalMessage(
-          "The QR code is not identified.\nPlease check and try again.",
+          "The QR code is not identified. Please check and try again.",
         );
         setShowRescanButton(true);
         setModalType("error");
@@ -225,27 +219,52 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       setLoading(true);
       setScannedLoadCode(loadNo);
 
-      // Simulate load scanning without backend integration
-      setTimeout(() => {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
         setLoading(false);
-        setModalTitle("Successful!");
-        setModalMessage(
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Load:{" "}
-              <Text className="font-bold text-[#000000]">{loadNo}</Text> has
-              been successfully scanned.
-            </Text>
-          </View>,
-        );
-        setModalType("success");
-        setShowSuccessModal(true);
-      }, 600);
+        setModalTitle("Error!");
+        setModalMessage("Authentication required. Please log in again.");
+        setShowRescanButton(false);
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
+      }
+
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/load/validate-qr`,
+        { transferCode: loadNo },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setLoading(false);
+
+      if (response.data && response.data.status === "success") {
+        setScanned(false);
+        navigation.navigate("LoadSummary", {
+          loadCode: loadNo,
+          mode: "accept",
+        });
+      } else {
+        setModalTitle("Error!");
+        setModalMessage(response.data?.message || "Failed to process QR code");
+        setModalType("error");
+        setShowRescanButton(false);
+        setShowErrorModal(true);
+      }
     } catch (error: any) {
       setLoading(false);
-      setModalTitle("Error");
-      setModalMessage("Failed to process QR code");
+      const errMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to process QR code";
+      setModalTitle("Error!");
+      setModalMessage(errMsg);
       setModalType("error");
+      setShowRescanButton(false);
       setShowErrorModal(true);
     }
   };

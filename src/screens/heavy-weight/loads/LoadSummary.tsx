@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RouteProp } from "@react-navigation/native";
+import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
@@ -115,6 +115,13 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
       ) {
         setItems(response.data.data.crops);
         setLoadInfo(response.data.data.load || null);
+
+        const currentJourneyStatus = response.data.data.load?.journeyStatus;
+        if (currentJourneyStatus === "Start" || currentJourneyStatus === "End") {
+          setJourneyStarted(true);
+        } else {
+          setJourneyStarted(false);
+        }
       }
     } catch (error) {
       console.warn("Could not fetch load details:", error);
@@ -123,9 +130,11 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
     }
   }, [loadCode]);
 
-  useEffect(() => {
-    fetchLoadDetails();
-  }, [fetchLoadDetails]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchLoadDetails();
+    }, [fetchLoadDetails])
+  );
 
   // When returning from Google Maps back to the app, show Finish Journey and Continue to map
   useEffect(() => {
@@ -170,11 +179,40 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
       });
   };
 
-  const handleStartJourney = () => {
+  const handleStartJourney = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${environment.API_BASE_URL}api/load/update-journey-status`,
+          { transferCode: loadCode, journeyStatus: "Start" },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        ).catch(() => {});
+      }
+    } catch (_) {}
+    setJourneyStarted(true);
     openGoogleMapsToThanamalwila();
   };
 
-  const handleFinishJourney = () => {
+  const handleFinishJourney = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${environment.API_BASE_URL}api/load/update-journey-status`,
+          { transferCode: loadCode, journeyStatus: "End" },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        ).catch(() => {});
+      }
+    } catch (_) {}
     navigation.navigate("LoadQR", { loadCode });
   };
 
@@ -182,7 +220,31 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
     openGoogleMapsToThanamalwila();
   };
 
-  const handleAcceptLoad = () => {
+  const [modalMessage, setModalMessage] = useState<React.ReactNode>("");
+
+  const handleAcceptLoad = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        await axios.post(
+          `${environment.API_BASE_URL}api/load/assign-load`,
+          { transferCode: loadCode },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        ).catch(() => {});
+      }
+    } catch (_) {}
+    setModalMessage(
+      <View className="items-center">
+        <Text className="text-center text-[#4E4E4E] mb-5 mt-2 text-sm leading-5">
+          <Text className="font-extrabold text-black">{loadCode}</Text>
+          {"\n"}has been successfully assigned to you.
+        </Text>
+      </View>
+    );
     setShowSuccessModal(true);
   };
 
@@ -435,11 +497,11 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
       {/* Success Modal */}
       <AlertModal
         visible={showSuccessModal}
-        title="Load Accepted!"
-        message="The load has been successfully accepted and assigned to you."
+        title="Successful!"
+        message={modalMessage}
         type="success"
         onClose={handleModalClose}
-        duration={3000}
+        duration={5000}
         autoClose={true}
       />
     </View>
