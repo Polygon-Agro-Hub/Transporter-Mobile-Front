@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -19,7 +18,6 @@ import environment from "@/environment/environment";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Progress from "react-native-progress";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
-import LoadingPage from "@/component/common/LoadingPage";
 import UnableToLoadData from "@/component/common/UnableToLoadData";
 import HomeSkeleton from "@/component/common/HomeSkeleton";
 
