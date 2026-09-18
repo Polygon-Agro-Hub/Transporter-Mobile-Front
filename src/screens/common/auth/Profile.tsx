@@ -477,7 +477,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
-      navigation.goBack();
+      navigation.navigate("Home");
     } else {
       const currentRole = jobRole || profileData?.jobRole;
       if (currentRole === ROLES.HEAVY_WEIGHT_DRIVER) {
@@ -597,8 +597,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       </View>
     );
   }
-
-  
 
   return (
     <View className="flex-1 bg-white">
@@ -730,61 +728,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                   <Text className="text-black font-bold text-xl">
                     Rs. {formatCurrency(earningsData?.totalEarnings ?? 0)}
                   </Text>
-                </View>
-
-                <View className="flex-row">
-                  {/* Cash earnings */}
-                  <View className="flex-1 items-center">
-                    <LottieView
-                      source={require("@/assets/json/coin.json")}
-                      style={{
-                        width: 40,
-                        height: 40,
-                      }}
-                      autoPlay
-                      loop
-                    />
-                    <Text className="text-[#000000] text-xs mb-1">
-                      Cash Earnings
-                    </Text>
-                    <Text className="text-black font-bold  mb-2">
-                      Rs. {formatCurrency(earningsData?.cashEarnings ?? 0)}
-                    </Text>
-                    <View className="bg-[#FFF3D6] rounded-md px-3 py-1">
-                      <Text className="text-[#8A6D1D] text-xs font-medium">
-                        {earningsData?.cashOrders ?? 0} Order
-                        {(earningsData?.cashOrders ?? 0) === 1 ? "" : "s"}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Divider */}
-                  <View className="w-[1px] bg-[#000000] mx-2" />
-
-                  {/* Card earnings */}
-                  <View className="flex-1 items-center">
-                    <LottieView
-                      source={require("@/assets/json/card.json")}
-                      style={{
-                        width: 40,
-                        height: 40,
-                      }}
-                      autoPlay
-                      loop
-                    />
-                    <Text className="text-[#000000] text-xs mb-1">
-                      Card Earnings
-                    </Text>
-                    <Text className="text-black font-bold mb-2">
-                      Rs. {formatCurrency(earningsData?.cardEarnings ?? 0)}
-                    </Text>
-                    <View className="bg-[#E4F7EC] rounded-md px-3 py-1">
-                      <Text className="text-[#1E8449] text-xs font-medium">
-                        {earningsData?.cardOrders ?? 0} Order
-                        {(earningsData?.cardOrders ?? 0) === 1 ? "" : "s"}
-                      </Text>
-                    </View>
-                  </View>
                 </View>
               </View>
 

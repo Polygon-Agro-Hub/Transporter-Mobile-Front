@@ -511,60 +511,9 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
                   style={{ marginTop: 2, marginRight: 4 }}
                 />
                 <Text className="text-[#5A6580] text-sm flex-1">
-                  Card payment order earnings will be transferred within 7 days
-                  after the delivered date.
+                  Your earnings will be transferred within 7 days after the
+                  delivered date.
                 </Text>
-              </View>
-
-              {/* Cash / Card earnings cards */}
-              <View className="flex-row mx-4 mt-3" style={{ gap: 12 }}>
-                <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
-                  <LottieView
-                    source={require("@/assets/json/coin.json")}
-                    style={{
-                      width: 40,
-                      height: 40,
-                    }}
-                    autoPlay
-                    loop
-                  />
-                  <Text className="text-[#7A7A7A] text-xs mb-1">
-                    Cash Earnings
-                  </Text>
-                  <Text className="text-black font-bold text-base mb-2">
-                    Rs. {formatCurrency(summary.cashEarnings)}
-                  </Text>
-                  <View className="bg-[#FEF3D4] rounded-lg px-3 py-1">
-                    <Text className="text-[#7A4A0E] text-xs font-medium">
-                      {summary.cashOrders} Order
-                      {summary.cashOrders === 1 ? "" : "s"}
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-1 border border-[#EFEFEF] rounded-2xl items-center py-4 shadow-sm bg-white">
-                  <LottieView
-                    source={require("@/assets/json/card.json")}
-                    style={{
-                      width: 40,
-                      height: 40,
-                    }}
-                    autoPlay
-                    loop
-                  />
-                  <Text className="text-[#7A7A7A] text-xs mb-1">
-                    Card Earnings
-                  </Text>
-                  <Text className="text-black font-bold text-base mb-2">
-                    Rs. {formatCurrency(summary.cardEarnings)}
-                  </Text>
-                  <View className="bg-[#DAF2E2] rounded-lg px-3 py-1">
-                    <Text className="text-[#0F6D40] text-xs font-medium">
-                      {summary.cardOrders} Order
-                      {summary.cardOrders === 1 ? "" : "s"}
-                    </Text>
-                  </View>
-                </View>
               </View>
 
               {/* All orders expandable */}

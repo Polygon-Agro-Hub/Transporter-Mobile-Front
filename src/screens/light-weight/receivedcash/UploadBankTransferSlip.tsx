@@ -34,6 +34,7 @@ type UploadBankTransferSlipNavigationProp = StackNavigationProp<
 >;
 
 const TRANSFER_DETAILS = {
+  // Fallback only — used if no amount param is passed in.
   amount: 9000.0,
   accountName: "Polygon Holdings Pvt Ltd",
   accountNumber: "701020161763",
@@ -58,8 +59,10 @@ const UploadBankTransferSlip: React.FC = () => {
   const route = useRoute();
   const routeParams = route.params as { amount?: number } | undefined;
 
+  // This is the FULL received amount (not reduced by earnings) — it
+  // comes straight from CashHandOver's Total Received figure.
   const rawAmount = routeParams?.amount;
-  const numAmount: number =
+  const receivedAmount: number =
     typeof rawAmount === "number" && !isNaN(rawAmount) && rawAmount > 0
       ? rawAmount
       : typeof rawAmount === "string" &&
@@ -290,8 +293,7 @@ const UploadBankTransferSlip: React.FC = () => {
         type: fileMime,
       } as any);
 
-      const amountToTransfer = numAmount;
-      formData.append("amount", String(amountToTransfer));
+      formData.append("amount", String(receivedAmount));
 
       const response = await axios.post(
         `${environment.API_BASE_URL}api/home/upload-transfer-slip`,
@@ -347,7 +349,7 @@ const UploadBankTransferSlip: React.FC = () => {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Amount to Transfer */}
+        {/* Amount to Transfer (full received amount) */}
         <View className="mt-6 self-center items-center rounded-2xl bg-[#FFFBE9] px-12 py-4">
           <Text numberOfLines={1} className="text-sm text-black">
             Amount to Transfer
@@ -356,7 +358,7 @@ const UploadBankTransferSlip: React.FC = () => {
             className="mt-1 text-2xl font-bold text-gray-900"
             numberOfLines={1}
           >
-            Rs. {formatNumberWithCommas(numAmount.toFixed(2))}
+            Rs. {formatNumberWithCommas(receivedAmount.toFixed(2))}
           </Text>
         </View>
 
