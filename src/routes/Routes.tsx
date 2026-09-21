@@ -25,6 +25,7 @@ import AddComplaint from "@/screens/common/complaints/AddComplaint";
 import ReturnOrders from "@/screens/light-weight/orders/ReturnOrders";
 import AssignOrderQR from "@/screens/light-weight/qr/AssignOrderQR";
 import ReturnOrderQR from "@/screens/light-weight/qr/ReturnOrderQR";
+import ReturnOrderOTPVerification from "@/screens/light-weight/orders/ReturnOrderOTPVerification";
 import Jobs from "@/screens/light-weight/orders/Jobs";
 import OrderDetails from "@/screens/light-weight/orders/OrderDetails";
 import EndJourneyConfirmation from "@/screens/light-weight/orders/EndJourneyConfirmation";
@@ -183,6 +184,7 @@ export const LIGHT_WEIGHT_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
   { name: "ReturnOrders", component: ReturnOrders, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "AssignOrderQR", component: AssignOrderQR, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "ReturnOrderQR", component: ReturnOrderQR, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
+  { name: "ReturnOrderOTPVerification", component: ReturnOrderOTPVerification, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "EndJourneyConfirmation", component: EndJourneyConfirmation, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "SignatureScreen", component: SignatureScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "DeliverySuccessful", component: DeliverySuccessful, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },

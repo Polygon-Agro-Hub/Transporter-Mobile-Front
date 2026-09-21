@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Animated,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -26,6 +27,8 @@ type AssignLoadQRNavigationProp = StackNavigationProp<
 interface AssignLoadQRProps {
   navigation: AssignLoadQRNavigationProp;
 }
+
+const PRIMARY_COLOR = "#F7CA21";
 
 const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -147,48 +150,56 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
     ).start();
   };
 
-  const extractLoadNumber = (qrData: string): string | null => {
+  const extractLoadCode = (qrData: string): string | null => {
     try {
-      if (!qrData || typeof qrData !== "string") return null;
-      const trimmed = qrData.trim();
-
-      const loadPattern = /L-[A-Z0-9]+-[0-9]+|L-[A-Z0-9]+|(LOAD|INV)[0-9]+/gi;
-      const match = trimmed.match(loadPattern);
-      if (match) {
-        return match[0];
+      if (!qrData || typeof qrData !== "string") {
+        return null;
       }
 
-      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      // Check if it's already a clean string format
+      const trimmedData = qrData.trim();
+
+      // Check for JSON string format
+      if (trimmedData.startsWith("{") && trimmedData.endsWith("}")) {
         try {
-          const parsed = JSON.parse(trimmed);
-          const code =
-            parsed.transferCode ||
-            parsed.loadCode ||
-            parsed.loadNo ||
-            parsed.loadNumber ||
-            parsed.invoiceNo ||
-            parsed.invNo;
-          if (code) {
-            return String(code).trim();
+          const parsedData = JSON.parse(trimmedData);
+          if (parsedData.transferCode) {
+            return parsedData.transferCode;
           }
-        } catch (e) {
-          // Silent catch
+          if (parsedData.loadCode) {
+            return parsedData.loadCode;
+          }
+          if (parsedData.code) {
+            return parsedData.code;
+          }
+        } catch (jsonError) {
+          // If JSON parsing fails, continue to other patterns
         }
       }
 
-      const simplePattern = /^[A-Za-z0-9\-_]{4,50}$/;
-      if (simplePattern.test(trimmed)) {
-        return trimmed;
+      // Check for L-DRV pattern (e.g., L-DRV00001260911001)
+      const loadCodePattern = /L-DRV\d+/i;
+      const match = trimmedData.match(loadCodePattern);
+      if (match) {
+        return match[0].toUpperCase();
       }
 
-      return trimmed;
+      // Check for plain format (e.g., DRV00001260911001)
+      const plainPattern = /DRV\d+/i;
+      const plainMatch = trimmedData.match(plainPattern);
+      if (plainMatch) {
+        return `L-${plainMatch[0].toUpperCase()}`;
+      }
+
+      return null;
     } catch (error) {
-      console.error("Error extracting load number:", error);
+      console.error("Error extracting load code:", error);
       return null;
     }
   };
 
   const handleBarCodeScanned = async ({
+    type,
     data,
   }: {
     type: string;
@@ -203,9 +214,9 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
     }
 
     try {
-      const loadNo = extractLoadNumber(data);
+      const loadCode = extractLoadCode(data);
 
-      if (!loadNo) {
+      if (!loadCode) {
         setModalTitle("Error!");
         setModalMessage(
           "The QR code is not identified. Please check and try again.",
@@ -217,54 +228,64 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       }
 
       setLoading(true);
-      setScannedLoadCode(loadNo);
 
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         setLoading(false);
         setModalTitle("Error!");
-        setModalMessage("Authentication required. Please log in again.");
-        setShowRescanButton(false);
+        setModalMessage("Authentication token not found. Please login again.");
+        setShowRescanButton(true);
         setModalType("error");
         setShowErrorModal(true);
         return;
       }
 
+      // Validate QR with backend
       const response = await axios.post(
-        `${environment.API_BASE_URL}api/load/validate-qr`,
-        { transferCode: loadNo },
+        `${environment.API_BASE_URL}api/load/validate-load-qr`,
+        { transferCode: loadCode },
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-        }
+          timeout: 10000,
+        },
       );
 
       setLoading(false);
 
       if (response.data && response.data.status === "success") {
+        setScannedLoadCode(loadCode);
         setScanned(false);
+        // Navigate directly to LoadSummary screen
         navigation.navigate("LoadSummary", {
-          loadCode: loadNo,
+          loadCode: loadCode,
           mode: "accept",
         });
       } else {
+        const errorMsg =
+          response.data?.message || "Failed to validate Load QR code";
         setModalTitle("Error!");
-        setModalMessage(response.data?.message || "Failed to process QR code");
-        setModalType("error");
+        setModalMessage(errorMsg);
         setShowRescanButton(false);
+        setModalType("error");
         setShowErrorModal(true);
       }
     } catch (error: any) {
       setLoading(false);
-      const errMsg =
-        error.response?.data?.message ||
+      console.error("Error processing QR scan:", error);
+
+      const responseData = error.response?.data;
+      const errorMessage =
+        responseData?.message ||
         error.message ||
-        "Failed to process QR code";
+        "Failed to process QR code. Please try again.";
+
       setModalTitle("Error!");
-      setModalMessage(errMsg);
-      setModalType("error");
+      setModalMessage(errorMessage);
       setShowRescanButton(false);
+      setModalType("error");
       setShowErrorModal(true);
     }
   };
@@ -278,7 +299,7 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
     setShowSuccessModal(false);
     setScanned(false);
     navigation.navigate("LoadSummary", {
-      loadCode: scannedLoadCode || "L-DRV00001260914001",
+      loadCode: scannedLoadCode,
       mode: "accept",
     });
   };
@@ -293,17 +314,19 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
     resetScanning();
   };
 
+  // Show loading while permission is being checked
   if (!permission) {
     return (
       <View className="flex-1 bg-gray-900 justify-center items-center">
         <View className="bg-black/50 p-8 rounded-full">
-          <ActivityIndicator size="large" color="#F7CA21" />
+          <ActivityIndicator size="large" color={PRIMARY_COLOR} />
         </View>
         <Text className="text-white text-lg mt-4">Loading camera...</Text>
       </View>
     );
   }
 
+  // Show permission denied screen
   if (!permission.granted) {
     return (
       <CameraAccess
@@ -325,9 +348,9 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       {loading && (
         <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/70 z-50 justify-center items-center">
           <View className="bg-black/80 p-6 rounded-xl items-center">
-            <ActivityIndicator size="large" color="#F7CA21" />
+            <ActivityIndicator size="large" color={PRIMARY_COLOR} />
             <Text className="text-white text-lg font-semibold mt-4">
-              Checking Load...
+              Validating Load...
             </Text>
           </View>
         </View>
@@ -371,194 +394,195 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
         autoClose={true}
       />
 
-      <View className="flex-1">
-        {/* Semi-transparent overlay */}
-        <View className="flex-1 bg-black/50">
-          {/* Back Button */}
-          <View className="flex-row items-center justify-between px-4 py-3 relative">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="items-start"
-              disabled={loading}
-            >
-              <Entypo
-                name="chevron-left"
-                size={25}
-                color="black"
-                style={{
-                  backgroundColor: loading ? "#666" : "#F7FAFF",
-                  borderRadius: 50,
-                  padding: wp(2.5),
-                }}
-              />
-            </TouchableOpacity>
-          </View>
+      {/* Full-Screen Camera View */}
+      <CameraView
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        barcodeScannerSettings={{
+          barcodeTypes: ["qr"],
+        }}
+        onBarcodeScanned={
+          scanned || loading ? undefined : handleBarCodeScanned
+        }
+      />
 
-          {/* Scan Frame Container */}
-          <View className="flex-1 justify-center items-center">
-            {/* Scan Frame with Camera */}
+      {/* Dark overlay with clear scan frame in center */}
+      <View className="flex-1 bg-black/35">
+        {/* Top Header with Back Button */}
+        <View className="flex-row items-center justify-between px-4 py-3 relative">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="items-start"
+            disabled={loading}
+          >
+            <Entypo
+              name="chevron-left"
+              size={25}
+              color="black"
+              style={{
+                backgroundColor: loading ? "#666" : "#F7FAFF",
+                borderRadius: 50,
+                padding: wp(2.5),
+              }}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scan Frame Container */}
+        <View className="flex-1 justify-center items-center">
+          <View
+            style={{
+              width: wp(80),
+              height: wp(80),
+              borderRadius: 24,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+            {/* Animated Yellow Scan Line */}
+            <Animated.View
+              style={{
+                width: "100%",
+                height: 3,
+                backgroundColor: PRIMARY_COLOR,
+                transform: [{ translateY: scanLineTranslateY }],
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 10,
+                opacity: scanned || loading ? 0 : 1,
+              }}
+            />
+
+            {/* Corner Markers - Top Left */}
             <View
               style={{
-                width: wp(80),
-                height: wp(80),
-                borderRadius: 24,
-                overflow: "hidden",
-                position: "relative",
+                position: "absolute",
+                top: -3,
+                left: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
               }}
             >
-              {/* Camera View inside the frame */}
-              <CameraView
+              <View
                 style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                }}
-                facing="back"
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr"],
-                }}
-                onBarcodeScanned={
-                  scanned || loading ? undefined : handleBarCodeScanned
-                }
-              />
-
-              {/* Animated Scan Line */}
-              <Animated.View
-                style={{
-                  width: "100%",
-                  height: 3,
-                  backgroundColor: "#F7CA21",
-                  transform: [{ translateY: scanLineTranslateY }],
-                  position: "relative",
-                  zIndex: 10,
-                  opacity: scanned || loading ? 0 : 1,
+                  width: 50,
+                  height: 12,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
                 }}
               />
-
-              {/* Corner Markers - Top Left */}
               <View
                 style={{
-                  position: "absolute",
-                  top: -3,
-                  left: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
+                  width: 12,
+                  height: 38,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderBottomLeftRadius: 20,
                 }}
-              >
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Top Right */}
-              <View
-                style={{
-                  position: "absolute",
-                  top: -3,
-                  right: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderBottomRightRadius: 20,
-                    alignSelf: "flex-end",
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Bottom Left */}
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: -3,
-                  left: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                    borderBottomRightRadius: 20,
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Bottom Right */}
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: -3,
-                  right: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderTopRightRadius: 20,
-                    alignSelf: "flex-end",
-                  }}
-                />
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                    borderBottomRightRadius: 20,
-                  }}
-                />
-              </View>
+              />
             </View>
+
+            {/* Corner Markers - Top Right */}
+            <View
+              style={{
+                position: "absolute",
+                top: -3,
+                right: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                }}
+              />
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderBottomRightRadius: 20,
+                  alignSelf: "flex-end",
+                }}
+              />
+            </View>
+
+            {/* Corner Markers - Bottom Left */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: -3,
+                left: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderTopLeftRadius: 20,
+                }}
+              />
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderBottomLeftRadius: 20,
+                  borderBottomRightRadius: 20,
+                }}
+              />
+            </View>
+
+            {/* Corner Markers - Bottom Right */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: -3,
+                right: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderTopRightRadius: 20,
+                  alignSelf: "flex-end",
+                }}
+              />
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: PRIMARY_COLOR,
+                  borderBottomLeftRadius: 20,
+                  borderBottomRightRadius: 20,
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Subtitle helper badge */}
+          <View className="mt-8 bg-black/60 px-5 py-2.5 rounded-full">
+            <Text className="text-white text-xs font-semibold text-center">
+              Align the Load QR code within the frame to scan
+            </Text>
           </View>
         </View>
       </View>

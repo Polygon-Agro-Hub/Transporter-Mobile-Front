@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Animated,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -507,194 +508,196 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         autoClose={true}
       />
 
-      <View className="flex-1">
-        {/* Semi-transparent overlay */}
-        <View className="flex-1 bg-black/50">
-          {/* Back Button */}
-          <View className="flex-row items-center justify-between px-4 py-3 relative">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="items-start"
-              disabled={loading}
-            >
-              <Entypo
-                name="chevron-left"
-                size={25}
-                color="black"
-                style={{
-                  backgroundColor: loading ? "#666" : "#F7FAFF",
-                  borderRadius: 50,
-                  padding: wp(2.5),
-                }}
-              />
-            </TouchableOpacity>
-          </View>
+      {/* Full-Screen Camera View */}
+      <CameraView
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        barcodeScannerSettings={{
+          barcodeTypes: ["qr"],
+        }}
+        onBarcodeScanned={
+          scanned || loading ? undefined : handleBarCodeScanned
+        }
+      />
 
-          {/* Scan Frame Container */}
-          <View className="flex-1 justify-center items-center">
-            {/* Scan Frame with Camera */}
+      {/* Dark overlay with clear scan frame in center */}
+      <View className="flex-1 bg-black/35">
+        {/* Top Header with Back Button */}
+        <View className="flex-row items-center justify-between px-4 py-3 relative">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="items-start"
+            disabled={loading}
+          >
+            <Entypo
+              name="chevron-left"
+              size={25}
+              color="black"
+              style={{
+                backgroundColor: loading ? "#666" : "#F7FAFF",
+                borderRadius: 50,
+                padding: wp(2.5),
+              }}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scan Frame Container */}
+        <View className="flex-1 justify-center items-center">
+          {/* Scan Frame */}
+          <View
+            style={{
+              width: wp(80),
+              height: wp(80),
+              borderRadius: 24,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+            {/* Animated Yellow Scan Line */}
+            <Animated.View
+              style={{
+                width: "100%",
+                height: 3,
+                backgroundColor: "#F7CA21",
+                transform: [{ translateY: scanLineTranslateY }],
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 10,
+                opacity: scanned || loading ? 0 : 1,
+              }}
+            />
+
+            {/* Corner Markers - Top Left */}
             <View
               style={{
-                width: wp(80),
-                height: wp(80),
-                borderRadius: 24,
-                overflow: "hidden",
-                position: "relative",
+                position: "absolute",
+                top: -3,
+                left: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
               }}
             >
-              {/* Camera View inside the frame */}
-              <CameraView
+              <View
                 style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                }}
-                facing="back"
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr"],
-                }}
-                onBarcodeScanned={
-                  scanned || loading ? undefined : handleBarCodeScanned
-                }
-              />
-
-              {/* Animated Scan Line */}
-              <Animated.View
-                style={{
-                  width: "100%",
-                  height: 3,
+                  width: 50,
+                  height: 12,
                   backgroundColor: "#F7CA21",
-                  transform: [{ translateY: scanLineTranslateY }],
-                  position: "relative",
-                  zIndex: 10,
-                  opacity: scanned || loading ? 0 : 1,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
                 }}
               />
-
-              {/* Corner Markers - Top Left */}
               <View
                 style={{
-                  position: "absolute",
-                  top: -3,
-                  left: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
+                  width: 12,
+                  height: 38,
+                  backgroundColor: "#F7CA21",
+                  borderBottomLeftRadius: 20,
                 }}
-              >
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Top Right */}
-              <View
-                style={{
-                  position: "absolute",
-                  top: -3,
-                  right: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderBottomRightRadius: 20,
-                    alignSelf: "flex-end",
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Bottom Left */}
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: -3,
-                  left: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderTopLeftRadius: 20,
-                  }}
-                />
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                    borderBottomRightRadius: 20,
-                  }}
-                />
-              </View>
-
-              {/* Corner Markers - Bottom Right */}
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: -3,
-                  right: -3,
-                  width: 50,
-                  height: 50,
-                  zIndex: 20,
-                }}
-              >
-                <View
-                  style={{
-                    width: 12,
-                    height: 38,
-                    backgroundColor: "#F7CA21",
-                    borderTopRightRadius: 20,
-                    alignSelf: "flex-end",
-                  }}
-                />
-                <View
-                  style={{
-                    width: 50,
-                    height: 12,
-                    backgroundColor: "#F7CA21",
-                    borderBottomLeftRadius: 20,
-                    borderBottomRightRadius: 20,
-                  }}
-                />
-              </View>
+              />
             </View>
+
+            {/* Corner Markers - Top Right */}
+            <View
+              style={{
+                position: "absolute",
+                top: -3,
+                right: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: "#F7CA21",
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                }}
+              />
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: "#F7CA21",
+                  borderBottomRightRadius: 20,
+                  alignSelf: "flex-end",
+                }}
+              />
+            </View>
+
+            {/* Corner Markers - Bottom Left */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: -3,
+                left: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: "#F7CA21",
+                  borderTopLeftRadius: 20,
+                }}
+              />
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: "#F7CA21",
+                  borderBottomLeftRadius: 20,
+                  borderBottomRightRadius: 20,
+                }}
+              />
+            </View>
+
+            {/* Corner Markers - Bottom Right */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: -3,
+                right: -3,
+                width: 50,
+                height: 50,
+                zIndex: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 12,
+                  height: 38,
+                  backgroundColor: "#F7CA21",
+                  borderTopRightRadius: 20,
+                  alignSelf: "flex-end",
+                }}
+              />
+              <View
+                style={{
+                  width: 50,
+                  height: 12,
+                  backgroundColor: "#F7CA21",
+                  borderBottomLeftRadius: 20,
+                  borderBottomRightRadius: 20,
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Subtitle helper badge */}
+          <View className="mt-8 bg-black/60 px-5 py-2.5 rounded-full">
+            <Text className="text-white text-xs font-semibold text-center">
+              Align the Order QR code within the frame to scan
+            </Text>
           </View>
         </View>
       </View>

@@ -32,6 +32,12 @@ export type RootStackParamList = {
     invoiceNumber: string;
     orderId: number;
   };
+  ReturnOrderOTPVerification: {
+    orderId: number;
+    invoiceNumber: string;
+    dcmEmpId: string;
+    drvOrderId: number;
+  };
   Jobs: undefined;
   Loads: undefined;
   LoadSummary: { loadCode?: string; mode?: "accept" | "journey" } | undefined;
