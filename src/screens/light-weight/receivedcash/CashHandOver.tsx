@@ -53,11 +53,7 @@ const CashHandOver: React.FC = () => {
   const [alertType, setAlertType] = useState<"success" | "error">("error");
 
   const totalReceived = orders.reduce((sum, o) => sum + o.received, 0);
-  const totalEarnings = orders.reduce((sum, o) => sum + o.earned, 0);
-  const amountToTransfer = totalReceived - totalEarnings;
-  const perOrderEarning = orders.length > 0 ? orders[0].earned : 0;
 
-  
   const pendingCategories = [
     { key: "todo", count: todoOrders, label: "Pending Orders" },
     { key: "hold", count: holdOrders, label: "Hold Orders" },
@@ -171,7 +167,7 @@ const CashHandOver: React.FC = () => {
       return;
     }
 
-    navigation.navigate("UploadBankTransferSlip", { amount: amountToTransfer });
+    navigation.navigate("UploadBankTransferSlip", { amount: totalReceived });
   };
 
   return (
@@ -203,115 +199,53 @@ const CashHandOver: React.FC = () => {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {/* Summary cards */}
-            <View className="flex-row " style={{ gap: 12 }}>
-              <View className="flex-1 rounded-2xl border border-[#D5D9E4] items-center justify-center p-3">
-                <LottieView
-                  source={require("@/assets/json/coin.json")}
-                  style={{
-                    width: 60,
-                    height: 60,
-                  }}
-                  autoPlay
-                  loop
-                />
-                <Text className="text-sm">Total Received</Text>
-                <Text className="text-xl font-bold mt-1">
-                  Rs. {formatNumberWithCommas(totalReceived)}
+            {/* Summary card - Total Received only */}
+            <View className="rounded-2xl border border-[#D5D9E4] items-center justify-center p-4">
+              <LottieView
+                source={require("@/assets/json/coin.json")}
+                style={{
+                  width: 60,
+                  height: 60,
+                }}
+                autoPlay
+                loop
+              />
+              <Text className="text-sm">Total Received</Text>
+              <Text className="text-xl font-bold mt-1">
+                Rs. {formatNumberWithCommas(totalReceived)}
+              </Text>
+              <View className="bg-[#FEF3D4] rounded-md px-2 py-0.5 mt-2">
+                <Text className="text-[11px] text-[#7A4A0E]">
+                  Total : {orders.length} Orders
                 </Text>
-                <View className=" bg-[#FEF3D4] rounded-md  px-2 mb-6 py-0.5 mt-2">
-                  <Text className="text-[11px] text-[#7A4A0E]">
-                    Total : {orders.length} Orders
-                  </Text>
-                </View>
-              </View>
-
-              <View className="flex-1 rounded-2xl border border-[#D5D9E4] items-center justify-center p-3">
-                <LottieView
-                  source={require("@/assets/json/coin.json")}
-                  style={{
-                    width: 60,
-                    height: 60,
-                  }}
-                  autoPlay
-                  loop
-                />
-                <Text className="text-sm ">Your Earnings</Text>
-                <Text className="text-xl font-bold mt-1">
-                  Rs. {formatNumberWithCommas(totalEarnings)}
-                </Text>
-                <View className=" bg-[#D4FEE0] rounded-md px-2 mb-6 py-0.5 mt-2">
-                  <Text className="text-[11px] text-[#076734]">
-                    Rs. {formatNumberWithCommas(perOrderEarning)} x{" "}
-                    {orders.length} Orders
-                  </Text>
-                </View>
               </View>
             </View>
 
-            {/* Amount to transfer */}
-            <View className="bg-[#FFFBE9] rounded-2xl items-center py-4 mt-4 ">
-              <Text className="text-xs text-[#000000]">Amount to Transfer</Text>
-              <Text className="text-2xl font-bold text-gray-900 mt-1">
-                Rs. {formatNumberWithCommas(amountToTransfer)}
-              </Text>
-              <Text className="text-[11px] text-[#415069] mt-1">
-                (Total Received - Your Earnings)
-              </Text>
-            </View>
-
-            {/* Order list */}
+            {/* Order list - Received amount only */}
             <View className="mt-4" style={{ gap: 12 }}>
-              {orders.map((order) => {
-                const toTransfer = order.received - order.earned;
-                return (
-                  <View
-                    key={order.orderId}
-                    className="rounded-2xl border border-[#D5D9E4] overflow-hidden"
-                  >
-                    <View className="px-3 pt-3 pb-2">
-                      <Text className="text-sm text-[#4E4E4E]">
-                        Order ID : #{order.orderId}
-                      </Text>
-                    </View>
-
-                    <View className="h-px bg-[#D5D9E4]" />
-
-                    <View className="flex-row items-center justify-between px-3 py-3">
-                      <View>
-                        <Text className="text-sm text-[#415069]">
-                          Received :
-                        </Text>
-                        <Text className="text-base font-semibold text-gray-900">
-                          Rs. {formatNumberWithCommas(order.received)}
-                        </Text>
-                      </View>
-
-                      <Text className="">-</Text>
-
-                      <View>
-                        <Text className="text-sm text-[#415069]">
-                          You Earned :
-                        </Text>
-                        <Text className="text-base font-semibold">
-                          Rs. {formatNumberWithCommas(order.earned)}
-                        </Text>
-                      </View>
-
-                      <Text className="">=</Text>
-
-                      <View>
-                        <Text className="text-sm text-[#415069]">
-                          To Transfer :
-                        </Text>
-                        <Text className="text-base font-extrabold ">
-                          Rs. {formatNumberWithCommas(toTransfer)}
-                        </Text>
-                      </View>
-                    </View>
+              {orders.map((order) => (
+                <View
+                  key={order.orderId}
+                  className="rounded-2xl border border-[#D5D9E4] overflow-hidden"
+                >
+                  <View className="px-3 pt-3 pb-2">
+                    <Text className="text-sm text-[#4E4E4E]">
+                      Order ID : #{order.orderId}
+                    </Text>
                   </View>
-                );
-              })}
+
+                  <View className="h-px bg-[#D5D9E4]" />
+
+                  <View className="px-3 py-3">
+                    <Text className="text-sm text-[#415069]">
+                      Received :
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-900">
+                      Rs. {formatNumberWithCommas(order.received)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
           </ScrollView>
 
