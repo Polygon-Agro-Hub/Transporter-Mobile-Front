@@ -14,6 +14,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
 import RootStackNavigator from "@/routes/Routes";
+import { AppUpdateProvider } from "@/features/app-update";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -262,7 +263,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
-        <AppContent />
+        <AppUpdateProvider>
+          <AppContent />
+        </AppUpdateProvider>
       </Provider>
     </SafeAreaProvider>
   );
