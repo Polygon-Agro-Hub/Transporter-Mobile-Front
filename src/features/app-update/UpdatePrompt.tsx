@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Modal,
   Platform,
@@ -8,26 +8,28 @@ import {
   View,
   useColorScheme,
   Dimensions,
-} from 'react-native';
-import LottieView from 'lottie-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import type { UpdateMessages } from './updatePolicy';
+} from "react-native";
+import LottieView from "lottie-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import type { UpdateMessages } from "./updatePolicy";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const DEFAULT_TEXT: Required<UpdateMessages> = {
-  softTitle: 'New Version Available!',
-  softMessage: 'A new version of GoVi Transport is ready with improved features, faster performance, and bug fixes.',
-  forceTitle: 'Update Required',
-  forceMessage: 'Your current app version is out of date and no longer supported. Please update to continue using GoVi Transport.',
-  updateButton: 'Update Now',
-  laterButton: 'Update Later',
+  softTitle: "New Version Available!",
+  softMessage:
+    "A new version of GoVi Transport is ready with improved features, faster performance, and bug fixes.",
+  forceTitle: "Update Required",
+  forceMessage:
+    "Your current app version is out of date and no longer supported. Please update to continue using GoVi Transport.",
+  updateButton: "Update Now",
+  laterButton: "Update Later",
 };
 
 export interface UpdatePromptProps {
   visible: boolean;
-  mode: 'soft' | 'force';
+  mode: "soft" | "force";
   installedVersion: string;
   latestVersion: string;
   messages?: UpdateMessages;
@@ -44,15 +46,15 @@ export function UpdatePrompt({
   onUpdate,
   onLater,
 }: UpdatePromptProps) {
-  const isDark = useColorScheme() === 'dark';
+  const isDark = useColorScheme() === "dark";
   const text = { ...DEFAULT_TEXT, ...messages };
-  const isForce = mode === 'force';
+  const isForce = mode === "force";
 
-  const cardBg = isDark ? '#1F242C' : '#FFFFFF';
-  const primaryTextColor = isDark ? '#F9FAFB' : '#181A20';
-  const secondaryTextColor = isDark ? '#9CA3AF' : '#64748B';
-  const chipBg = isDark ? '#2B323D' : '#F8FAFC';
-  const chipBorder = isDark ? '#3E4756' : '#E2E8F0';
+  const cardBg = isDark ? "#1F242C" : "#FFFFFF";
+  const primaryTextColor = isDark ? "#F9FAFB" : "#181A20";
+  const secondaryTextColor = isDark ? "#9CA3AF" : "#64748B";
+  const chipBg = isDark ? "#2B323D" : "#F8FAFC";
+  const chipBorder = isDark ? "#3E4756" : "#E2E8F0";
 
   return (
     <Modal
@@ -69,18 +71,35 @@ export function UpdatePrompt({
             styles.card,
             {
               backgroundColor: cardBg,
-              borderColor: isDark ? '#333B48' : '#F0F2F5',
+              borderColor: isDark ? "#333B48" : "#F0F2F5",
             },
           ]}
         >
           {/* Lottie Animation Header */}
           <View style={styles.lottieWrapper}>
             <LottieView
-              source={require('@/assets/json/app-update/new-update.json')}
+              source={require("@/assets/json/app-update/new-update.json")}
               autoPlay
               loop
               style={styles.lottie}
             />
+          </View>
+
+          {/* New Release Badge */}
+          <View
+            style={[
+              styles.releaseTag,
+              { backgroundColor: isDark ? "#FFFAD4" : "#FFFAD4" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.releaseTagText,
+                { color: isDark ? "#AC7F5E" : "#AC7F5E" },
+              ]}
+            >
+              NEW RELEASE
+            </Text>
           </View>
 
           {/* Title & Description */}
@@ -95,10 +114,17 @@ export function UpdatePrompt({
           </View>
 
           {/* Version Transition Chip */}
-          <View style={[styles.versionRow, { backgroundColor: chipBg, borderColor: chipBorder }]}>
+          <View
+            style={[
+              styles.versionRow,
+              { backgroundColor: chipBg, borderColor: chipBorder },
+            ]}
+          >
             <View style={styles.versionCol}>
               <Text style={styles.versionLabel}>Current</Text>
-              <Text style={[styles.versionValue, { color: secondaryTextColor }]}>
+              <Text
+                style={[styles.versionValue, { color: secondaryTextColor }]}
+              >
                 v{installedVersion}
               </Text>
             </View>
@@ -109,7 +135,9 @@ export function UpdatePrompt({
 
             <View style={styles.versionCol}>
               <Text style={styles.versionLabel}>Latest</Text>
-              <Text style={[styles.versionValueHighlight, { color: '#D97706' }]}>
+              <Text
+                style={[styles.versionValueHighlight, { color: "#D97706" }]}
+              >
                 v{latestVersion}
               </Text>
             </View>
@@ -143,19 +171,21 @@ export function UpdatePrompt({
               ]}
             >
               <LinearGradient
-                colors={['#FFB700', '#FFC700']}
+                colors={["#FFB700", "#FFC700"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientButton}
               >
                 <View style={styles.buttonContent}>
                   <FontAwesome5
-                    name={Platform.OS === 'ios' ? 'app-store-ios' : 'google-play'}
+                    name={
+                      Platform.OS === "ios" ? "app-store-ios" : "google-play"
+                    }
                     size={19}
                     color="#181A20"
                   />
                   <Text style={styles.buttonText}>
-                    {isForce ? 'Update Now to Continue' : 'Update Now'}
+                    {isForce ? "Update Now to Continue" : "Update Now"}
                   </Text>
                   <Ionicons name="arrow-forward" size={18} color="#181A20" />
                 </View>
@@ -172,11 +202,9 @@ export function UpdatePrompt({
                   styles.laterBtn,
                   { opacity: pressed ? 0.6 : 1 },
                 ]}
-                className='mt-4'
+                className="mt-4"
               >
-                <Text style={styles.laterBtnText}>
-                  Update Later
-                </Text>
+                <Text style={styles.laterBtnText}>Update Later</Text>
               </Pressable>
             )}
           </View>
@@ -189,21 +217,21 @@ export function UpdatePrompt({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(10, 15, 26, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(10, 15, 26, 0.75)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: Math.min(width - 32, 380),
     borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 26,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 18,
@@ -212,36 +240,49 @@ const styles = StyleSheet.create({
   lottieWrapper: {
     width: 105,
     height: 105,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   lottie: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
+  },
+  releaseTag: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  releaseTagText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   textSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 14,
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: "800",
+    textAlign: "center",
     letterSpacing: -0.2,
     marginBottom: 6,
   },
   message: {
     fontSize: 13.5,
     lineHeight: 19,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 6,
   },
   versionRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 10,
@@ -249,91 +290,91 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   versionCol: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   versionLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#94A3B8",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   versionValue: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   versionValueHighlight: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   arrowContainer: {
     paddingHorizontal: 8,
   },
   featuresContainer: {
-    width: '100%',
+    width: "100%",
     gap: 8,
     marginBottom: 18,
     paddingHorizontal: 4,
   },
   featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   featureText: {
     fontSize: 12.5,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   actionsContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 6,
   },
   pressableWrapper: {
-    width: '100%',
+    width: "100%",
     borderRadius: 9999,
-    shadowColor: '#FFB700',
+    shadowColor: "#FFB700",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
   },
   gradientButton: {
-    width: '100%',
+    width: "100%",
     minHeight: 52,
     borderRadius: 9999,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#181A20',
+    fontWeight: "800",
+    color: "#181A20",
     letterSpacing: 0.2,
-    textAlign: 'center',
+    textAlign: "center",
   },
   laterBtn: {
     marginTop: 24,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   laterBtnText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#494A65',
-    textDecorationLine: 'underline',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#494A65",
+    textDecorationLine: "underline",
+    textAlign: "center",
     letterSpacing: 0.2,
   },
 });
