@@ -29,7 +29,7 @@ interface AssignOrderQRProps {
 }
 
 const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
@@ -45,10 +45,12 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
   const isFocusedRef = useRef(true);
+  const isProcessingRef = useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
       isFocusedRef.current = true;
+      isProcessingRef.current = false;
 
       setScanned(false);
       setLoading(false);
@@ -62,6 +64,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
       return () => {
         isFocusedRef.current = false;
+        isProcessingRef.current = false;
 
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -120,6 +123,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       clearTimeout(timerRef.current);
     }
 
+    isProcessingRef.current = false;
     setScanned(false);
     setShowTimeoutModal(false);
     setShowErrorModal(false);
@@ -259,8 +263,9 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
     type: string;
     data: string;
   }) => {
-    if (scanned || loading || !isFocusedRef.current) return;
+    if (isProcessingRef.current || scanned || loading || !isFocusedRef.current) return;
 
+    isProcessingRef.current = true;
     setScanned(true);
 
     if (timerRef.current) {
@@ -333,9 +338,9 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         error.response?.data?.currentStatus || error.data?.currentStatus;
 
       if (currentStatus === "Return" || currentStatus === "Return Received") {
-        title = "Order Already Returned!";
+        title = "Already Returned!";
         message =
-          "This order has already been returned to the centre and cannot be delivered again.";
+          "This order has already been returned to the center and cannot proceed again!";
       } else if (currentStatus === "Ready to Pickup") {
         title = "Cannot Proceed!";
         message =
@@ -446,6 +451,12 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       <CameraAccess
         navigation={navigation as any}
         onRequestPermission={requestPermission}
+        onPermissionGranted={async () => {
+          if (getPermission) {
+            await getPermission();
+          }
+        }}
+        returnScreen="AssignOrderQR"
         onClose={() => navigation.goBack()}
       />
     );

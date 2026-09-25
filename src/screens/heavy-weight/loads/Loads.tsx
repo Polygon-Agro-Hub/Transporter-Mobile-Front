@@ -33,6 +33,7 @@ interface LoadItem {
   loadCode: string; // e.g. "L-DRV00025260916001"
   destination: string; // e.g. "Colombo - Colombo"
   status: "todo" | "delivered";
+  journeyStatus?: string; // e.g. "End"
   totalWeightKg?: number;
   totalCrates?: number;
   totalItemsCount?: number;
@@ -59,11 +60,17 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
+      console.log("data", response.data.data);
 
-      if (response.data && response.data.status === "success" && response.data.data) {
-        const { todoLoads: fetchedTodo, deliveredLoads: fetchedDelivered } = response.data.data;
+      if (
+        response.data &&
+        response.data.status === "success" &&
+        response.data.data
+      ) {
+        const { todoLoads: fetchedTodo, deliveredLoads: fetchedDelivered } =
+          response.data.data;
         setTodoLoads(fetchedTodo || []);
         setDeliveredLoads(fetchedDelivered || []);
       }
@@ -78,7 +85,7 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchLoads();
-    }, [fetchLoads])
+    }, [fetchLoads]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -122,54 +129,85 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
       {/* Tabs (To Do & Delivered) */}
       <View className="mt-2 bg-white relative">
         <View
-          className="flex-row"
-          style={Platform.OS === "android" ? { elevation: 5 } : undefined}
+          className="mt-2 bg-white relative"
+          style={{
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          }}
         >
-          <TouchableOpacity
-            onPress={() => setActiveTab("todo")}
-            className={`
+          <View className="flex-row">
+            <TouchableOpacity
+              onPress={() => setActiveTab("todo")}
+              className={`
               flex-1 flex-row items-center justify-center gap-x-2 
               ${activeTab === "todo" ? "bg-[#F6F9FF]" : ""}
               py-3
             `}
-            activeOpacity={0.8}
-          >
-            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-              <Text className="text-white font-bold text-xs">
-                {formatCount(todoLoads.length)}
-              </Text>
-            </View>
-            <Text
-              className={`text-md ${
-                activeTab === "todo" ? "font-bold text-black" : "font-medium text-gray-700"
-              }`}
+              activeOpacity={0.8}
             >
-              To Do
-            </Text>
-          </TouchableOpacity>
+              <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+                <Text className="text-white font-bold text-xs">
+                  {formatCount(todoLoads.length)}
+                </Text>
+              </View>
+              <Text
+                className={`text-md ${
+                  activeTab === "todo"
+                    ? "font-bold text-black"
+                    : "font-medium text-gray-700"
+                }`}
+              >
+                To Do
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setActiveTab("delivered")}
-            className={`
+            <TouchableOpacity
+              onPress={() => setActiveTab("delivered")}
+              className={`
               flex-1 flex-row items-center justify-center gap-x-2 
               ${activeTab === "delivered" ? "bg-[#F6F9FF]" : ""}
               py-3
             `}
-            activeOpacity={0.8}
-          >
-            <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
-              <Text className="text-white font-bold text-xs">
-                {formatCount(deliveredLoads.length)}
-              </Text>
-            </View>
-            <Text
-              className={`text-md ${
-                activeTab === "delivered" ? "font-bold text-black" : "font-medium text-gray-700"
-              }`}
+              activeOpacity={0.8}
             >
-              Delivered
-            </Text>
-          </TouchableOpacity>
+              <View className="w-7 h-7 rounded-full bg-black justify-center items-center">
+                <Text className="text-white font-bold text-xs">
+                  {formatCount(deliveredLoads.length)}
+                </Text>
+              </View>
+              <Text
+                className={`text-md ${
+                  activeTab === "delivered"
+                    ? "font-bold text-black"
+                    : "font-medium text-gray-700"
+                }`}
+              >
+                Delivered
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom-only shadow */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: Platform.OS === "android" ? 3 : 1,
+              backgroundColor: "#fff",
+              ...(Platform.OS === "ios"
+                ? {
+                    shadowColor: "#000000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                  }
+                : { elevation: 4 }),
+            }}
+          />
         </View>
 
         {Platform.OS === "ios" && (
@@ -211,7 +249,8 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
           }
         >
           {dataToShow.map((item, index) => {
-            const isDelivered = activeTab === "delivered" || item.status === "delivered";
+            const isDelivered =
+              activeTab === "delivered" || item.status === "delivered";
 
             if (isDelivered) {
               return (
@@ -243,10 +282,16 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
                 key={index}
                 activeOpacity={0.8}
                 onPress={() => {
-                  navigation.navigate("LoadSummary", {
-                    loadCode: item.loadCode,
-                    mode: "journey",
-                  });
+                  if (item.journeyStatus === "End") {
+                    navigation.navigate("LoadQR", {
+                      loadCode: item.loadCode,
+                    });
+                  } else {
+                    navigation.navigate("LoadSummary", {
+                      loadCode: item.loadCode,
+                      mode: "journey",
+                    });
+                  }
                 }}
                 style={[
                   {
@@ -281,7 +326,11 @@ const Loads: React.FC<LoadsScreenProps> = ({ navigation }) => {
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          contentContainerStyle={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

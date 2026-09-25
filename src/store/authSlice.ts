@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { ROLES } from "@/constants/user-roles";
+import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 
 export interface ProfileData {
   firstName: string;
@@ -41,7 +41,7 @@ const authSlice = createSlice({
       const { token, empId, jobRole } = action.payload;
       state.token = token;
       state.empId = empId;
-      state.jobRole = jobRole ?? ROLES.LIGHT_WEIGHT_DRIVER;
+      state.jobRole = normalizeDriverRole(jobRole);
     },
 
     setUserProfile: (state, action: PayloadAction<ProfileData>) => {
@@ -75,7 +75,7 @@ const authSlice = createSlice({
       const { token, empId, jobRole, profile } = action.payload;
       state.token = token;
       state.empId = empId;
-      state.jobRole = jobRole ?? ROLES.LIGHT_WEIGHT_DRIVER;
+      state.jobRole = normalizeDriverRole(jobRole);
       state.userProfile = profile;
     },
   },

@@ -20,7 +20,7 @@ import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
-import { ROLES } from "@/constants/user-roles";
+import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 import { AlertModal } from "@/component/common/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
@@ -278,7 +278,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         qrCode,
       } = data.data;
 
-      const userJobRole = jobRole || ROLES.LIGHT_WEIGHT_DRIVER;
+      const userJobRole = normalizeDriverRole(jobRole);
       const qrCodeUrl = QRcode || qrCode || "";
 
       await AsyncStorage.setItem("token", token);

@@ -102,22 +102,14 @@ const UploadBankTransferSlip: React.FC = () => {
   };
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted && permission.status !== ("limited" as any)) {
-      showAlert(
-        "Permission Required",
-        "Please allow access to your photos to upload a transfer slip.",
-      );
-      return;
-    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
 
       if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
@@ -148,7 +140,10 @@ const UploadBankTransferSlip: React.FC = () => {
         type: "image",
       });
     }
-  };
+  } catch (error) {
+    console.error("Error picking image:", error);
+  }
+};
 
   const pickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -224,6 +219,7 @@ const UploadBankTransferSlip: React.FC = () => {
   };
 
   const removeFile = () => setFile(null);
+  
 
   const openPdfExternally = async () => {
     if (!file || file.type !== "pdf") return;

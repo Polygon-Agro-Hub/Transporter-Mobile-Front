@@ -33,7 +33,6 @@ import { RefreshControl } from "react-native";
 import LoadingPage from "@/component/common/LoadingPage";
 import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import MediaAccess from "@/screens/common/permission/MediaAccess";
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -66,46 +65,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [showAuthErrorModal, setShowAuthErrorModal] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState("");
-  const [showMediaAccessModal, setShowMediaAccessModal] = useState(false);
 
   const token = useSelector(selectAuthToken);
   const jobRole = useSelector(selectJobRole);
   const dispatch = useDispatch();
-
-  const requestPermissions = async () => {
-    if (Platform.OS === "android") {
-      const platformVersion =
-        typeof Platform.Version === "string"
-          ? parseInt(Platform.Version, 10)
-          : Platform.Version;
-
-      if (platformVersion >= 33) {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          const { status: newStatus } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === "granted";
-        }
-        return true;
-      } else {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          const { status: newStatus } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === "granted";
-        }
-        return true;
-      }
-    } else {
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        const { status: newStatus } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        return newStatus === "granted";
-      }
-      return true;
-    }
-  };
 
   const formatJoinedDate = (dateString: string) => {
     if (!dateString) return "";
@@ -329,13 +292,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const openImagePicker = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        presentationStyle: ImagePicker.UIImagePickerPresentationStyle.POPOVER,
         allowsMultipleSelection: false,
-        exif: false,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -350,26 +311,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleProfileImagePress = async () => {
-    try {
-      const { status, granted } =
-        await ImagePicker.getMediaLibraryPermissionsAsync();
-
-      if (granted || status === "granted") {
-        await openImagePicker();
-      } else {
-        setShowMediaAccessModal(true);
-      }
-    } catch (error) {
-      console.error("Error checking media library permissions:", error);
-      setShowMediaAccessModal(true);
-    }
-  };
-
-  const handleMediaPermissionGranted = () => {
-    setShowMediaAccessModal(false);
-    setTimeout(() => {
-      openImagePicker();
-    }, 300);
+    await openImagePicker();
   };
 
   const handleImageUpload = handleProfileImagePress;
@@ -477,7 +419,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
-      navigation.navigate("Home");
+      navigation.goBack();
     } else {
       const currentRole = jobRole || profileData?.jobRole;
       if (currentRole === ROLES.HEAVY_WEIGHT_DRIVER) {
@@ -881,20 +823,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* File and Media Access Permission Modal */}
-      <Modal
-        visible={showMediaAccessModal}
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => setShowMediaAccessModal(false)}
-      >
-        <MediaAccess
-          onClose={() => setShowMediaAccessModal(false)}
-          onNotNow={() => setShowMediaAccessModal(false)}
-          onPermissionGranted={handleMediaPermissionGranted}
-        />
       </Modal>
     </View>
   );
