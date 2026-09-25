@@ -205,6 +205,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     ).start();
   };
 
+  // Extracts a DCM officer empId from the QR payload.
+  // Returns null if the QR does not clearly encode a DCM empId.
   const extractDcmEmpId = (qrData: string): string | null => {
     try {
       if (!qrData || typeof qrData !== "string") return null;
@@ -223,16 +225,14 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             return String(emp).trim().toUpperCase();
           }
         } catch (e) {}
+        return null;
       }
 
-      // Check if QR matches DCM pattern
-      const dcmMatch = trimmed.match(/DCM[A-Za-z0-9]+/i);
+      // Check if QR matches DCM pattern, allowing it to be the whole string
+      // or a clearly-delimited token within it (e.g. "DCM:DCM001").
+      const dcmMatch = trimmed.match(/DCM[-_]?[A-Za-z0-9]{2,20}/i);
       if (dcmMatch) {
-        return dcmMatch[0].toUpperCase();
-      }
-
-      if (trimmed.toUpperCase().startsWith("DCM")) {
-        return trimmed.toUpperCase();
+        return dcmMatch[0].replace(/[-_]/g, "").toUpperCase();
       }
 
       return null;
@@ -242,6 +242,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     }
   };
 
+  // Extracts an order/invoice number from the QR payload.
+  // Returns null if the QR does not look like a valid order code, so
+  // unrelated QR codes never reach the backend.
   const extractInvoiceNumber = (qrData: string): string | null => {
     try {
       if (!qrData || typeof qrData !== "string") return null;
@@ -258,14 +261,32 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             parsed.id;
           if (inv) return String(inv).trim();
         } catch (e) {}
+        return null;
       }
 
-      const alphanumericMatches = trimmed.match(/[A-Za-z0-9]+/g);
-      if (alphanumericMatches && alphanumericMatches.length > 0) {
-        return alphanumericMatches[0];
+      // Match a plain numeric invoice number anywhere in the string
+      // (this project's invNo values are numeric, e.g. "2608170008").
+      const numericMatch = trimmed.match(/\b[0-9]{6,15}\b/);
+      if (numericMatch) {
+        return numericMatch[0];
       }
 
-      return trimmed;
+      // Match an INV-prefixed code, with or without a separator.
+      const invMatch = trimmed.match(/INV[-_]?[0-9]{4,15}/i);
+      if (invMatch) {
+        return invMatch[0].replace(/[-_]/g, "").toUpperCase();
+      }
+
+      // Fall back to a broader order-code shape: letters, digits, and the
+      // common separators (- _ :), 4-30 chars, matching the WHOLE string
+      // once outer whitespace is trimmed. This still rejects full
+      // sentences, URLs, and JSON blobs that failed to parse above.
+      const looseCodePattern = /^[A-Z0-9][A-Z0-9\-_:]{3,29}$/i;
+      if (looseCodePattern.test(trimmed)) {
+        return trimmed;
+      }
+
+      return null;
     } catch (error) {
       return null;
     }
@@ -292,8 +313,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
       const targetDcm = dcmEmpId || "";
 
-      // If neither DCM nor valid scan data:
-      if (!dcmEmpId && !scannedInvoice && !data) {
+      // If the QR is neither a recognizable DCM code nor an order code,
+      // reject it before ever calling the backend.
+      if (!dcmEmpId && !scannedInvoice) {
         setModalTitle("Error!");
         setModalMessage(
           "The QR code is not identified. Please check and try again.",
@@ -303,30 +325,13 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         return;
       }
 
-      // If scanned data is an order/package invoice code, verify it matches this order if known
-      if (!dcmEmpId && scannedInvoice && orderInvoiceNumber) {
-        const cleanScanned = scannedInvoice
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .toUpperCase();
-        const cleanExpected = orderInvoiceNumber
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .toUpperCase();
-        const cleanOrderId = String(orderId).toUpperCase();
-
-        if (
-          !cleanScanned.includes(cleanExpected) &&
-          !cleanExpected.includes(cleanScanned) &&
-          !cleanScanned.includes(cleanOrderId)
-        ) {
-          setModalTitle("Error!");
-          setModalMessage(
-            "The QR code is not identified.Please check and try again.",
-          );
-          setModalType("error");
-          setShowErrorModal(true);
-          return;
-        }
-      }
+      // NOTE: we intentionally do NOT pre-check scannedInvoice against
+      // orderInvoiceNumber here. The backend is the single source of
+      // truth for whether this QR belongs to the right order, is already
+      // returned, or is valid to process — see the currentStatus handling
+      // in the catch block below. Pre-filtering here previously caused
+      // valid "already returned" scans to be swallowed as a generic
+      // "not identified" error before the backend ever saw them.
 
       setLoading(true);
 
@@ -344,7 +349,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         `${environment.API_BASE_URL}api/return/scan-dcm-generate-otp`,
         {
           orderId,
-          invoiceNumber: orderInvoiceNumber || scannedInvoice || data,
+          // Prefer what was actually scanned; fall back to the screen's
+          // known invoice only if the QR only carried a DCM code.
+          invoiceNumber: scannedInvoice || orderInvoiceNumber || data,
           dcmEmpId: targetDcm,
         },
         {
@@ -377,12 +384,32 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     } catch (error: any) {
       setLoading(false);
       console.error("Error processing QR scan:", error);
+
       const errMsg =
         error.response?.data?.message ||
         error.message ||
         "Failed to process QR code";
-      setModalTitle("Error!");
-      setModalMessage(errMsg);
+      const currentStatus = error.response?.data?.currentStatus;
+      const statusCode = error.response?.status;
+
+      if (currentStatus === "Return Received") {
+        setModalTitle("Order Already Returned!");
+        setModalMessage(
+          "This order has already been returned to the centre and cannot be delivered again.",
+        );
+      } else if (
+        statusCode === 404 ||
+        errMsg.toLowerCase().includes("not found")
+      ) {
+        // Wrong/unrelated QR, or no matching return order for this driver.
+        setModalTitle("Error!");
+        setModalMessage(
+          "The QR code is not identified. Please check and try again.",
+        );
+      } else {
+        setModalTitle("Error!");
+        setModalMessage(errMsg);
+      }
       setModalType("error");
       setShowErrorModal(true);
     }
@@ -477,7 +504,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       <AlertModal
         visible={showTimeoutModal}
         title="Scan Timeout"
-        message="The QR code could not be detected within the time limit.Please check and try again."
+        message="The QR code could not be detected within the time limit. Please check and try again."
         type="error"
         onClose={handleTimeoutModalClose}
         showRescanButton={true}

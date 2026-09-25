@@ -102,13 +102,17 @@ const UploadBankTransferSlip: React.FC = () => {
   };
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted && permission.status !== ("limited" as any)) {
-      showAlert(
-        "Permission Required",
-        "Please allow access to your photos to upload a transfer slip.",
-      );
-      return;
+    // Photo library permission is only required on iOS.
+    // Android uses the system photo picker which requires no runtime media permissions.
+    if (Platform.OS === "ios") {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted && permission.status !== ("limited" as any)) {
+        showAlert(
+          "Permission Required",
+          "Please allow access to your photos to upload a transfer slip.",
+        );
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -224,6 +228,7 @@ const UploadBankTransferSlip: React.FC = () => {
   };
 
   const removeFile = () => setFile(null);
+  
 
   const openPdfExternally = async () => {
     if (!file || file.type !== "pdf") return;

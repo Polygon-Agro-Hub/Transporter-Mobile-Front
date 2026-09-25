@@ -10,6 +10,7 @@ import {
   Platform,
   BackHandler,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
@@ -58,10 +59,8 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Mirrors `otp` synchronously so backspace logic never depends on React's
-  // render/commit timing (Android can fire onChangeText before onKeyPress
-  // for the same keystroke, which caused the cursor to race back to box 0).
   const otpRef = useRef<string[]>(new Array(OTP_LENGTH).fill(""));
+  const lastBackspaceTimeRef = useRef<number>(0);
 
   const syncOtp = (newOtp: string[]) => {
     otpRef.current = newOtp;
@@ -120,59 +119,68 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
   };
 
   const handleOtpChange = (text: string, index: number) => {
+    // 1. Text cleared (backspace on a box with content)
+    if (text === "") {
+      lastBackspaceTimeRef.current = Date.now();
+
+      const newOtp = [...otpRef.current];
+      newOtp[index] = "";
+      syncOtp(newOtp);
+
+      // Move focus back one box at a time until box 0
+      if (index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+      return;
+    }
+
     // Clean input to only numeric characters
     const numericText = text.replace(/[^0-9]/g, "");
 
-    // A genuine paste of the whole code (all OTP_LENGTH digits at once).
-    // Only this exact-length case should refill the array from index 0.
-    if (numericText.length === OTP_LENGTH) {
-      const newOtp = numericText.split("").slice(0, OTP_LENGTH);
+    // 2. Full OTP pasted code (all OTP_LENGTH digits at once)
+    if (numericText.length >= OTP_LENGTH) {
+      const newOtp = numericText.slice(0, OTP_LENGTH).split("");
       syncOtp(newOtp);
-      inputRefs.current[OTP_LENGTH - 1]?.focus();
+      inputRefs.current[OTP_LENGTH - 1]?.blur();
+      Keyboard.dismiss();
       return;
     }
 
-    // Empty text means the box was cleared (backspace/delete). Deleting is
-    // handled entirely in handleKeyPress below, so onChangeText does nothing
-    // here — this avoids the two handlers racing over the same state.
     if (numericText.length === 0) {
+      const newOtp = [...otpRef.current];
+      newOtp[index] = "";
+      syncOtp(newOtp);
       return;
     }
 
-    // On some Android devices/keyboards, typing quickly can make onChangeText
-    // fire with the previous digit + the new digit concatenated (e.g. "69"
-    // instead of just "9"). Treat it as a normal single keystroke for THIS
-    // box only, using the most recently typed digit.
+    // 3. Single digit entered - use the newest digit
     const singleDigit = numericText.slice(-1);
-
     const newOtp = [...otpRef.current];
     newOtp[index] = singleDigit;
     syncOtp(newOtp);
 
-    // Auto-advance to next input if digit entered
+    // Auto-advance to next input, or blur and dismiss keyboard when last digit is entered
     if (index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
+    } else {
+      inputRefs.current[index]?.blur();
+      Keyboard.dismiss();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key !== "Backspace") return;
 
-    // Always read the ref, never the `otp` state closure, so this logic is
-    // correct regardless of whether the platform fires onChangeText or
-    // onKeyPress first for this same backspace press.
-    const current = otpRef.current;
+    const now = Date.now();
+    // Guard against duplicate events or key cascade
+    if (now - lastBackspaceTimeRef.current < 100) {
+      return;
+    }
 
-    if (current[index] !== "") {
-      // This box has a digit: this backspace press just clears it, cursor
-      // stays put. (Matches what onChangeText would have reported too.)
-      const newOtp = [...current];
-      newOtp[index] = "";
-      syncOtp(newOtp);
-    } else if (index > 0) {
-      // This box was already empty before this press: step back one box
-      // and clear that digit too, all in one backspace press.
-      const newOtp = [...current];
+    // If current box is already empty, move to previous box and clear its digit
+    if (otpRef.current[index] === "" && index > 0) {
+      lastBackspaceTimeRef.current = now;
+      const newOtp = [...otpRef.current];
       newOtp[index - 1] = "";
       syncOtp(newOtp);
       inputRefs.current[index - 1]?.focus();
@@ -423,8 +431,9 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
                       onChangeText={(text) => handleOtpChange(text, index)}
                       onKeyPress={(e) => handleKeyPress(e, index)}
                       keyboardType="number-pad"
-                      maxLength={index === 0 ? OTP_LENGTH : 1}
-                      selectTextOnFocus
+                      maxLength={OTP_LENGTH}
+                      returnKeyType={index === OTP_LENGTH - 1 ? "done" : "next"}
+                      blurOnSubmit={index === OTP_LENGTH - 1}
                       textAlign="center"
                       style={{
                         width: "100%",

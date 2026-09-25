@@ -54,12 +54,12 @@ const CashHandOver: React.FC = () => {
 
   const totalReceived = orders.reduce((sum, o) => sum + o.received, 0);
 
-  const pendingCategories = [
-    { key: "todo", count: todoOrders, label: "Pending Orders" },
-    { key: "hold", count: holdOrders, label: "Hold Orders" },
-    { key: "ongoing", count: onTheWayOrders, label: "On The Way Orders" },
-    { key: "return", count: returnOrders, label: "Return Orders" },
-  ].filter((c) => c.count > 0);
+ const pendingCategories = [
+  { key: "todo", count: todoOrders, label: "Pending Order" },
+  { key: "hold", count: holdOrders, label: "Hold Order" },
+  { key: "ongoing", count: onTheWayOrders, label: "On The Way Order" },
+  { key: "return", count: returnOrders, label: "Return Order" },
+].filter((c) => c.count > 0);
 
   const hasPendingOrders = pendingCategories.length > 0;
 
@@ -153,22 +153,22 @@ const CashHandOver: React.FC = () => {
     setAlertVisible(false);
   };
 
-  const handleUploadSlip = () => {
-    if (hasPendingOrders) {
-      const summary = pendingCategories
-        .map((c) => `${c.count} ${c.label}`)
-        .join(", ");
-      setAlertType("error");
-      setAlertTitle("Pending Orders");
-      setAlertMessage(
-        `You still have ${summary}. Please complete, receive, or clear these first before uploading the transfer slip.`,
-      );
-      setAlertVisible(true);
-      return;
-    }
+const handleUploadSlip = () => {
+  if (hasPendingOrders) {
+    const summary = pendingCategories
+      .map((c) => `${c.count} ${c.label}${c.count === 1 ? "" : "s"}`)
+      .join(", ");
+    setAlertType("error");
+    setAlertTitle("Pending Orders");
+    setAlertMessage(
+      `You still have ${summary}. Please complete, receive, or clear these first before uploading the transfer slip.`,
+    );
+    setAlertVisible(true);
+    return;
+  }
 
-    navigation.navigate("UploadBankTransferSlip", { amount: totalReceived });
-  };
+  navigation.navigate("UploadBankTransferSlip", { amount: totalReceived });
+};
 
   return (
     <View className="flex-1 bg-white">

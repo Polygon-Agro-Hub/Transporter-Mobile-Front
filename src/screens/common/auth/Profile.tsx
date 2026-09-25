@@ -74,37 +74,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const requestPermissions = async () => {
     if (Platform.OS === "android") {
-      const platformVersion =
-        typeof Platform.Version === "string"
-          ? parseInt(Platform.Version, 10)
-          : Platform.Version;
-
-      if (platformVersion >= 33) {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          const { status: newStatus } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === "granted";
-        }
-        return true;
-      } else {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          const { status: newStatus } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          return newStatus === "granted";
-        }
-        return true;
-      }
-    } else {
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        const { status: newStatus } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        return newStatus === "granted";
-      }
+      // Android uses the system photo picker without requiring runtime media permissions
       return true;
     }
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      const { status: newStatus } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      return newStatus === "granted";
+    }
+    return true;
   };
 
   const formatJoinedDate = (dateString: string) => {
@@ -350,6 +329,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleProfileImagePress = async () => {
+    // Only iOS devices require photo library permission checks.
+    // Android uses the system photo picker which requires no runtime media permissions.
+    if (Platform.OS === "android") {
+      await openImagePicker();
+      return;
+    }
+
     try {
       const { status, granted } =
         await ImagePicker.getMediaLibraryPermissionsAsync();
