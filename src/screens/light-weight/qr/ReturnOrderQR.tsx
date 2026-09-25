@@ -34,7 +34,7 @@ interface ReturnOrderQRProps {
 }
 
 const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
-  const { orderId } = route.params;
+  const { orderId, invoiceNumber: routeInvoiceNumber } = (route.params || {}) as any;
 
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -53,13 +53,17 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   const [modalType, setModalType] = useState<"error" | "success">("error");
 
   const [scannedInvoices, setScannedInvoices] = useState<string[]>([]);
-  const [orderInvoiceNumber, setOrderInvoiceNumber] = useState<string>("");
+  const [orderInvoiceNumber, setOrderInvoiceNumber] = useState<string>(
+    routeInvoiceNumber || "",
+  );
 
   const isFocusedRef = useRef(true);
+  const isProcessingRef = useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
       isFocusedRef.current = true;
+      isProcessingRef.current = false;
 
       setScanned(false);
       setLoading(false);
@@ -73,6 +77,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
       return () => {
         isFocusedRef.current = false;
+        isProcessingRef.current = false;
 
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -115,6 +120,11 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
   // Fetch order details to get the invoice number
   const fetchOrderDetails = async () => {
+    if (routeInvoiceNumber) {
+      setOrderInvoiceNumber(routeInvoiceNumber);
+    }
+    if (!orderId) return;
+
     try {
       const token = await AsyncStorage.getItem("token");
 
@@ -133,26 +143,17 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       );
 
       if (response.data.status === "success") {
-        const orders = response.data.data.returnOrders;
+        const orders = response.data.data.returnOrders || [];
         const currentOrder = orders.find(
           (order: any) => order.orderId === orderId,
         );
 
         if (currentOrder) {
           setOrderInvoiceNumber(currentOrder.invoiceNumber);
-        } else {
-          setModalTitle("Order Not Found");
-          setModalMessage("Unable to find the order details.");
-          setModalType("error");
-          setShowErrorModal(true);
         }
       }
     } catch (error: any) {
       console.error("Error fetching order details:", error);
-      setModalTitle("Error");
-      setModalMessage("Failed to load order details. Please try again.");
-      setModalType("error");
-      setShowErrorModal(true);
     }
   };
 
@@ -178,6 +179,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       clearTimeout(timerRef.current);
     }
 
+    isProcessingRef.current = false;
     setScanned(false);
     setShowTimeoutModal(false);
     setShowErrorModal(false);
@@ -299,8 +301,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     type: string;
     data: string;
   }) => {
-    if (scanned || loading || !isFocusedRef.current) return;
+    if (isProcessingRef.current || scanned || loading || !isFocusedRef.current) return;
 
+    isProcessingRef.current = true;
     setScanned(true);
 
     if (timerRef.current) {
@@ -374,10 +377,25 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           drvOrderId: response.data.data?.drvOrderId,
         });
       } else {
-        setModalTitle("Error!");
-        setModalMessage(
-          response.data?.message || "Failed to verify QR code",
-        );
+        const currentStatus = response.data?.currentStatus;
+        const respMsg = response.data?.message || "Failed to verify QR code";
+
+        if (
+          currentStatus === "Return Received" ||
+          currentStatus === "Return" ||
+          respMsg.toLowerCase().includes("already been marked as return received") ||
+          respMsg.toLowerCase().includes("already been returned") ||
+          respMsg.toLowerCase().includes("already returned") ||
+          respMsg.toLowerCase().includes("return received")
+        ) {
+          setModalTitle("Already Returned!");
+          setModalMessage(
+            "This order has already been returned to the center and cannot proceed again!",
+          );
+        } else {
+          setModalTitle("Error!");
+          setModalMessage(respMsg);
+        }
         setModalType("error");
         setShowErrorModal(true);
       }
@@ -389,13 +407,21 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         error.response?.data?.message ||
         error.message ||
         "Failed to process QR code";
-      const currentStatus = error.response?.data?.currentStatus;
+      const currentStatus =
+        error.response?.data?.currentStatus || error.data?.currentStatus;
       const statusCode = error.response?.status;
 
-      if (currentStatus === "Return Received") {
-        setModalTitle("Order Already Returned!");
+      if (
+        currentStatus === "Return Received" ||
+        currentStatus === "Return" ||
+        errMsg.toLowerCase().includes("already been marked as return received") ||
+        errMsg.toLowerCase().includes("already been returned") ||
+        errMsg.toLowerCase().includes("already returned") ||
+        errMsg.toLowerCase().includes("return received")
+      ) {
+        setModalTitle("Already Returned!");
         setModalMessage(
-          "This order has already been returned to the centre and cannot be delivered again.",
+          "This order has already been returned to the center and cannot proceed again!",
         );
       } else if (
         statusCode === 404 ||

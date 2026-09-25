@@ -306,22 +306,37 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       setVerifying(false);
       const errMsg =
         error.response?.data?.message || error.message || "Verification failed";
-      setModalTitle("Error!");
+      const currentStatus =
+        error.response?.data?.currentStatus || error.data?.currentStatus;
 
-      if (errMsg.toLowerCase().includes("expired")) {
+      if (
+        currentStatus === "Return Received" ||
+        errMsg.toLowerCase().includes("already been marked as return received") ||
+        errMsg.toLowerCase().includes("already been returned") ||
+        errMsg.toLowerCase().includes("already returned")
+      ) {
+        setModalTitle("Already Returned!");
+        setModalMessage(
+          "This order has already been returned to the center and cannot proceed again!",
+        );
+        setShowRetryButton(false);
+      } else if (errMsg.toLowerCase().includes("expired")) {
+        setModalTitle("Error!");
         setModalMessage(
           <View className="items-center mb-2">
             <Text className="text-center text-[#4E4E4E] text-sm leading-5">
               The OTP has expired.{"\n"}Please request a new one.
             </Text>
-          </View>
+          </View>,
         );
+        setShowRetryButton(true);
       } else {
+        setModalTitle("Error!");
         setModalMessage(errMsg);
+        setShowRetryButton(true);
       }
 
       setModalType("error");
-      setShowRetryButton(true);
       setModalVisible(true);
     }
   };

@@ -17,7 +17,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomHeader from "@/component/common/CustomHeader";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import LoadingPage from "@/component/common/LoadingPage";
 import LottieView from "lottie-react-native";
 import { AlertModal } from "@/component/common/AlertModal";
