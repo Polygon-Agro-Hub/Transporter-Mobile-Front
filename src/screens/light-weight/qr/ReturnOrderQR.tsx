@@ -386,7 +386,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           respMsg.toLowerCase().includes("already been marked as return received") ||
           respMsg.toLowerCase().includes("already been returned") ||
           respMsg.toLowerCase().includes("already returned") ||
-          respMsg.toLowerCase().includes("return received")
+          respMsg.toLowerCase().includes("return received") ||
+          respMsg.toLowerCase().includes("cannot proceed again")
         ) {
           setModalTitle("Already Returned!");
           setModalMessage(
@@ -417,7 +418,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         errMsg.toLowerCase().includes("already been marked as return received") ||
         errMsg.toLowerCase().includes("already been returned") ||
         errMsg.toLowerCase().includes("already returned") ||
-        errMsg.toLowerCase().includes("return received")
+        errMsg.toLowerCase().includes("return received") ||
+        errMsg.toLowerCase().includes("cannot proceed again")
       ) {
         setModalTitle("Already Returned!");
         setModalMessage(
