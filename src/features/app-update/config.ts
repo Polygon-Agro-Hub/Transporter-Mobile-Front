@@ -32,8 +32,10 @@ export const APP_UPDATE_CONFIG = {
 
   /**
    * iOS App Store numeric ID (from App Store Connect -> App Information -> Apple ID).
+   * Example: '6739123456'.
+   * When you publish to App Store Connect, paste your Apple ID number here.
    */
-  iosAppStoreId: '6761367256',
+  iosAppStoreId: '',
 
   /**
    * Maximum milliseconds to wait for the version policy fetch.
@@ -43,7 +45,7 @@ export const APP_UPDATE_CONFIG = {
 
   /**
    * How long a "Update Later" snooze lasts, in milliseconds.
-   * Default: 24 hours.
+   * Default: 24 hours. Set to 0 to only snooze until next app restart.
    */
   snoozeDurationMs: 24 * 60 * 60 * 1000,
 };

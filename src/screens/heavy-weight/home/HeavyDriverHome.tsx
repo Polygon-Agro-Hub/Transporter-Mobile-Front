@@ -50,10 +50,14 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
-      if (response.data && response.data.status === "success" && response.data.data) {
+      if (
+        response.data &&
+        response.data.status === "success" &&
+        response.data.data
+      ) {
         const count =
           response.data.data.todoLoads ??
           response.data.data.todoLoadsCount ??
@@ -71,7 +75,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchLoadsCount();
-    }, [fetchLoadsCount])
+    }, [fetchLoadsCount]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -88,6 +92,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
       action: () => {
         navigation.navigate("AssignLoadQR");
       },
+      disabled: false,
     },
     {
       image: packsImage,
@@ -96,6 +101,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
       action: () => {
         navigation.navigate("Loads");
       },
+      disabled: loadsCount === 0,
     },
     {
       image: myComplaintImage,
@@ -104,6 +110,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
       action: () => {
         navigation.navigate("ComplaintsList");
       },
+      disabled: false,
     },
   ];
 
@@ -162,7 +169,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
 
         {/* QR Code Lottie Button */}
         <TouchableOpacity
-          className="w-14 h-14 rounded-full bg-black justify-center items-center overflow-hidden"
+          className="w-14 h-14 rounded-full justify-center items-center overflow-hidden"
           activeOpacity={0.8}
           onPress={() => navigation.navigate("MyQRCode")}
         >
@@ -182,8 +189,9 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
             {row.map((button, index) => (
               <TouchableOpacity
                 key={index}
-                onPress={button.action}
-                activeOpacity={0.7}
+                onPress={button.disabled ? undefined : button.action}
+                activeOpacity={button.disabled ? 1 : 0.7}
+                disabled={button.disabled}
                 style={{
                   width: "48%",
                   backgroundColor: "#fff",
@@ -191,11 +199,18 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
                   padding: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                  elevation: 3,
+                  ...(button.disabled
+                    ? {
+                        borderWidth: 1,
+                        borderColor: "#EBEBEB",
+                      }
+                    : {
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }),
                 }}
               >
                 <View className="w-28 h-28 rounded-lg justify-center items-center mb-3 overflow-hidden">

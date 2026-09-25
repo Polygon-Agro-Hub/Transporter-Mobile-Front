@@ -1,11 +1,29 @@
+/**
+ * The "brain" of the update check.
+ *
+ * This file is plain TypeScript with no React Native imports, so it is easy to read
+ * and easy to unit test.
+ *
+ *   fetchUpdatePolicy()  →  decideUpdate()  →  'none' | 'soft' | 'force'
+ */
+
 export type StorePlatform = 'ios' | 'android';
 
+/** The rules for one platform, read from your version policy JSON. */
 export interface PlatformPolicy {
+  /** Newest version live in the store. Users below it get an optional ("soft") prompt. */
   latestVersion?: string;
+  /** Oldest version you still support. Users below it are blocked ("force"). */
   minimumVersion?: string;
+  /**
+   * Optional minimum OS needed to install your latest build.
+   * iOS: e.g. "15.1". Android: API level e.g. "24".
+   * People on an older OS cannot install the update, so they are never prompted.
+   */
   minOsVersion?: string;
 }
 
+/** Optional text overrides from the server — change wording without shipping a new build. */
 export interface UpdateMessages {
   softTitle?: string;
   softMessage?: string;
@@ -27,6 +45,11 @@ export type UpdateDecision =
 
 const NO_UPDATE: UpdateDecision = { kind: 'none' };
 
+/**
+ * Cleans a version so it can be compared:
+ * "v1.4.0" → "1.4.0", " 1.4.0 " → "1.4.0", "1.4.0-beta.2" → "1.4.0", 24 → "24".
+ * Returns null when there is no usable version number in the value.
+ */
 export function normalizeVersion(value: unknown): string | null {
   const text = typeof value === 'number' && Number.isFinite(value) ? String(value) : value;
   if (typeof text !== 'string') return null;
@@ -34,6 +57,13 @@ export function normalizeVersion(value: unknown): string | null {
   return match ? match[0] : null;
 }
 
+/**
+ * Compares two versions number by number.
+ * Returns 1 if a is newer, -1 if a is older, 0 if equal.
+ *
+ * Why not compare strings directly? Alphabetically "1.10.0" < "1.9.0",
+ * but 1.10.0 IS the newer version. This is the most common bug in update checks.
+ */
 export function compareVersions(a: string, b: string): number {
   const left = (normalizeVersion(a) ?? '0').split('.').map(Number);
   const right = (normalizeVersion(b) ?? '0').split('.').map(Number);
@@ -46,6 +76,10 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+/**
+ * Reads the downloaded JSON defensively — missing or malformed fields are ignored
+ * instead of crashing the app. Returns null if the JSON isn't an object at all.
+ */
 export function parsePolicy(json: unknown): UpdatePolicy | null {
   if (!isRecord(json)) return null;
   return {
@@ -58,10 +92,13 @@ export function parsePolicy(json: unknown): UpdatePolicy | null {
 export interface DecideUpdateInput {
   policy: UpdatePolicy;
   platform: StorePlatform;
+  /** The version installed on this device, e.g. "1.1.0". */
   installedVersion: string;
+  /** iOS: e.g. "17.5". Android: API level, e.g. 34 (React Native's Platform.Version). */
   osVersion?: string | number;
 }
 
+/** Decides what the user should see. This is the entire business logic of the feature. */
 export function decideUpdate({
   policy,
   platform,
@@ -75,10 +112,12 @@ export function decideUpdate({
   const latest = rules.latestVersion;
   let minimum = rules.minimumVersion;
 
+  // Safety net for typos: never block people on a version newer than the one in the store.
   if (minimum && latest && compareVersions(minimum, latest) > 0) {
     minimum = latest;
   }
 
+  // If this device's OS is too old to install the new build, prompting only frustrates the user.
   const os = normalizeVersion(osVersion);
   if (rules.minOsVersion && os && compareVersions(os, rules.minOsVersion) < 0) {
     return NO_UPDATE;
@@ -93,6 +132,11 @@ export function decideUpdate({
   return NO_UPDATE;
 }
 
+/**
+ * Downloads your version policy.
+ * Returns null on ANY problem (offline, timeout, 404, invalid JSON), because an update check
+ * must NEVER be the reason your app stops working.
+ */
 export async function fetchUpdatePolicy(
   url: string,
   timeoutMs: number,
@@ -101,6 +145,7 @@ export async function fetchUpdatePolicy(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    // Timestamp stops the phone (and CDNs) from serving a stale cached copy.
     const separator = url.includes('?') ? '&' : '?';
     const response = await fetch(`${url}${separator}t=${Date.now()}`, {
       headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
@@ -114,6 +159,10 @@ export async function fetchUpdatePolicy(
     clearTimeout(timer);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MESSAGE_KEYS = [
   'softTitle',

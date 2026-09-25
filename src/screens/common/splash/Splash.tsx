@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import environment from "@/environment/environment";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
-import { ROLES } from "@/constants/user-roles";
+import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 
 const splashscreen = require("@/assets/images/splash.webp");
 
@@ -58,7 +58,7 @@ const Splash: React.FC = () => {
             setUser({
               token: userToken,
               empId: empId,
-              jobRole: storedJobRole || ROLES.LIGHT_WEIGHT_DRIVER,
+              jobRole: normalizeDriverRole(storedJobRole),
             }),
           );
 
@@ -123,12 +123,10 @@ const Splash: React.FC = () => {
           await AsyncStorage.setItem("@user_qr", profileData.QRcode || profileData.qrCode);
         }
 
-        if (profileData.jobRole) {
-          dispatch(setUser({ token, empId, jobRole: profileData.jobRole }));
-          await AsyncStorage.setItem("jobRole", profileData.jobRole);
-        }
+        const normalizedRole = normalizeDriverRole(profileData.jobRole || (await AsyncStorage.getItem("jobRole")));
 
-        const effectiveRole = profileData.jobRole || (await AsyncStorage.getItem("jobRole"));
+        dispatch(setUser({ token, empId, jobRole: normalizedRole }));
+        await AsyncStorage.setItem("jobRole", normalizedRole);
 
         if (
           profileData.passwordUpdated === 0 ||
@@ -137,7 +135,7 @@ const Splash: React.FC = () => {
           navigation.replace("ChangePassword", {
             passwordUpdated: Number(profileData.passwordUpdated),
           });
-        } else if (effectiveRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+        } else if (normalizedRole === ROLES.HEAVY_WEIGHT_DRIVER) {
           navigation.replace("HeavyDriverHome");
         } else {
           navigation.replace("Home");
@@ -151,7 +149,7 @@ const Splash: React.FC = () => {
             message: data.message || "Your account has been rejected or is not approved.",
           });
         } else {
-          const currentStoredRole = await AsyncStorage.getItem("jobRole");
+          const currentStoredRole = normalizeDriverRole(await AsyncStorage.getItem("jobRole"));
           if (currentStoredRole === ROLES.HEAVY_WEIGHT_DRIVER) {
             navigation.replace("HeavyDriverHome");
           } else {
@@ -161,7 +159,7 @@ const Splash: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      const currentStoredRole = await AsyncStorage.getItem("jobRole");
+      const currentStoredRole = normalizeDriverRole(await AsyncStorage.getItem("jobRole"));
       if (currentStoredRole === ROLES.HEAVY_WEIGHT_DRIVER) {
         navigation.replace("HeavyDriverHome");
       } else {

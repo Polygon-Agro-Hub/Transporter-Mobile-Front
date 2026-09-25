@@ -1,3 +1,12 @@
+/**
+ * Device layer for the app-update feature.
+ *
+ * - getPlatform()         → 'ios' | 'android'
+ * - getInstalledVersion() → e.g. "1.1.0" from the native binary / app.json
+ * - getOsVersion()        → iOS: "17.5" / Android: API level (e.g. 34)
+ * - openStore()           → Opens Play Store (Android) or App Store (iOS)
+ */
+
 import * as Application from 'expo-application';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Linking, Platform } from 'react-native';
@@ -10,15 +19,16 @@ export function getPlatform(): StorePlatform {
 
 /**
  * Returns the version string of the installed app.
- * In development (__DEV__) or Expo Go: Always uses app.json version ("1.1.0") so update testing works reliably.
- * In standalone production builds: Uses Application.nativeApplicationVersion.
+ * In Expo Go / Dev Client: Uses Constants.expoConfig.version (e.g. "1.1.0" from app.json)
+ * because Application.nativeApplicationVersion in Expo Go returns Expo Go's own version.
+ * In Standalone APK / iOS IPA / Production: Uses Application.nativeApplicationVersion.
  */
 export function getInstalledVersion(): string {
   const isExpoGo =
     Constants.appOwnership === 'expo' ||
     Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-  if (__DEV__ || isExpoGo) {
+  if (isExpoGo) {
     return Constants.expoConfig?.version ?? '1.1.0';
   }
 
@@ -29,10 +39,19 @@ export function getInstalledVersion(): string {
   );
 }
 
+/**
+ * Returns the OS version.
+ * iOS:     a string like "17.5"
+ * Android: a number (API level) like 34
+ */
 export function getOsVersion(): string | number {
   return Platform.Version;
 }
 
+/**
+ * Opens this app's page on the Play Store (Android) or App Store (iOS).
+ * Supports both Apple ID number and bundle identifier fallback for iOS.
+ */
 export async function openStore(): Promise<void> {
   const isIos = Platform.OS === 'ios';
 
@@ -40,6 +59,7 @@ export async function openStore(): Promise<void> {
     const appleId = APP_UPDATE_CONFIG.iosAppStoreId?.trim();
     const bundleId = APP_UPDATE_CONFIG.iosBundleIdentifier?.trim() || 'com.polygonagro.Transporter';
 
+    // If numeric Apple ID exists, link directly to app ID; otherwise link by bundle ID / search
     const storeUrl = appleId
       ? `itms-apps://apps.apple.com/app/id${appleId}`
       : `itms-apps://apps.apple.com/app/${bundleId}`;
@@ -61,6 +81,7 @@ export async function openStore(): Promise<void> {
     return;
   }
 
+  // Android
   const storeUrl = `market://details?id=${APP_UPDATE_CONFIG.androidPackageName}`;
   const webUrl = `https://play.google.com/store/apps/details?id=${APP_UPDATE_CONFIG.androidPackageName}`;
 

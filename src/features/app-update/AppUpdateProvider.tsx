@@ -1,3 +1,19 @@
+/**
+ * AppUpdateProvider
+ *
+ * Wrap your root component with this provider. It will:
+ *   1. Fetch the version policy from your backend on every app launch.
+ *   2. Fetch again every time the user brings the app back to the foreground.
+ *   3. Show the UpdatePrompt (soft or force) when a newer version is available.
+ *   4. Handle "Update Now" (opens store) and "Update Later" (snoozes for 24h).
+ *
+ * The check is completely silent on failure — if the network is down, the server
+ * is unreachable, or the JSON is malformed, the app simply continues normally.
+ *
+ * useAppUpdate() hook is also exported for components that need to manually
+ * trigger a re-check (e.g. a "Check for updates" button in a settings screen).
+ */
+
 import React, {
   createContext,
   useCallback,
@@ -19,7 +35,10 @@ import {
   type UpdateMessages,
 } from './updatePolicy';
 
+// ─── Context ─────────────────────────────────────────────────────────────────
+
 interface AppUpdateContextType {
+  /** Manually trigger a version check (e.g. from a settings page). */
   checkForUpdate: () => Promise<void>;
 }
 
@@ -28,6 +47,8 @@ const AppUpdateContext = createContext<AppUpdateContextType>({
 });
 
 export const useAppUpdate = (): AppUpdateContextType => useContext(AppUpdateContext);
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 interface AppUpdateProviderProps {
   children: ReactNode;
@@ -38,8 +59,10 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
   const [messages, setMessages] = useState<UpdateMessages | undefined>(undefined);
   const [promptVisible, setPromptVisible] = useState(false);
 
+  // Track whether a check is already running to avoid concurrent fetches.
   const isChecking = useRef(false);
 
+  // ── Core check logic ──────────────────────────────────────────────────────
   const checkForUpdate = useCallback(async () => {
     if (isChecking.current) return;
     isChecking.current = true;
@@ -52,6 +75,7 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
 
       const policy = await fetchUpdatePolicy(url, APP_UPDATE_CONFIG.timeoutMs);
 
+      // Network/server failure — fail silently.
       if (!policy) {
         if (__DEV__) {
           console.warn('[AppUpdate] ⚠️ Policy fetch returned null or network error. (URL:', url, ')');
@@ -79,13 +103,14 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
         console.log('[AppUpdate] 🎯 Decision:', result);
       }
 
+      // No update needed.
       if (result.kind === 'none') {
         setPromptVisible(false);
         setDecision(result);
         return;
       }
 
-      // If soft update, check if it was snoozed
+      // Soft update: respect the "Update Later" snooze.
       if (result.kind === 'soft') {
         const snoozed = await isSnoozed(result.latestVersion);
         if (snoozed) {
@@ -96,6 +121,7 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
         }
       }
 
+      // Show the prompt.
       setMessages(policy.messages);
       setDecision(result);
       setPromptVisible(true);
@@ -108,10 +134,12 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
     }
   }, []);
 
+  // ── Check on mount (app launch) ───────────────────────────────────────────
   useEffect(() => {
     checkForUpdate();
   }, [checkForUpdate]);
 
+  // ── Check when app returns to foreground ──────────────────────────────────
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'active') {
@@ -122,6 +150,8 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
   }, [checkForUpdate]);
+
+  // ── Button handlers ──────────────────────────────────────────────────────
 
   const handleUpdate = useCallback(() => {
     openStore();
@@ -134,6 +164,7 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
     setPromptVisible(false);
   }, [decision]);
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <AppUpdateContext.Provider value={{ checkForUpdate }}>
       {children}

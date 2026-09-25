@@ -89,6 +89,21 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
   const requestMediaPermission = async () => {
     setIsLoading(true);
     try {
+      // Photo library permission is only required on iOS.
+      // Android uses the system photo picker which requires zero runtime media permissions.
+      if (Platform.OS === "android") {
+        if (onPermissionGranted) {
+          onPermissionGranted();
+        } else if (navigation) {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.navigate(targetReturnScreen as any);
+          }
+        }
+        return;
+      }
+
       let isGranted = false;
       let isDenied = false;
 

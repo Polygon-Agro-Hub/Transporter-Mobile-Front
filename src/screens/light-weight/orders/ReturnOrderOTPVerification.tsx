@@ -10,6 +10,7 @@ import {
   Platform,
   BackHandler,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
@@ -58,6 +59,13 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const otpRef = useRef<string[]>(new Array(OTP_LENGTH).fill(""));
+  const lastBackspaceTimeRef = useRef<number>(0);
+
+  const syncOtp = (newOtp: string[]) => {
+    otpRef.current = newOtp;
+    setOtp(newOtp);
+  };
 
   // Focus effect for Android hardware back
   useFocusEffect(
@@ -111,47 +119,76 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
   };
 
   const handleOtpChange = (text: string, index: number) => {
-    // Clean input to only numeric characters
-    const numericText = text.replace(/[^0-9]/g, "");
+    // 1. Text cleared (backspace on a box with content)
+    if (text === "") {
+      lastBackspaceTimeRef.current = Date.now();
 
-    // Handling pasted code (e.g. 5 digits pasted in first box)
-    if (numericText.length > 1) {
-      const newOtp = [...otp];
-      for (let i = 0; i < OTP_LENGTH; i++) {
-        if (numericText[i]) {
-          newOtp[i] = numericText[i];
-        }
+      const newOtp = [...otpRef.current];
+      newOtp[index] = "";
+      syncOtp(newOtp);
+
+      // Move focus back one box at a time until box 0
+      if (index > 0) {
+        inputRefs.current[index - 1]?.focus();
       }
-      setOtp(newOtp);
-      const nextIndex = Math.min(numericText.length, OTP_LENGTH - 1);
-      inputRefs.current[nextIndex]?.focus();
       return;
     }
 
-    const newOtp = [...otp];
-    newOtp[index] = numericText;
-    setOtp(newOtp);
+    // Clean input to only numeric characters
+    const numericText = text.replace(/[^0-9]/g, "");
 
-    // Auto-advance to next input if digit entered
-    if (numericText && index < OTP_LENGTH - 1) {
+    // 2. Full OTP pasted code (all OTP_LENGTH digits at once)
+    if (numericText.length >= OTP_LENGTH) {
+      const newOtp = numericText.slice(0, OTP_LENGTH).split("");
+      syncOtp(newOtp);
+      inputRefs.current[OTP_LENGTH - 1]?.blur();
+      Keyboard.dismiss();
+      return;
+    }
+
+    if (numericText.length === 0) {
+      const newOtp = [...otpRef.current];
+      newOtp[index] = "";
+      syncOtp(newOtp);
+      return;
+    }
+
+    // 3. Single digit entered - use the newest digit
+    const singleDigit = numericText.slice(-1);
+    const newOtp = [...otpRef.current];
+    newOtp[index] = singleDigit;
+    syncOtp(newOtp);
+
+    // Auto-advance to next input, or blur and dismiss keyboard when last digit is entered
+    if (index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
+    } else {
+      inputRefs.current[index]?.blur();
+      Keyboard.dismiss();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // If backspace is pressed on an empty box, move focus to previous box
-    if (e.nativeEvent.key === "Backspace") {
-      if (otp[index] === "" && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-        const newOtp = [...otp];
-        newOtp[index - 1] = "";
-        setOtp(newOtp);
-      }
+    if (e.nativeEvent.key !== "Backspace") return;
+
+    const now = Date.now();
+    // Guard against duplicate events or key cascade
+    if (now - lastBackspaceTimeRef.current < 100) {
+      return;
+    }
+
+    // If current box is already empty, move to previous box and clear its digit
+    if (otpRef.current[index] === "" && index > 0) {
+      lastBackspaceTimeRef.current = now;
+      const newOtp = [...otpRef.current];
+      newOtp[index - 1] = "";
+      syncOtp(newOtp);
+      inputRefs.current[index - 1]?.focus();
     }
   };
 
   const clearOtpInputs = () => {
-    setOtp(new Array(OTP_LENGTH).fill(""));
+    syncOtp(new Array(OTP_LENGTH).fill(""));
     inputRefs.current[0]?.focus();
   };
 
@@ -269,10 +306,37 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       setVerifying(false);
       const errMsg =
         error.response?.data?.message || error.message || "Verification failed";
-      setModalTitle("Error!");
-      setModalMessage(errMsg);
+      const currentStatus =
+        error.response?.data?.currentStatus || error.data?.currentStatus;
+
+      if (
+        currentStatus === "Return Received" ||
+        errMsg.toLowerCase().includes("already been marked as return received") ||
+        errMsg.toLowerCase().includes("already been returned") ||
+        errMsg.toLowerCase().includes("already returned")
+      ) {
+        setModalTitle("Already Returned!");
+        setModalMessage(
+          "This order has already been returned to the center and cannot proceed again!",
+        );
+        setShowRetryButton(false);
+      } else if (errMsg.toLowerCase().includes("expired")) {
+        setModalTitle("Error!");
+        setModalMessage(
+          <View className="items-center mb-2">
+            <Text className="text-center text-[#4E4E4E] text-sm leading-5">
+              The OTP has expired.{"\n"}Please request a new one.
+            </Text>
+          </View>,
+        );
+        setShowRetryButton(true);
+      } else {
+        setModalTitle("Error!");
+        setModalMessage(errMsg);
+        setShowRetryButton(true);
+      }
+
       setModalType("error");
-      setShowRetryButton(true);
       setModalVisible(true);
     }
   };
@@ -382,8 +446,9 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
                       onChangeText={(text) => handleOtpChange(text, index)}
                       onKeyPress={(e) => handleKeyPress(e, index)}
                       keyboardType="number-pad"
-                      maxLength={index === 0 ? OTP_LENGTH : 1}
-                      selectTextOnFocus
+                      maxLength={OTP_LENGTH}
+                      returnKeyType={index === OTP_LENGTH - 1 ? "done" : "next"}
+                      blurOnSubmit={index === OTP_LENGTH - 1}
                       textAlign="center"
                       style={{
                         width: "100%",

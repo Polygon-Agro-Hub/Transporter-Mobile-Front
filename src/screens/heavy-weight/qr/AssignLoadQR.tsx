@@ -31,7 +31,7 @@ interface AssignLoadQRProps {
 const PRIMARY_COLOR = "#F7CA21";
 
 const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
@@ -48,10 +48,12 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
   const [scannedLoadCode, setScannedLoadCode] = useState<string>("");
 
   const isFocusedRef = useRef(true);
+  const isProcessingRef = useRef(false);
 
   useFocusEffect(
     React.useCallback(() => {
       isFocusedRef.current = true;
+      isProcessingRef.current = false;
 
       setScanned(false);
       setLoading(false);
@@ -65,6 +67,7 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
 
       return () => {
         isFocusedRef.current = false;
+        isProcessingRef.current = false;
 
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -123,6 +126,7 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       clearTimeout(timerRef.current);
     }
 
+    isProcessingRef.current = false;
     setScanned(false);
     setShowTimeoutModal(false);
     setShowErrorModal(false);
@@ -205,8 +209,9 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
     type: string;
     data: string;
   }) => {
-    if (scanned || loading || !isFocusedRef.current) return;
+    if (isProcessingRef.current || scanned || loading || !isFocusedRef.current) return;
 
+    isProcessingRef.current = true;
     setScanned(true);
 
     if (timerRef.current) {
@@ -332,6 +337,12 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       <CameraAccess
         navigation={navigation as any}
         onRequestPermission={requestPermission}
+        onPermissionGranted={async () => {
+          if (getPermission) {
+            await getPermission();
+          }
+        }}
+        returnScreen="AssignLoadQR"
         onClose={() => navigation.goBack()}
       />
     );
