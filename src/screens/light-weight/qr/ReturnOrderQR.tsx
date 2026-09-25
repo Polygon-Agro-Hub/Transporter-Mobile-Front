@@ -378,7 +378,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         });
       } else {
         const currentStatus = response.data?.currentStatus;
-        const respMsg = response.data?.message || "Failed to verify QR code";
+        const respMsg = response.data?.message || "";
 
         if (
           currentStatus === "Return Received" ||
@@ -395,7 +395,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           );
         } else {
           setModalTitle("Error!");
-          setModalMessage(respMsg);
+          setModalMessage(
+            "The QR code is not identified. Please check and try again.",
+          );
         }
         setModalType("error");
         setShowErrorModal(true);
@@ -407,10 +409,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       const errMsg =
         error.response?.data?.message ||
         error.message ||
-        "Failed to process QR code";
+        "";
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
-      const statusCode = error.response?.status;
 
       if (
         currentStatus === "Return Received" ||
@@ -425,18 +426,12 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         setModalMessage(
           "This order has already been returned to the center and cannot proceed again!",
         );
-      } else if (
-        statusCode === 404 ||
-        errMsg.toLowerCase().includes("not found")
-      ) {
-        // Wrong/unrelated QR, or no matching return order for this driver.
+      } else {
+        // Any other non-matching or error case
         setModalTitle("Error!");
         setModalMessage(
           "The QR code is not identified. Please check and try again.",
         );
-      } else {
-        setModalTitle("Error!");
-        setModalMessage(errMsg);
       }
       setModalType("error");
       setShowErrorModal(true);
