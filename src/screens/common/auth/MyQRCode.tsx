@@ -31,8 +31,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import QRCode from "react-native-qrcode-svg";
 import { captureRef } from "react-native-view-shot";
 
-const polygonLogo = require("@/assets/images/public/polygon-logo.png");
-
 type MyQRCodeNavigationProp = StackNavigationProp<RootStackParamList, "MyQRCode">;
 
 interface MyQRCodeProps {
@@ -49,6 +47,9 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
 
   const [qrUrl, setQrUrl] = useState<string>(
     userProfile?.QRcode || userProfile?.qrCode || ""
+  );
+  const [companyLogo, setCompanyLogo] = useState<string>(
+    (userProfile as any)?.company?.logo || ""
   );
   const [loading, setLoading] = useState<boolean>(!userProfile?.QRcode && !userProfile?.qrCode);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -71,9 +72,13 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
     try {
       const storedToken = token || (await AsyncStorage.getItem("token"));
       const storedQr = await AsyncStorage.getItem("@user_qr");
+      const storedLogo = await AsyncStorage.getItem("@company_logo");
 
       if (storedQr && !qrUrl) {
         setQrUrl(storedQr);
+      }
+      if (storedLogo && !companyLogo) {
+        setCompanyLogo(storedLogo);
       }
 
       if (!storedToken) {
@@ -88,13 +93,25 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
         }
       );
 
+      console.log(response.data.data)
+
       if (response.data && response.data.success && response.data.data) {
         const profileData = response.data.data;
         const fetchedQR = profileData.QRcode || profileData.qrCode || "";
+        const fetchedLogo = profileData.company?.logo || "";
 
         if (fetchedQR) {
           setQrUrl(fetchedQR);
           await AsyncStorage.setItem("@user_qr", fetchedQR);
+        }
+
+        // Company logo is optional — only store/display it if the API actually returned one.
+        if (fetchedLogo) {
+          setCompanyLogo(fetchedLogo);
+          await AsyncStorage.setItem("@company_logo", fetchedLogo);
+        } else {
+          setCompanyLogo("");
+          await AsyncStorage.removeItem("@company_logo");
         }
 
         if (userProfile) {
@@ -106,7 +123,8 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
               profileImg: profileData.image || userProfile.profileImg,
               QRcode: fetchedQR,
               qrCode: fetchedQR,
-            })
+              company: profileData.company || (userProfile as any).company,
+            } as any)
           );
         }
       }
@@ -123,6 +141,11 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
       if (cached && !qrUrl) {
         setQrUrl(cached);
         setLoading(false);
+      }
+    });
+    AsyncStorage.getItem("@company_logo").then((cached) => {
+      if (cached && !companyLogo) {
+        setCompanyLogo(cached);
       }
     });
 
@@ -264,7 +287,30 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
           }
         >
           <View className="flex-1 justify-center px-4">
-            {/* On-Screen UI: QR Code Container only */}
+            {/* Company Logo — only shown when the API actually returns one */}
+            {companyLogo ? (
+              <View className="items-center mb-4">
+                <Image
+                  source={{ uri: companyLogo }}
+                  className="w-[180px] h-[54px]"
+                  resizeMode="contain"
+                />
+              </View>
+            ) : null}
+
+            {/* Driver Name and ID */}
+            <View className="items-center mb-6">
+              <Text className="text-2xl font-bold text-gray-900 text-center">
+                {getFullName()}
+              </Text>
+              {userProfile?.empId ? (
+                <Text className="text-base font-semibold text-gray-500 text-center mt-1">
+                  Driver ID: {userProfile.empId}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* On-Screen UI: QR Code Container */}
             <View className="items-center mb-8">
               <View className="bg-white p-5 rounded-3xl border-2 border-[#FAE432] items-center justify-center shadow-md">
                 {qrUrl &&
@@ -286,18 +332,6 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
                   </View>
                 )}
               </View>
-            </View>
-
-            {/* Driver Name and ID */}
-            <View className="items-center mb-8">
-              <Text className="text-2xl font-bold text-gray-900 text-center">
-                {getFullName()}
-              </Text>
-              {userProfile?.empId ? (
-                <Text className="text-base font-semibold text-gray-500 text-center mt-1">
-                  Driver ID: {userProfile.empId}
-                </Text>
-              ) : null}
             </View>
 
             {/* Download and Share Buttons */}
@@ -337,14 +371,16 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
             borderRadius: 24,
           }}
         >
-          {/* Top: Top gap + Bigger Polygon Logo + GOVI TRANS */}
-          <View style={{ alignItems: "center", marginBottom: 22 }}>
-            <Image
-              source={polygonLogo}
-              style={{ width: 240, height: 72 }}
-              resizeMode="contain"
-            />
-          </View>
+          {/* Top: Company logo — only rendered when the API actually returns one, otherwise nothing is shown */}
+          {companyLogo ? (
+            <View style={{ alignItems: "center", marginBottom: 22 }}>
+              <Image
+                source={{ uri: companyLogo }}
+                style={{ width: 240, height: 72 }}
+                resizeMode="contain"
+              />
+            </View>
+          ) : null}
 
           {/* Middle: QR Code Container */}
           <View
