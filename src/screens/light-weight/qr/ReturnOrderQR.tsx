@@ -36,7 +36,7 @@ interface ReturnOrderQRProps {
 const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   const { orderId } = route.params;
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
@@ -320,7 +320,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         ) {
           setModalTitle("Error!");
           setModalMessage(
-            "The QR code does not match this return order. Please scan the correct package QR or Centre Manager QR.",
+            "The QR code is not identified.Please check and try again.",
           );
           setModalType("error");
           setShowErrorModal(true);
@@ -443,6 +443,12 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       <CameraAccess
         navigation={navigation as any}
         onRequestPermission={requestPermission}
+        onPermissionGranted={async () => {
+          if (getPermission) {
+            await getPermission();
+          }
+        }}
+        returnScreen="ReturnOrderQR"
         onClose={() => navigation.goBack()}
       />
     );
@@ -461,7 +467,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Updating Return Order...
+              Checking Return Order
             </Text>
           </View>
         </View>

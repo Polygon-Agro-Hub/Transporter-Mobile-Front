@@ -31,7 +31,7 @@ interface AssignLoadQRProps {
 const PRIMARY_COLOR = "#F7CA21";
 
 const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
@@ -332,6 +332,12 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       <CameraAccess
         navigation={navigation as any}
         onRequestPermission={requestPermission}
+        onPermissionGranted={async () => {
+          if (getPermission) {
+            await getPermission();
+          }
+        }}
+        returnScreen="AssignLoadQR"
         onClose={() => navigation.goBack()}
       />
     );

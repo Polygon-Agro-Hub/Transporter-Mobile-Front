@@ -29,7 +29,7 @@ interface AssignOrderQRProps {
 }
 
 const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
   const [loading, setLoading] = useState(false);
@@ -446,6 +446,12 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       <CameraAccess
         navigation={navigation as any}
         onRequestPermission={requestPermission}
+        onPermissionGranted={async () => {
+          if (getPermission) {
+            await getPermission();
+          }
+        }}
+        returnScreen="AssignOrderQR"
         onClose={() => navigation.goBack()}
       />
     );

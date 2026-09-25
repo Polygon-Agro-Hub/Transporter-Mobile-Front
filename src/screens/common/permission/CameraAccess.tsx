@@ -10,6 +10,8 @@ import {
   ScrollView,
   Platform,
   LayoutChangeEvent,
+  AppState,
+  AppStateStatus,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -82,6 +84,46 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
     return () => subscription.remove();
   }, [navigation, onClose, onBackPress, targetReturnScreen]);
 
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active") {
+        try {
+          const check = await Camera.getCameraPermissionsAsync();
+          if (check.granted || check.status === "granted") {
+            if (onPermissionGranted) {
+              onPermissionGranted();
+            } else if (route?.params?.returnScreen) {
+              navigation?.navigate(route.params.returnScreen as any);
+            } else if (returnScreen && returnScreen !== "Home") {
+              navigation?.navigate(returnScreen as any);
+            } else if (!onRequestPermission && navigation) {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate(targetReturnScreen as any);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore error
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
+    return () => subscription.remove();
+  }, [
+    navigation,
+    onPermissionGranted,
+    onRequestPermission,
+    route?.params?.returnScreen,
+    returnScreen,
+    targetReturnScreen,
+  ]);
+
   const requestCameraPermission = async () => {
     setIsLoading(true);
     try {
@@ -112,7 +154,11 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
       if (isGranted) {
         if (onPermissionGranted) {
           onPermissionGranted();
-        } else if (navigation) {
+        } else if (route?.params?.returnScreen) {
+          navigation?.navigate(route.params.returnScreen as any);
+        } else if (returnScreen && returnScreen !== "Home") {
+          navigation?.navigate(returnScreen as any);
+        } else if (!onRequestPermission && navigation) {
           if (navigation.canGoBack()) {
             navigation.goBack();
           } else {

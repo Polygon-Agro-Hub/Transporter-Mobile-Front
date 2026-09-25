@@ -58,6 +58,15 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Mirrors `otp` synchronously so backspace logic never depends on React's
+  // render/commit timing (Android can fire onChangeText before onKeyPress
+  // for the same keystroke, which caused the cursor to race back to box 0).
+  const otpRef = useRef<string[]>(new Array(OTP_LENGTH).fill(""));
+
+  const syncOtp = (newOtp: string[]) => {
+    otpRef.current = newOtp;
+    setOtp(newOtp);
+  };
 
   // Focus effect for Android hardware back
   useFocusEffect(
@@ -114,44 +123,64 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
     // Clean input to only numeric characters
     const numericText = text.replace(/[^0-9]/g, "");
 
-    // Handling pasted code (e.g. 5 digits pasted in first box)
-    if (numericText.length > 1) {
-      const newOtp = [...otp];
-      for (let i = 0; i < OTP_LENGTH; i++) {
-        if (numericText[i]) {
-          newOtp[i] = numericText[i];
-        }
-      }
-      setOtp(newOtp);
-      const nextIndex = Math.min(numericText.length, OTP_LENGTH - 1);
-      inputRefs.current[nextIndex]?.focus();
+    // A genuine paste of the whole code (all OTP_LENGTH digits at once).
+    // Only this exact-length case should refill the array from index 0.
+    if (numericText.length === OTP_LENGTH) {
+      const newOtp = numericText.split("").slice(0, OTP_LENGTH);
+      syncOtp(newOtp);
+      inputRefs.current[OTP_LENGTH - 1]?.focus();
       return;
     }
 
-    const newOtp = [...otp];
-    newOtp[index] = numericText;
-    setOtp(newOtp);
+    // Empty text means the box was cleared (backspace/delete). Deleting is
+    // handled entirely in handleKeyPress below, so onChangeText does nothing
+    // here — this avoids the two handlers racing over the same state.
+    if (numericText.length === 0) {
+      return;
+    }
+
+    // On some Android devices/keyboards, typing quickly can make onChangeText
+    // fire with the previous digit + the new digit concatenated (e.g. "69"
+    // instead of just "9"). Treat it as a normal single keystroke for THIS
+    // box only, using the most recently typed digit.
+    const singleDigit = numericText.slice(-1);
+
+    const newOtp = [...otpRef.current];
+    newOtp[index] = singleDigit;
+    syncOtp(newOtp);
 
     // Auto-advance to next input if digit entered
-    if (numericText && index < OTP_LENGTH - 1) {
+    if (index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // If backspace is pressed on an empty box, move focus to previous box
-    if (e.nativeEvent.key === "Backspace") {
-      if (otp[index] === "" && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-        const newOtp = [...otp];
-        newOtp[index - 1] = "";
-        setOtp(newOtp);
-      }
+    if (e.nativeEvent.key !== "Backspace") return;
+
+    // Always read the ref, never the `otp` state closure, so this logic is
+    // correct regardless of whether the platform fires onChangeText or
+    // onKeyPress first for this same backspace press.
+    const current = otpRef.current;
+
+    if (current[index] !== "") {
+      // This box has a digit: this backspace press just clears it, cursor
+      // stays put. (Matches what onChangeText would have reported too.)
+      const newOtp = [...current];
+      newOtp[index] = "";
+      syncOtp(newOtp);
+    } else if (index > 0) {
+      // This box was already empty before this press: step back one box
+      // and clear that digit too, all in one backspace press.
+      const newOtp = [...current];
+      newOtp[index - 1] = "";
+      syncOtp(newOtp);
+      inputRefs.current[index - 1]?.focus();
     }
   };
 
   const clearOtpInputs = () => {
-    setOtp(new Array(OTP_LENGTH).fill(""));
+    syncOtp(new Array(OTP_LENGTH).fill(""));
     inputRefs.current[0]?.focus();
   };
 
@@ -270,7 +299,19 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       const errMsg =
         error.response?.data?.message || error.message || "Verification failed";
       setModalTitle("Error!");
-      setModalMessage(errMsg);
+
+      if (errMsg.toLowerCase().includes("expired")) {
+        setModalMessage(
+          <View className="items-center mb-2">
+            <Text className="text-center text-[#4E4E4E] text-sm leading-5">
+              The OTP has expired.{"\n"}Please request a new one.
+            </Text>
+          </View>
+        );
+      } else {
+        setModalMessage(errMsg);
+      }
+
       setModalType("error");
       setShowRetryButton(true);
       setModalVisible(true);
