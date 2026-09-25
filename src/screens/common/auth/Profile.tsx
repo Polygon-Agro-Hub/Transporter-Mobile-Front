@@ -1,0 +1,831 @@
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Modal,
+  BackHandler,
+} from "react-native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "@/types/types";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import CustomHeader from "@/component/common/CustomHeader";
+import { useSelector, useDispatch } from "react-redux";
+import { AlertModal } from "@/component/common/AlertModal";
+import {
+  selectAuthToken,
+  logoutUser,
+  updateProfileImage,
+  selectJobRole,
+} from "@/store/authSlice";
+import { ROLES } from "@/constants/user-roles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import environment from "@/environment/environment";
+import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+import { RefreshControl } from "react-native";
+import LoadingPage from "@/component/common/LoadingPage";
+import LottieView from "lottie-react-native";
+import { useFocusEffect } from "@react-navigation/native";
+
+type ProfileScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  "Profile"
+>;
+
+interface ProfileScreenProps {
+  navigation: ProfileScreenNavigationProp;
+}
+
+interface EarningsData {
+  todayDate: string;
+  totalEarnings: number;
+  cashEarnings: number;
+  cashOrders: number;
+  cardEarnings: number;
+  cardOrders: number;
+}
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
+  const [profileData, setProfileData] = useState<any>(null);
+  const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [showAuthErrorModal, setShowAuthErrorModal] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState("");
+
+  const token = useSelector(selectAuthToken);
+  const jobRole = useSelector(selectJobRole);
+  const dispatch = useDispatch();
+
+  const formatJoinedDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const month = monthNames[date.getMonth()];
+      const day = date.getDate();
+      const year = date.getFullYear();
+      return `${month} ${day}, ${year}`;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "";
+    }
+  };
+
+  const formatEarningsDate = (dateString: string) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    } catch (error) {
+      return "";
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileData();
+    fetchEarningsData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    if (!token) {
+      setError("No authentication token found");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `${environment.API_BASE_URL}api/auth/get-profile`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setProfileData(data.data);
+      } else {
+        const errorMessage = data.message || "Failed to fetch profile data";
+
+        if (
+          response.status === 404 ||
+          errorMessage.includes("User not found") ||
+          errorMessage.includes("account not approved")
+        ) {
+          await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
+          dispatch(logoutUser());
+
+          setError("Account not found or not approved");
+
+          setAuthErrorMessage(
+            "Your account is not found or not approved. Redirecting to login...",
+          );
+          setShowAuthErrorModal(true);
+
+          setTimeout(() => {
+            setShowAuthErrorModal(false);
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          }, 3000);
+
+          return;
+        }
+
+        setError(errorMessage);
+      }
+    } catch (error: unknown) {
+      console.error("Error fetching profile:", error);
+
+      const isErrorWithMessage = (
+        err: unknown,
+      ): err is { message?: string } => {
+        return typeof err === "object" && err !== null;
+      };
+
+      let errorMessage = "Network error. Please try again.";
+
+      if (isErrorWithMessage(error)) {
+        errorMessage = error.message || errorMessage;
+
+        if (
+          errorMessage.includes("Network") ||
+          errorMessage.includes("Failed to fetch")
+        ) {
+          try {
+            await AsyncStorage.multiRemove([
+              "token",
+              "refreshToken",
+              "userData",
+            ]);
+            dispatch(logoutUser());
+          } catch (storageError) {
+            console.error("Error clearing storage:", storageError);
+          }
+        }
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchEarningsData = async (dateFilter?: string) => {
+    if (!token || jobRole === ROLES.HEAVY_WEIGHT_DRIVER) return;
+
+    try {
+      const url = dateFilter
+        ? `${environment.API_BASE_URL}api/auth/get-earnings?date=${dateFilter}`
+        : `${environment.API_BASE_URL}api/auth/get-earnings`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEarningsData(data.data);
+      } else {
+        setEarningsData({
+          todayDate: new Date().toISOString(),
+          totalEarnings: 0,
+          cashEarnings: 0,
+          cashOrders: 0,
+          cardEarnings: 0,
+          cardOrders: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching earnings:", error);
+      setEarningsData({
+        todayDate: new Date().toISOString(),
+        totalEarnings: 0,
+        cashEarnings: 0,
+        cashOrders: 0,
+        cardEarnings: 0,
+        cardOrders: 0,
+      });
+    }
+  };
+
+  const handleFilterByDate = () => {
+    navigation.navigate("MyEarnings" as any);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchProfileData(), fetchEarningsData()]);
+    setRefreshing(false);
+  };
+
+  const formatCurrency = (value: number) => {
+    return (value ?? 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const handleAuthErrorModalClose = () => {
+    setShowAuthErrorModal(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  };
+
+  const openImagePicker = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        uploadProfileImage(selectedImage);
+      }
+    } catch (error) {
+      console.error("Image picker error:", error);
+      setModalMessage("Failed to open image picker");
+      setShowErrorModal(true);
+    }
+  };
+
+  const handleProfileImagePress = async () => {
+    await openImagePicker();
+  };
+
+  const handleImageUpload = handleProfileImagePress;
+  const handleImageUploadAndroidPicker = handleProfileImagePress;
+
+  const uploadProfileImage = async (
+    selectedImage: ImagePicker.ImagePickerAsset,
+  ) => {
+    if (!token) {
+      setModalMessage("Authentication required");
+      setShowErrorModal(true);
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+
+      const uriParts = selectedImage.uri.split("/");
+      const filename = uriParts[uriParts.length - 1];
+
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+
+      formData.append("profileImage", {
+        uri: selectedImage.uri,
+        name: filename,
+        type: type,
+      } as any);
+
+      const response = await axios.post(
+        `${environment.API_BASE_URL}api/auth/update-profile-image`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 30000,
+        },
+      );
+
+      if (response.data.success) {
+        const newImageUrl = response.data.data.imageUrl;
+
+        setProfileData((prev: any) => ({
+          ...prev,
+          image: newImageUrl,
+        }));
+
+        dispatch(updateProfileImage(newImageUrl));
+
+        setModalMessage("Your profile picture has been updated successfully!");
+        setShowSuccessModal(true);
+      } else {
+        setModalMessage(response.data.message || "Upload failed");
+        setShowErrorModal(true);
+      }
+    } catch (error: any) {
+      console.error("Upload error details:", error);
+
+      let errorMessage = "Failed to upload image";
+
+      if (error.response) {
+        if (error.response.status === 404) {
+          errorMessage =
+            "Update profile endpoint not found. Please check the backend route.";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        errorMessage = "No response from server. Please check your connection.";
+      } else {
+        errorMessage = error.message || "Unknown error occurred";
+      }
+
+      setModalMessage(errorMessage);
+      setShowErrorModal(true);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(true);
+  };
+
+  const performLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(["token", "refreshToken", "userData"]);
+      dispatch(logoutUser());
+      setShowLogoutModal(false);
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      setModalMessage("Failed to logout. Please try again.");
+      setShowErrorModal(true);
+    }
+  };
+
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      const currentRole = jobRole || profileData?.jobRole;
+      if (currentRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+        navigation.navigate("HeavyDriverHome");
+      } else {
+        navigation.navigate("Home");
+      }
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
+      return () => backHandler.remove();
+    }, [navigation, jobRole, profileData?.jobRole]),
+  );
+
+  const formatPhoneNumber = (phoneCode: string, phoneNumber: string) => {
+    if (!phoneCode && !phoneNumber) return "Not available";
+    return `${phoneCode || ""} ${phoneNumber || ""}`.trim();
+  };
+
+  const InfoRow = ({
+    icon,
+    iconSet = "material",
+    value,
+    isLast = false,
+  }: {
+    icon: string;
+    iconSet?: "material" | "community";
+    value: string;
+    isLast?: boolean;
+  }) => (
+    <View>
+      <View className="flex-row items-center py-4 px-4">
+        <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center mr-3">
+          {iconSet === "material" ? (
+            <MaterialIcons name={icon as any} size={18} color="#000000" />
+          ) : (
+            <FontAwesome5 name={icon as any} size={18} color="#000000" />
+          )}
+        </View>
+        <Text
+          className="text-black text-sm font-medium flex-1"
+          numberOfLines={1}
+        >
+          {value || "Not available"}
+        </Text>
+      </View>
+      {!isLast && <View className="h-[1px] bg-[#F0F0F0] mx-4" />}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="My Profile"
+          showBackButton={true}
+          showLanguageSelector={false}
+          showLogoutButton={true}
+          navigation={navigation}
+          onBackPress={handleBackPress}
+          onLogoutPress={handleLogoutConfirm}
+        />
+        <LoadingPage message="Loading Profile..." fullScreen={true} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-white justify-center items-center px-6">
+        <Text className="text-red-500 text-center mb-4">{error}</Text>
+
+        {/* Show retry button only if it's not an auth error */}
+        {!error.includes("Account not found") &&
+        !error.includes("No authentication token") ? (
+          <TouchableOpacity
+            onPress={fetchProfileData}
+            className="bg-[#FFC83D] px-6 py-3 rounded-full"
+          >
+            <Text className="font-semibold">Retry</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => {
+              AsyncStorage.multiRemove(["token", "refreshToken", "userData"])
+                .then(() => {
+                  dispatch(logoutUser());
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Login" }],
+                  });
+                })
+                .catch(() => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Login" }],
+                  });
+                });
+            }}
+            className="bg-[#FFC83D] px-6 py-3 rounded-full"
+          >
+            <Text className="font-semibold">Go to Login</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-white">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <CustomHeader
+          title="My Profile"
+          showBackButton={true}
+          showLanguageSelector={false}
+          showLogoutButton={true}
+          navigation={navigation}
+          onBackPress={handleBackPress}
+          onLogoutPress={handleLogoutConfirm}
+        />
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#FFC83D"]}
+              tintColor="#FFC83D"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Avatar + joined date */}
+          <View className="items-center mt-2">
+            <View style={{ position: "relative" }}>
+              {uploading ? (
+                <View className="w-32 h-32 rounded-full border-2 border-[#FFC83D] justify-center items-center bg-[#f3f3f3]">
+                  <ActivityIndicator size="large" color="#FFC83D" />
+                  <Text className="text-xs text-gray-500 mt-2">
+                    Uploading...
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={uploading}
+                  onPress={handleProfileImagePress}
+                >
+                  <Image
+                    source={
+                      profileData?.image
+                        ? { uri: profileData.image }
+                        : require("@/assets/images/home/profile.webp")
+                    }
+                    className="w-32 h-32 rounded-full border-2 border-[#FFC83D]"
+                  />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={handleProfileImagePress}
+                disabled={uploading}
+                style={{
+                  position: "absolute",
+                  bottom: 5,
+                  right: 5,
+                  backgroundColor: "#000",
+                  padding: 6,
+                  borderRadius: 20,
+                }}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={uploading ? "loading" : "pencil"}
+                  size={24}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {profileData?.createdAt && (
+              <Text className="text-md font-bold text-black mt-2 italic">
+                Joined {formatJoinedDate(profileData.createdAt)}
+              </Text>
+            )}
+          </View>
+
+          {/* Earnings card & info note - Only for Light Weight Driver */}
+          {jobRole !== ROLES.HEAVY_WEIGHT_DRIVER && (
+            <>
+              <View
+                className="mx-4 mt-6 bg-white rounded-2xl border border-[#FFFFFF] p-4 "
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
+              >
+                <View className="flex-row justify-between items-center mb-3">
+                  <View className="flex-row items-center">
+                    <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F3F3F3]">
+                      <FontAwesome5 name="wallet" size={18} color="#000" />
+                    </View>
+                    <Text className="text-black font-bold text-base ml-2">
+                      My Earnings
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleFilterByDate}
+                    className="flex-row items-center"
+                    activeOpacity={0.7}
+                  >
+                    <Text className="text-[#0122F5] font-medium mr-2 text-sm">
+                      Filter By Date
+                    </Text>
+                    <FontAwesome6
+                      name="arrow-up-right-from-square"
+                      size={14}
+                      color="#0122F5"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View className="bg-[#FFF8E6] rounded-xl px-4 py-3 mb-4">
+                  <Text className="text-[#000000] text-xs mb-1">
+                    Today's Earnings{"  |  "}
+                    {formatEarningsDate(
+                      earningsData?.todayDate || new Date().toISOString(),
+                    )}
+                  </Text>
+                  <Text className="text-black font-bold text-xl">
+                    Rs. {formatCurrency(earningsData?.totalEarnings ?? 0)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Info note */}
+              <View className="flex-row items-start mx-4 mt-3">
+                <FontAwesome6
+                  name="circle-info"
+                  size={14}
+                  color="#5A6580"
+                  style={{ marginTop: 2, marginRight: 4 }}
+                />
+                <Text className="text-[#5A6580] text-xs flex-1">
+                  Card payment order earnings will be transferred within 7 days
+                  after the delivered date.
+                </Text>
+              </View>
+            </>
+          )}
+
+          {/* Details list card */}
+          <View
+            className="mx-4 mt-4 mb-8 bg-white rounded-2xl border border-[#FFFFFF] "
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          >
+            <InfoRow
+              icon="person"
+              value={
+                profileData
+                  ? `${profileData.firstNameEnglish || ""} ${
+                      profileData.lastNameEnglish || ""
+                    }`.trim()
+                  : "Not available"
+              }
+            />
+            <InfoRow
+              icon="id-badge"
+              iconSet="community"
+              value={profileData?.empId || "Not available"}
+            />
+            <InfoRow
+              icon="phone"
+              value={formatPhoneNumber(
+                profileData?.phoneCode01,
+                profileData?.phoneNumber01,
+              )}
+            />
+            <InfoRow
+              icon="shield-alt"
+              iconSet="community"
+              value={profileData?.nic || "Not available"}
+            />
+            <InfoRow
+              icon="truck"
+              iconSet="community"
+              value={profileData?.vType || "Not available"}
+            />
+            <InfoRow
+              icon="sticky-note-2"
+              iconSet="material"
+              value={profileData?.vRegNo || "Not available"}
+              isLast
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Authentication Error Alert Modal */}
+      <AlertModal
+        visible={showAuthErrorModal}
+        title="Session Expired"
+        message={authErrorMessage}
+        type="error"
+        onClose={handleAuthErrorModalClose}
+        autoClose={true}
+        duration={4000}
+      />
+
+      {/* Success Alert Modal */}
+      <AlertModal
+        visible={showSuccessModal}
+        title="Success!"
+        message={modalMessage}
+        type="success"
+        onClose={() => setShowSuccessModal(false)}
+        autoClose={true}
+        duration={3000}
+      />
+
+      {/* Error Alert Modal */}
+      <AlertModal
+        visible={showErrorModal}
+        title="Error"
+        message={modalMessage}
+        type="error"
+        onClose={() => setShowErrorModal(false)}
+        autoClose={true}
+        duration={4000}
+      />
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <Text className="text-black font-semibold text-center mb-6">
+              Are you sure you want to logout?
+            </Text>
+
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                onPress={() => setShowLogoutModal(false)}
+                className="flex flex-row mr-2 py-3 px-4 rounded-full bg-[#DFE5F2] w-[48%] justify-center items-center"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
+              >
+                <MaterialIcons name="close" size={20} color="black" />
+                <Text className="text-center font-medium ml-2">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={performLogout}
+                className="flex flex-row ml-2 py-3 px-4 bg-[#FF0000] rounded-full w-[48%] justify-center items-center"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
+              >
+                <MaterialIcons name="logout" size={20} color="white" />
+                <Text className="text-center font-medium text-white ml-2">
+                  Logout
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+export default ProfileScreen;

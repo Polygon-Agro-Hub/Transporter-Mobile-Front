@@ -1,43 +1,20 @@
 import { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
 import { Alert, BackHandler, Text, TextInput, StatusBar } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector, useDispatch } from "react-redux";
 import { navigationRef } from "../navigationRef";
 import { LogBox } from "react-native";
-import { RootStackParamList } from "@/types/types";
 import store from "@/services/store";
 import { selectAuthToken, selectEmpId, logoutUser } from "@/store/authSlice";
-import { environment } from "@/environment/environment";
+import environment from "@/environment/environment";
 import NetInfo from "@react-native-community/netinfo";
-import Splash from "@/component/common/Splash";
-import ComplaintsList from "@/component/complaints/ComplaintsList";
-import AddComplaint from "@/component/complaints/AddComplaint";
-import LoginScreen from "@/component/auth/LoginScreen";
-import ChangePassword from "@/component/auth/ChangePassword";
-import BannedScreen from "@/component/auth/BannedScreen";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ReturnOrders from "@/component/orders/ReturnOrders";
-import AssignOrderQR from "@/component/qr/AssignOrderQR";
-import Jobs from "@/component/orders/Jobs";
-import OrderDetails from "@/component/orders/OrderDetails";
-import EndJourneyConfirmation from "@/component/orders/EndJourneyConfirmation";
-import SignatureScreen from "@/component/orders/SignatureScreen";
-import DeliverySuccessful from "@/component/orders/DeliverySuccessful";
-import OrderReturn from "@/component/orders/OrderReturn";
-import HoldOrder from "@/component/orders/HoldOrder";
-import ReturnOrderQR from "@/component/qr/ReturnOrderQR";
-import Home from "@/component/home/Home";
-import ProfileScreen from "@/component/auth/Profile";
-import OrderDetailsLoadingScreen from "@/component/orders/OrderDetailsLoadingScreen";
-import MyEarnings from "@/component/auth/MyEarnings";
-import CashHandOver from "@/component/receivedcash/CashHandOver";
-import UploadBankTransferSlip from "@/component/receivedcash/UploadBankTransferSlip";
-import BankTransferSlipStatus from "@/component/receivedcash/BankTransferSlipStatus";
 import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
+import RootStackNavigator from "@/routes/Routes";
+import { AppUpdateProvider } from "@/features/app-update";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -52,8 +29,7 @@ LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
   allowFontScaling: false,
 };
 
-const Stack = createStackNavigator<RootStackParamList>();
-
+// AppContent component handles the main application logic, including navigation, authentication checks, and network status monitoring.
 function AppContent() {
   const [isOfflineAlertShown, setIsOfflineAlertShown] = useState(false);
   const token = useSelector(selectAuthToken);
@@ -167,7 +143,7 @@ function AppContent() {
 
       const currentRouteName = (navigationRef.getCurrentRoute() as any)?.name ?? "";
 
-      if (currentRouteName === "Home") {
+      if (currentRouteName === "Home" || currentRouteName === "HeavyDriverHome") {
         BackHandler.exitApp();
         return true;
       } else if (navigationRef.canGoBack()) {
@@ -249,41 +225,34 @@ function AppContent() {
     };
   }, []);
 
+  const [currentRoute, setCurrentRoute] = useState<string>("Splash");
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView
+        edges={
+          currentRoute === "Splash"
+            ? []
+            : ["top", "bottom", "left", "right"]
+        }
         style={{
           flex: 1,
           backgroundColor: "#fff",
         }}
       >
         <StatusBar backgroundColor="#fff" barStyle="dark-content" />
-        <NavigationContainer ref={navigationRef}>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Splash" component={Splash} />
-            <Stack.Screen name="Home" component={Home} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="ComplaintsList" component={ComplaintsList} />
-            <Stack.Screen name="AddComplaint" component={AddComplaint} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ChangePassword" component={ChangePassword} />
-            <Stack.Screen name="BannedScreen" component={BannedScreen as any} />
-            <Stack.Screen name="ReturnOrders" component={ReturnOrders} />
-            <Stack.Screen name="AssignOrderQR" component={AssignOrderQR} />
-            <Stack.Screen name="ReturnOrderQR" component={ReturnOrderQR} />
-            <Stack.Screen name="Jobs" component={Jobs} />
-            <Stack.Screen name="OrderDetails" component={OrderDetails} />
-            <Stack.Screen name="EndJourneyConfirmation" component={EndJourneyConfirmation} />
-            <Stack.Screen name="SignatureScreen" component={SignatureScreen} />
-            <Stack.Screen name="DeliverySuccessful" component={DeliverySuccessful} />
-            <Stack.Screen name="OrderReturn" component={OrderReturn} />
-            <Stack.Screen name="HoldOrder" component={HoldOrder} />
-            <Stack.Screen name="MyEarnings" component={MyEarnings} />
-            <Stack.Screen name="CashHandOver" component={CashHandOver} />
-            <Stack.Screen name="UploadBankTransferSlip" component={UploadBankTransferSlip} />
-            <Stack.Screen name="BankTransferSlipStatus" component={BankTransferSlipStatus} />
-            <Stack.Screen name="OrderDetailsLoadingScreen" component={OrderDetailsLoadingScreen} />
-          </Stack.Navigator>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            const routeName = navigationRef.getCurrentRoute()?.name;
+            if (routeName) setCurrentRoute(routeName);
+          }}
+          onStateChange={() => {
+            const routeName = navigationRef.getCurrentRoute()?.name;
+            if (routeName) setCurrentRoute(routeName);
+          }}
+        >
+          <RootStackNavigator />
         </NavigationContainer>
       </SafeAreaView>
     </GestureHandlerRootView>
@@ -294,8 +263,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
-        <AppContent />
+        <AppUpdateProvider>
+          <AppContent />
+        </AppUpdateProvider>
       </Provider>
     </SafeAreaProvider>
   );
 }
+
