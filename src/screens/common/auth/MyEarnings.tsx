@@ -234,13 +234,17 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
   };
 
   const handleBackPress = () => {
-    navigation.navigate("Profile");
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("Profile");
+    }
   };
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.navigate("Profile");
+        handleBackPress();
         return true;
       };
 
