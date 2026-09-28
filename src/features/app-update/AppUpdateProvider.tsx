@@ -31,6 +31,7 @@ import { UpdatePrompt } from './UpdatePrompt';
 import {
   decideUpdate,
   fetchUpdatePolicy,
+  type UpdatePolicy,
   type UpdateDecision,
   type UpdateMessages,
 } from './updatePolicy';
@@ -62,6 +63,54 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
   // Track whether a check is already running to avoid concurrent fetches.
   const isChecking = useRef(false);
 
+  // ── Apply policy helper ───────────────────────────────────────────────────
+  const applyPolicy = useCallback(async (policy: UpdatePolicy | null) => {
+    if (!policy) return;
+
+    const platform = getPlatform();
+    const installedVersion = getInstalledVersion();
+    const osVersion = getOsVersion();
+
+    if (__DEV__) {
+      console.log('[AppUpdate] 📱 Platform:', platform, '| Installed Version:', installedVersion);
+      console.log('[AppUpdate] 📋 Policy Rules:', policy[platform]);
+    }
+
+    const result = decideUpdate({
+      policy,
+      platform,
+      installedVersion,
+      osVersion,
+    });
+
+    if (__DEV__) {
+      console.log('[AppUpdate] 🎯 Decision:', result);
+    }
+
+    // No update needed.
+    if (result.kind === 'none') {
+      setPromptVisible(false);
+      setDecision(result);
+      return;
+    }
+
+    // Soft update: respect the "Update Later" snooze.
+    if (result.kind === 'soft') {
+      const snoozed = await isSnoozed(result.latestVersion);
+      if (snoozed) {
+        if (__DEV__) {
+          console.log('[AppUpdate] ⏱️ Version', result.latestVersion, 'is currently snoozed.');
+        }
+        return;
+      }
+    }
+
+    // Show the prompt.
+    setMessages(policy.messages);
+    setDecision(result);
+    setPromptVisible(true);
+  }, []);
+
   // ── Core check logic ──────────────────────────────────────────────────────
   const checkForUpdate = useCallback(async () => {
     if (isChecking.current) return;
@@ -83,48 +132,7 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
         return;
       }
 
-      const platform = getPlatform();
-      const installedVersion = getInstalledVersion();
-      const osVersion = getOsVersion();
-
-      if (__DEV__) {
-        console.log('[AppUpdate] 📱 Platform:', platform, '| Installed Version:', installedVersion);
-        console.log('[AppUpdate] 📋 Policy Rules:', policy[platform]);
-      }
-
-      const result = decideUpdate({
-        policy,
-        platform,
-        installedVersion,
-        osVersion,
-      });
-
-      if (__DEV__) {
-        console.log('[AppUpdate] 🎯 Decision:', result);
-      }
-
-      // No update needed.
-      if (result.kind === 'none') {
-        setPromptVisible(false);
-        setDecision(result);
-        return;
-      }
-
-      // Soft update: respect the "Update Later" snooze.
-      if (result.kind === 'soft') {
-        const snoozed = await isSnoozed(result.latestVersion);
-        if (snoozed) {
-          if (__DEV__) {
-            console.log('[AppUpdate] ⏱️ Version', result.latestVersion, 'is currently snoozed.');
-          }
-          return;
-        }
-      }
-
-      // Show the prompt.
-      setMessages(policy.messages);
-      setDecision(result);
-      setPromptVisible(true);
+      await applyPolicy(policy);
     } catch (error) {
       if (__DEV__) {
         console.error('[AppUpdate] ❌ Error in checkForUpdate:', error);
@@ -132,23 +140,21 @@ export function AppUpdateProvider({ children }: AppUpdateProviderProps) {
     } finally {
       isChecking.current = false;
     }
-  }, []);
+  }, [applyPolicy]);
 
-  // ── Check on mount (app launch) ───────────────────────────────────────────
+  // ── Check on mount (app launch) & on foreground resume ──────────────────
   useEffect(() => {
     checkForUpdate();
-  }, [checkForUpdate]);
 
-  // ── Check when app returns to foreground ──────────────────────────────────
-  useEffect(() => {
-    const handleAppStateChange = (nextState: AppStateStatus) => {
-      if (nextState === 'active') {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
         checkForUpdate();
       }
-    };
+    });
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+    };
   }, [checkForUpdate]);
 
   // ── Button handlers ──────────────────────────────────────────────────────

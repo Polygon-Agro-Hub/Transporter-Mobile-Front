@@ -21,8 +21,9 @@ export type RootStackParamList = {
   Login: undefined;
   ChangePassword: { passwordUpdated: number };
   BannedScreen: {
-    statusType: string;
-    message: string;
+    status?: string;
+    statusType?: string;
+    message?: string;
   };
   Profile: undefined;
   ReturnOrders: undefined;

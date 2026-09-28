@@ -13,6 +13,7 @@ import { RootStackParamList } from "@/types/types";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import LottieView from "lottie-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { OFFICER_STATUS } from "@/constants/officer-status";
 
 type BannedScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -28,7 +29,18 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
   route,
   navigation,
 }) => {
-  const { statusType, message } = route.params || {};
+  const { status, statusType, message } = (route.params || {}) as {
+    status?: string;
+    statusType?: string;
+    message?: string;
+  };
+  const normalizedStatus =
+    status ||
+    (statusType === "rejected"
+      ? OFFICER_STATUS.REJECTED
+      : statusType === "not_approved"
+      ? OFFICER_STATUS.NOT_APPROVED
+      : statusType);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,15 +75,12 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
   let title = "Access Denied";
   let description = "Your account has been rejected or is not approved.";
 
-  if (statusType === "rejected") {
+  if (normalizedStatus === OFFICER_STATUS.REJECTED) {
     title = "Account Rejected";
     description = "Your account approval has been revoked by the administrator.";
-  } else if (statusType === "not_approved") {
+  } else if (normalizedStatus === OFFICER_STATUS.NOT_APPROVED) {
     title = "Account Not Approved";
     description = "Your account approval has been revoked by the administrator.";
-  } else if (statusType === "pending") {
-    title = "Pending Verification";
-    description = "Your account status is pending verification.";
   }
 
   if (message) {

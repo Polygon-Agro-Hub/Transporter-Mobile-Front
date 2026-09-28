@@ -418,15 +418,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleBackPress = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
+    const currentRole = jobRole || profileData?.jobRole;
+    if (currentRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.navigate("HeavyDriverHome");
     } else {
-      const currentRole = jobRole || profileData?.jobRole;
-      if (currentRole === ROLES.HEAVY_WEIGHT_DRIVER) {
-        navigation.navigate("HeavyDriverHome");
-      } else {
-        navigation.navigate("Home");
-      }
+      navigation.navigate("Home");
     }
   };
 

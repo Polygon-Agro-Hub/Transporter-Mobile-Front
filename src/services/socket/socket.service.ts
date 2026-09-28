@@ -15,16 +15,24 @@ export interface LoadDeliveredData {
   [key: string]: any;
 }
 
+export interface AccountStatusData {
+  status: string;
+  statusType?: string;
+  message?: string;
+  [key: string]: any;
+}
+
 type LoadDeliveredCallback = (data: LoadDeliveredData) => void;
-type GenericCallback = (data: any) => void;
+type AccountStatusCallback = (data: AccountStatusData) => void;
 
 class SocketService {
   private socket: Socket | null = null;
   private loadDeliveredListeners: Set<LoadDeliveredCallback> = new Set();
-  private notificationListeners: Set<GenericCallback> = new Set();
+  private accountStatusListeners: Set<AccountStatusCallback> = new Set();
   private isConnecting: boolean = false;
   private activeLoadRooms: Set<string> = new Set();
   private currentUserId: number | null = null;
+  private currentEmpId: string | null = null;
 
   /**
    * Connect to backend Socket.IO server with JWT authentication.
@@ -86,13 +94,14 @@ class SocketService {
         });
       });
 
-      this.socket?.on("new_notification", (data: any) => {
-        console.log("📢 [SocketService] Received new_notification:", data?.title || data?.id);
-        this.notificationListeners.forEach((listener) => {
+
+      this.socket?.on("account_status_changed", (data: AccountStatusData) => {
+        console.log("📢 [SocketService] Received account_status_changed:", data);
+        this.accountStatusListeners.forEach((listener) => {
           try {
             listener(data);
           } catch (e) {
-            console.error("[SocketService] Notification listener error:", e);
+            console.error("[SocketService] Account status listener error:", e);
           }
         });
       });
@@ -155,25 +164,52 @@ class SocketService {
     };
   }
 
+
   /**
-   * Subscribe to general notifications
+   * Subscribe to account status changes (e.g. Banned / Rejected / Not Approved)
    */
-  onNotification(callback: GenericCallback): () => void {
-    this.notificationListeners.add(callback);
+  onAccountStatusChanged(callback: AccountStatusCallback): () => void {
+    this.accountStatusListeners.add(callback);
     return () => {
-      this.notificationListeners.delete(callback);
+      this.accountStatusListeners.delete(callback);
     };
   }
 
   /**
    * Register user with socket room upon login
    */
-  async registerUser(userId: number) {
-    this.currentUserId = userId;
+  async registerUser(userId?: number, empId?: string) {
+    if (userId) this.currentUserId = userId;
+    if (empId) this.currentEmpId = empId;
     if (!this.socket?.connected) {
       await this.connect();
     } else {
       this.syncUserRegistration();
+    }
+  }
+
+  /**
+   * Register driver by Employee ID
+   */
+  async registerEmpId(empId: string) {
+    if (empId) this.currentEmpId = empId;
+    if (!this.socket?.connected) {
+      await this.connect();
+    } else {
+      this.syncUserRegistration();
+    }
+  }
+
+  /**
+   * Request status verification over the open WebSocket connection.
+   * Lightweight frame that triggers DB status check without making REST/HTTP calls.
+   */
+  verifyStatus() {
+    if (this.socket?.connected) {
+      this.socket.emit("verify_status", {
+        userId: this.currentUserId || undefined,
+        empId: this.currentEmpId || undefined,
+      });
     }
   }
 
@@ -182,19 +218,25 @@ class SocketService {
     try {
       const token = (await AsyncStorage.getItem("token")) || "";
       const userProfileStr = await AsyncStorage.getItem("userProfile");
+      const storedEmpId = await AsyncStorage.getItem("empid");
       let userId = this.currentUserId;
+      let empId = this.currentEmpId || storedEmpId;
 
       if (!userId && userProfileStr) {
         try {
           const userProfile = JSON.parse(userProfileStr);
           userId = userProfile.id;
+          if (!empId && userProfile.empId) {
+            empId = userProfile.empId;
+          }
         } catch (_) {}
       }
 
-      if (userId) {
-        console.log(`👤 [SocketService] Registering user ID ${userId} in socket room...`);
+      if (userId || empId) {
+        console.log(`👤 [SocketService] Registering user in socket room (userId: ${userId}, empId: ${empId})...`);
         this.socket.emit("register_user", {
-          userId: Number(userId),
+          userId: userId ? Number(userId) : undefined,
+          empId: empId || undefined,
           token: token || undefined,
         });
       }

@@ -21,6 +21,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
+import { OFFICER_STATUS } from "@/constants/officer-status";
 import { AlertModal } from "@/component/common/AlertModal";
 
 type LoginScreenNavigationProp = StackNavigationProp<
@@ -188,15 +189,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
         const message = data.message?.toLowerCase() || "";
         const statusCode = response.status;
-        const statusType = data.statusType;
+        const status = data.status;
 
         if (
-          statusType === "rejected" ||
-          statusType === "not_approved" ||
-          statusType === "pending"
+          status === OFFICER_STATUS.REJECTED ||
+          status === OFFICER_STATUS.NOT_APPROVED ||
+          statusCode === 403
         ) {
+          const exactStatus =
+            status === OFFICER_STATUS.REJECTED
+              ? OFFICER_STATUS.REJECTED
+              : OFFICER_STATUS.NOT_APPROVED;
           navigation.navigate("BannedScreen", {
-            statusType,
+            status: exactStatus,
+            statusType: exactStatus,
             message: data.message,
           });
           return;
