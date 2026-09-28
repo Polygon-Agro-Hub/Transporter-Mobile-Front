@@ -23,13 +23,11 @@ export interface AccountStatusData {
 }
 
 type LoadDeliveredCallback = (data: LoadDeliveredData) => void;
-type GenericCallback = (data: any) => void;
 type AccountStatusCallback = (data: AccountStatusData) => void;
 
 class SocketService {
   private socket: Socket | null = null;
   private loadDeliveredListeners: Set<LoadDeliveredCallback> = new Set();
-  private notificationListeners: Set<GenericCallback> = new Set();
   private accountStatusListeners: Set<AccountStatusCallback> = new Set();
   private isConnecting: boolean = false;
   private activeLoadRooms: Set<string> = new Set();
@@ -96,16 +94,6 @@ class SocketService {
         });
       });
 
-      this.socket?.on("new_notification", (data: any) => {
-        console.log("📢 [SocketService] Received new_notification:", data?.title || data?.id);
-        this.notificationListeners.forEach((listener) => {
-          try {
-            listener(data);
-          } catch (e) {
-            console.error("[SocketService] Notification listener error:", e);
-          }
-        });
-      });
 
       this.socket?.on("account_status_changed", (data: AccountStatusData) => {
         console.log("📢 [SocketService] Received account_status_changed:", data);
@@ -176,15 +164,6 @@ class SocketService {
     };
   }
 
-  /**
-   * Subscribe to general notifications
-   */
-  onNotification(callback: GenericCallback): () => void {
-    this.notificationListeners.add(callback);
-    return () => {
-      this.notificationListeners.delete(callback);
-    };
-  }
 
   /**
    * Subscribe to account status changes (e.g. Banned / Rejected / Not Approved)

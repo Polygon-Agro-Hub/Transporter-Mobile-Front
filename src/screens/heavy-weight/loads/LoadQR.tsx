@@ -64,14 +64,13 @@ const LoadQR: React.FC<LoadQRProps> = ({ navigation, route }) => {
   // Initialize Socket connection and real-time listening
   useEffect(() => {
     let isMounted = true;
-    let pollInterval: any = null;
 
-    const setupSocketAndPolling = async () => {
+    const setupSocket = async () => {
       // Connect to socket and join specific load room
       await socketService.connect();
       await socketService.joinLoadRoom(loadCode);
 
-      // Listen for socket load_delivered event
+      // Listen for real-time socket load_delivered event
       const unsubscribe = socketService.onLoadDelivered((data: LoadDeliveredData) => {
         const targetCode = data.transferCode || data.loadCode;
         if (targetCode === loadCode) {
@@ -82,13 +81,10 @@ const LoadQR: React.FC<LoadQRProps> = ({ navigation, route }) => {
         }
       });
 
-      // Poll database status check as fallback
-      const checkStatus = async () => {
-        if (isDeliveredRef.current) return;
-        try {
-          const token = await AsyncStorage.getItem("token");
-          if (!token) return;
-
+      // One-time status check on mount in case it was already scanned before opening
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token && !isDeliveredRef.current) {
           const response = await axios.get(
             `${environment.API_BASE_URL}api/load/check-status?transferCode=${encodeURIComponent(loadCode)}`,
             {
@@ -103,30 +99,25 @@ const LoadQR: React.FC<LoadQRProps> = ({ navigation, route }) => {
             response.data.status === "success" &&
             response.data.data?.isDelivered
           ) {
-            console.log("📦 [LoadQR] Load status verified as delivered:", loadCode);
+            console.log("📦 [LoadQR] Load status verified as delivered on mount:", loadCode);
             if (isMounted) {
               handleDelivered();
             }
           }
-        } catch (err) {
-          // Silent catch during periodic status checks
         }
-      };
-
-      // Run initial check and set interval
-      checkStatus();
-      pollInterval = setInterval(checkStatus, 3500);
+      } catch (err) {
+        // Silent catch during initial mount status check
+      }
 
       return () => {
         unsubscribe();
       };
     };
 
-    let cleanupPromise = setupSocketAndPolling();
+    let cleanupPromise = setupSocket();
 
     return () => {
       isMounted = false;
-      if (pollInterval) clearInterval(pollInterval);
       socketService.leaveLoadRoom(loadCode);
       cleanupPromise.then((cleanup) => {
         if (typeof cleanup === "function") cleanup();
