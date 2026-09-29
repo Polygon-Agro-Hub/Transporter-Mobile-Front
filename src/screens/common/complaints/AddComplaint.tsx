@@ -137,10 +137,18 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
     }
   };
 
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("ComplaintsList");
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.navigate("ComplaintsList");
+        handleBackPress();
         return true;
       };
 
@@ -292,6 +300,7 @@ const AddComplaint: React.FC<AddComplaintProps> = ({ navigation }) => {
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
+        onBackPress={handleBackPress}
       />
       <KeyboardAvoidingView
         style={{ flex: 1 }}

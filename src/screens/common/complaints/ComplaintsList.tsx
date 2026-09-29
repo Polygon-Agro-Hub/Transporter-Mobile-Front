@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   AntDesign,
   Feather,
@@ -64,9 +65,11 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   const userProfile = useSelector(selectUserProfile);
   const jobRole = useSelector(selectJobRole);
 
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchComplaints();
+    }, []),
+  );
 
   const fetchComplaints = async () => {
     try {
@@ -102,32 +105,28 @@ const ComplaintsList: React.FC<ComplaintsListProps> = ({ navigation }) => {
   };
 
   const handleBackPress = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
+    if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.navigate("HeavyDriverHome");
     } else {
-      if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
-        navigation.navigate("HeavyDriverHome");
-      } else {
-        navigation.navigate("Home");
-      }
+      navigation.navigate("Home");
     }
   };
 
-  useEffect(() => {
-    const backAction = () => {
-      handleBackPress();
-      return true;
-    };
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
 
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction,
-    );
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
 
-    return () => {
-      backHandler.remove();
-    };
-  }, [navigation, jobRole]);
+      return () => backHandler.remove();
+    }, [navigation, jobRole]),
+  );
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

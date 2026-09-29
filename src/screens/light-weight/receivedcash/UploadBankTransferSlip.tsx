@@ -22,6 +22,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PdfViewer from "./PdfViewer";
 import axios from "axios";
 import environment from "@/environment/environment";
@@ -54,8 +55,32 @@ interface UploadedFile {
   type: FileType;
 }
 
+const sanitizeFileName = (
+  rawName: string | null | undefined,
+  uri: string,
+  fallback: string,
+): string => {
+  let candidate = rawName;
+  if (!candidate || candidate.trim() === "") {
+    const uriPart = uri.split("/").pop()?.split("?")[0];
+    if (uriPart && uriPart.includes(".")) {
+      candidate = uriPart;
+    }
+  }
+  if (!candidate || candidate.trim() === "") {
+    candidate = fallback;
+  }
+  try {
+    candidate = decodeURIComponent(candidate);
+  } catch {
+    // ignore decode error
+  }
+  return candidate.trim();
+};
+
 const UploadBankTransferSlip: React.FC = () => {
   const navigation = useNavigation<UploadBankTransferSlipNavigationProp>();
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const routeParams = route.params as { amount?: number } | undefined;
 
@@ -110,40 +135,64 @@ const UploadBankTransferSlip: React.FC = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
+        const asset = result.assets[0];
 
-      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
-        showFileTooLargeAlert();
-        return;
-      }
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
+          showFileTooLargeAlert();
+          return;
+        }
 
-      let finalUri = asset.uri;
-      try {
-        const ext = asset.fileName?.split(".").pop() || "png";
-        const localUri = `${FileSystem.cacheDirectory}transfer_slip_${Date.now()}.${ext}`;
-        await FileSystem.copyAsync({
-          from: asset.uri,
-          to: localUri,
+        let originalName = asset.fileName;
+        if (!originalName) {
+          const uriName = asset.uri.split("/").pop()?.split("?")[0];
+          if (uriName && uriName.includes(".")) {
+            originalName = uriName;
+          }
+        }
+        const ext = originalName?.split(".").pop() || "jpg";
+        const safeName = sanitizeFileName(
+          originalName,
+          asset.uri,
+          `Transfer_Slip_${Date.now()}.${ext}`,
+        );
+
+        let finalUri = asset.uri;
+        try {
+          const localUri = `${FileSystem.cacheDirectory}${safeName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          await FileSystem.copyAsync({
+            from: asset.uri,
+            to: localUri,
+          });
+          finalUri = localUri;
+        } catch (e) {
+          console.log("Copy image cache error:", e);
+        }
+
+        let sizeMB = "—";
+        if (asset.fileSize) {
+          sizeMB = (asset.fileSize / (1024 * 1024)).toFixed(1);
+        } else {
+          try {
+            const info = await FileSystem.getInfoAsync(finalUri);
+            if (info.exists && info.size) {
+              sizeMB = (info.size / (1024 * 1024)).toFixed(1);
+            }
+          } catch (e) {
+            console.log("File size check error:", e);
+          }
+        }
+
+        setFile({
+          uri: finalUri,
+          name: safeName,
+          sizeMB: `${sizeMB} MB`,
+          type: "image",
         });
-        finalUri = localUri;
-      } catch (e) {
-        console.log("Copy image cache error:", e);
       }
-
-      const sizeMB = asset.fileSize
-        ? (asset.fileSize / (1024 * 1024)).toFixed(1)
-        : "—";
-      setFile({
-        uri: finalUri,
-        name: asset.fileName ?? "Transfer_Slip.png",
-        sizeMB: `${sizeMB} MB`,
-        type: "image",
-      });
+    } catch (error) {
+      console.error("Error picking image:", error);
     }
-  } catch (error) {
-    console.error("Error picking image:", error);
-  }
-};
+  };
 
   const pickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -155,19 +204,27 @@ const UploadBankTransferSlip: React.FC = () => {
 
     const asset = result.assets[0];
     const isPdf =
-      asset.mimeType === "application/pdf" || asset.name?.endsWith(".pdf");
+      asset.mimeType === "application/pdf" ||
+      asset.name?.toLowerCase().endsWith(".pdf") ||
+      asset.uri.toLowerCase().endsWith(".pdf");
 
     if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
       showFileTooLargeAlert();
       return;
     }
 
-    const sizeMB = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "—";
+    const ext = asset.name?.split(".").pop() || (isPdf ? "pdf" : "png");
+    const safeName = sanitizeFileName(
+      asset.name,
+      asset.uri,
+      isPdf
+        ? `Transfer_Slip_${Date.now()}.pdf`
+        : `Transfer_Slip_${Date.now()}.${ext}`,
+    );
 
     let finalUri = asset.uri;
     try {
-      const ext = asset.name?.split(".").pop() || (isPdf ? "pdf" : "png");
-      const localUri = `${FileSystem.cacheDirectory}doc_${Date.now()}.${ext}`;
+      const localUri = `${FileSystem.cacheDirectory}${safeName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       await FileSystem.copyAsync({
         from: asset.uri,
         to: localUri,
@@ -177,12 +234,18 @@ const UploadBankTransferSlip: React.FC = () => {
       console.error("Failed to copy file:", err);
     }
 
-    if (!asset.size) {
+    let sizeMB = "—";
+    if (asset.size) {
+      sizeMB = (asset.size / (1024 * 1024)).toFixed(1);
+    } else {
       try {
         const info = await FileSystem.getInfoAsync(finalUri);
-        if (info.exists && info.size && info.size > MAX_FILE_SIZE_BYTES) {
-          showFileTooLargeAlert();
-          return;
+        if (info.exists && info.size) {
+          if (info.size > MAX_FILE_SIZE_BYTES) {
+            showFileTooLargeAlert();
+            return;
+          }
+          sizeMB = (info.size / (1024 * 1024)).toFixed(1);
         }
       } catch (err) {
         console.error("Failed to check file size:", err);
@@ -191,7 +254,7 @@ const UploadBankTransferSlip: React.FC = () => {
 
     setFile({
       uri: finalUri,
-      name: asset.name ?? (isPdf ? "Transfer_Slip.pdf" : "Transfer_Slip.png"),
+      name: safeName,
       sizeMB: `${sizeMB} MB`,
       type: isPdf ? "pdf" : "image",
     });
@@ -528,8 +591,10 @@ const UploadBankTransferSlip: React.FC = () => {
         visible={previewVisible}
         animationType="slide"
         onRequestClose={() => setPreviewVisible(false)}
+        statusBarTranslucent={true}
       >
-        <View style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
+        <View style={{ flex: 1, backgroundColor: "#000000" }}>
+          <StatusBar barStyle="light-content" backgroundColor="#000000" />
           {/* Header */}
           <View
             className="flex-row items-center justify-between bg-black px-4 pb-3"
@@ -537,7 +602,7 @@ const UploadBankTransferSlip: React.FC = () => {
               paddingTop:
                 Platform.OS === "android"
                   ? (StatusBar.currentHeight ?? 0) + 12
-                  : 12,
+                  : Math.max(insets.top, 44) + 8,
             }}
           >
             <Text
@@ -573,6 +638,7 @@ const UploadBankTransferSlip: React.FC = () => {
               width: "100%",
               height: "100%",
               backgroundColor: "#f3f4f6",
+              paddingBottom: Platform.OS === "ios" ? insets.bottom : 0,
             }}
           >
             {file?.type === "image" && (

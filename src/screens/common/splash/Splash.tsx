@@ -8,6 +8,7 @@ import environment from "@/environment/environment";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
+import { OFFICER_STATUS } from "@/constants/officer-status";
 
 const splashscreen = require("@/assets/images/splash.webp");
 
@@ -141,12 +142,23 @@ const Splash: React.FC = () => {
           navigation.replace("Home");
         }
       } else {
-        const statusType = data.statusType;
-        if (response.status === 403 && (statusType === "rejected" || statusType === "not_approved" || statusType === "pending")) {
+        const status = data.status;
+        if (
+          response.status === 403 ||
+          status === OFFICER_STATUS.REJECTED ||
+          status === OFFICER_STATUS.NOT_APPROVED
+        ) {
+          const exactStatus =
+            status === OFFICER_STATUS.REJECTED
+              ? OFFICER_STATUS.REJECTED
+              : OFFICER_STATUS.NOT_APPROVED;
           await clearStorage();
           navigation.replace("BannedScreen", {
-            statusType,
-            message: data.message || "Your account has been rejected or is not approved.",
+            status: exactStatus,
+            statusType: exactStatus,
+            message:
+              data.message ||
+              "Your account has been rejected or is not approved.",
           });
         } else {
           const currentStoredRole = normalizeDriverRole(await AsyncStorage.getItem("jobRole"));

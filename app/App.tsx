@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { Alert, BackHandler, Text, TextInput, StatusBar } from "react-native";
+import { Alert, BackHandler, Text, TextInput, StatusBar, AppState, AppStateStatus } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector, useDispatch } from "react-redux";
@@ -15,6 +15,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { requestTrackingIfNeeded } from "@/utils/trackingPermissions";
 import RootStackNavigator from "@/routes/Routes";
 import { AppUpdateProvider } from "@/features/app-update";
+import socketService, { AccountStatusData } from "@/services/socket/socket.service";
+import { OFFICER_STATUS } from "@/constants/officer-status";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -36,14 +38,72 @@ function AppContent() {
   const empId = useSelector(selectEmpId);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    requestTrackingIfNeeded();
-  }, []);
+  const handleAccountBanned = useCallback(
+    async (status?: string, message?: string) => {
+      try {
+        await AsyncStorage.multiRemove([
+          "token",
+          "tokenStoredTime",
+          "tokenExpirationTime",
+          "empid",
+          "userProfile",
+        ]);
+      } catch (e) {
+        console.warn("Error clearing tokens:", e);
+      }
+
+      socketService.disconnect();
+      dispatch(logoutUser());
+
+      const exactStatus =
+        status === OFFICER_STATUS.REJECTED
+          ? OFFICER_STATUS.REJECTED
+          : OFFICER_STATUS.NOT_APPROVED;
+
+      if (navigationRef.isReady()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [
+            {
+              name: "BannedScreen",
+              params: {
+                status: exactStatus,
+                statusType: exactStatus,
+                message:
+                  message ||
+                  (exactStatus === OFFICER_STATUS.REJECTED
+                    ? "Your account has been rejected by administration."
+                    : "Your account is not approved."),
+              },
+            },
+          ],
+        });
+      }
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
     if (!token || !empId) return;
 
-    const checkStatus = async () => {
+    // Connect to WebSocket and register user room
+    socketService.connect();
+    socketService.registerEmpId(empId);
+
+    // Listen for real-time account status changes over WebSocket
+    const unsubscribeAccountStatus = socketService.onAccountStatusChanged(
+      (data: AccountStatusData) => {
+        if (
+          data.status === OFFICER_STATUS.REJECTED ||
+          data.status === OFFICER_STATUS.NOT_APPROVED
+        ) {
+          handleAccountBanned(data.status, data.message);
+        }
+      },
+    );
+
+    // Check status ONCE on mount / auth change (no 15-second polling interval)
+    const checkStatusOnce = async () => {
       try {
         const response = await fetch(
           `${environment.API_BASE_URL}api/auth/get-profile`,
@@ -59,55 +119,73 @@ function AppContent() {
         const data = await response.json();
 
         if (!response.ok) {
-          const statusType = data.statusType;
           if (
-            response.status === 403 &&
-            (statusType === "rejected" ||
-              statusType === "not_approved" ||
-              statusType === "pending")
+            response.status === 403 ||
+            data.status === OFFICER_STATUS.REJECTED ||
+            data.status === OFFICER_STATUS.NOT_APPROVED
           ) {
-            // Clear auth tokens
-            await AsyncStorage.multiRemove([
-              "token",
-              "tokenStoredTime",
-              "tokenExpirationTime",
-              "empid",
-              "userProfile",
-            ]);
-
-            // Clear Redux state
-            dispatch(logoutUser());
-
-            // Redirect
-            if (navigationRef.isReady()) {
-              navigationRef.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: "BannedScreen",
-                    params: {
-                      statusType,
-                      message: data.message || "Your account has been rejected or is not approved.",
-                    },
-                  },
-                ],
-              });
-            }
+            const exactStatus =
+              data.status === OFFICER_STATUS.REJECTED
+                ? OFFICER_STATUS.REJECTED
+                : OFFICER_STATUS.NOT_APPROVED;
+            console.log("⛔ [App] Driver account is disallowed:", exactStatus, data.message);
+            handleAccountBanned(exactStatus, data.message);
           }
         }
       } catch (error) {
-        console.error("Error checking user status in background:", error);
+        console.error("Error checking user status on launch:", error);
       }
     };
 
-    // Run status check immediately on mount/token change
-    checkStatus();
+    // Check status ONCE on launch / token change
+    checkStatusOnce();
 
-    // Poll every 15 seconds
-    const intervalId = setInterval(checkStatus, 15000);
+    return () => {
+      unsubscribeAccountStatus();
+    };
+  }, [token, empId, handleAccountBanned]);
 
-    return () => clearInterval(intervalId);
-  }, [token, empId, dispatch]);
+  // Check status once when user resumes the app from background (no interval timer)
+  useEffect(() => {
+    if (!token || !empId) return;
+
+    const handleAppStateChange = async (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        try {
+          const response = await fetch(
+            `${environment.API_BASE_URL}api/auth/get-profile`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+          const data = await response.json();
+          if (!response.ok) {
+            if (
+              response.status === 403 ||
+              data.status === OFFICER_STATUS.REJECTED ||
+              data.status === OFFICER_STATUS.NOT_APPROVED
+            ) {
+              const exactStatus =
+                data.status === OFFICER_STATUS.REJECTED
+                  ? OFFICER_STATUS.REJECTED
+                  : OFFICER_STATUS.NOT_APPROVED;
+              handleAccountBanned(exactStatus, data.message);
+            }
+          }
+        } catch (_) {}
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
+    return () => subscription.remove();
+  }, [token, empId, handleAccountBanned]);
 
   useEffect(() => {
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
@@ -169,12 +247,9 @@ function AppContent() {
         if (
           errorResponse &&
           (errorResponse.status === 401 || errorResponse.status === 403) &&
-          (errorResponse.data?.statusType === "not_approved" ||
-            errorResponse.data?.statusType === "rejected" ||
-            errorResponse.data?.statusType === "pending" ||
-            errorResponse.data?.message === "This Employee ID is rejected" ||
-            errorResponse.data?.message === "This Employee ID is not approved" ||
-            errorResponse.data?.message === "Account status is pending verification")
+          (errorResponse.status === 403 ||
+            errorResponse.data?.status === OFFICER_STATUS.REJECTED ||
+            errorResponse.data?.status === OFFICER_STATUS.NOT_APPROVED)
         ) {
           let currentRouteName = "";
           if (navigationRef.isReady()) {
@@ -196,13 +271,19 @@ function AppContent() {
               // Clear Redux state
               dispatch(logoutUser());
 
+              const exactStatus =
+                errorResponse.data?.status === OFFICER_STATUS.REJECTED
+                  ? OFFICER_STATUS.REJECTED
+                  : OFFICER_STATUS.NOT_APPROVED;
+
               if (navigationRef.isReady()) {
                 navigationRef.reset({
                   index: 0,
                   routes: [{ 
                     name: "BannedScreen",
                     params: { 
-                      statusType: errorResponse.data?.statusType,
+                      status: exactStatus,
+                      statusType: exactStatus,
                       message: errorResponse.data?.message 
                     }
                   }],
