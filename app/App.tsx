@@ -39,21 +39,8 @@ function AppContent() {
   const dispatch = useDispatch();
 
   const handleAccountBanned = useCallback(
-    async (status?: string, message?: string) => {
-      try {
-        await AsyncStorage.multiRemove([
-          "token",
-          "tokenStoredTime",
-          "tokenExpirationTime",
-          "empid",
-          "userProfile",
-        ]);
-      } catch (e) {
-        console.warn("Error clearing tokens:", e);
-      }
-
+    (status?: string, message?: string) => {
       socketService.disconnect();
-      dispatch(logoutUser());
 
       const exactStatus =
         status === OFFICER_STATUS.REJECTED
@@ -61,6 +48,11 @@ function AppContent() {
           : OFFICER_STATUS.NOT_APPROVED;
 
       if (navigationRef.isReady()) {
+        const currentRoute = navigationRef.getCurrentRoute() as any;
+        if (currentRoute?.name === "BannedScreen") {
+          return;
+        }
+
         navigationRef.reset({
           index: 0,
           routes: [
@@ -80,7 +72,7 @@ function AppContent() {
         });
       }
     },
-    [dispatch],
+    [],
   );
 
   useEffect(() => {
@@ -95,14 +87,16 @@ function AppContent() {
       (data: AccountStatusData) => {
         if (
           data.status === OFFICER_STATUS.REJECTED ||
-          data.status === OFFICER_STATUS.NOT_APPROVED
+          data.status === OFFICER_STATUS.NOT_APPROVED ||
+          data.statusType === "rejected" ||
+          data.statusType === "not_approved"
         ) {
           handleAccountBanned(data.status, data.message);
         }
       },
     );
 
-    // Check status ONCE on mount / auth change (no 15-second polling interval)
+    // Check status on mount / auth change
     const checkStatusOnce = async () => {
       try {
         const response = await fetch(
@@ -133,7 +127,7 @@ function AppContent() {
           }
         }
       } catch (error) {
-        console.error("Error checking user status on launch:", error);
+        console.error("Error checking user status:", error);
       }
     };
 
@@ -258,40 +252,12 @@ function AppContent() {
           }
 
           if (currentRouteName !== "Login" && currentRouteName !== "Splash" && currentRouteName !== "BannedScreen") {
-            try {
-              // Clear auth tokens
-              await AsyncStorage.multiRemove([
-                "token",
-                "tokenStoredTime",
-                "tokenExpirationTime",
-                "empid",
-                "userProfile",
-              ]);
+            const exactStatus =
+              errorResponse.data?.status === OFFICER_STATUS.REJECTED
+                ? OFFICER_STATUS.REJECTED
+                : OFFICER_STATUS.NOT_APPROVED;
 
-              // Clear Redux state
-              dispatch(logoutUser());
-
-              const exactStatus =
-                errorResponse.data?.status === OFFICER_STATUS.REJECTED
-                  ? OFFICER_STATUS.REJECTED
-                  : OFFICER_STATUS.NOT_APPROVED;
-
-              if (navigationRef.isReady()) {
-                navigationRef.reset({
-                  index: 0,
-                  routes: [{ 
-                    name: "BannedScreen",
-                    params: { 
-                      status: exactStatus,
-                      statusType: exactStatus,
-                      message: errorResponse.data?.message 
-                    }
-                  }],
-                });
-              }
-            } catch (e) {
-              console.error("Failed to perform force logout:", e);
-            }
+            handleAccountBanned(exactStatus, errorResponse.data?.message);
 
             // Return a promise that never resolves or rejects to prevent component error logs
             return new Promise(() => {});

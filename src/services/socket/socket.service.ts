@@ -59,7 +59,7 @@ class SocketService {
 
       this.socket = io(socketUrl, {
         path: socketPath,
-        transports: ["websocket", "polling"],
+        transports: ["polling", "websocket"],
         extraHeaders: token ? { Authorization: `Bearer ${token}` } : {},
         auth: {
           token: token || undefined,
@@ -95,8 +95,8 @@ class SocketService {
       });
 
 
-      this.socket?.on("account_status_changed", (data: AccountStatusData) => {
-        console.log("📢 [SocketService] Received account_status_changed:", data);
+      const handleAccountStatusChange = (data: AccountStatusData) => {
+        console.log("📢 [SocketService] Received account status event:", data);
         this.accountStatusListeners.forEach((listener) => {
           try {
             listener(data);
@@ -104,7 +104,13 @@ class SocketService {
             console.error("[SocketService] Account status listener error:", e);
           }
         });
-      });
+      };
+
+      this.socket?.on("account_status_changed", handleAccountStatusChange);
+      this.socket?.on("officer_status_changed", handleAccountStatusChange);
+      this.socket?.on("user_status_changed", handleAccountStatusChange);
+      this.socket?.on("force_logout", handleAccountStatusChange);
+      this.socket?.on("officer_rejected", handleAccountStatusChange);
 
       this.socket?.on("connect_error", (err: any) => {
         this.isConnecting = false;
@@ -234,6 +240,14 @@ class SocketService {
 
       if (userId || empId) {
         console.log(`👤 [SocketService] Registering user in socket room (userId: ${userId}, empId: ${empId})...`);
+        if (userId) {
+          this.socket.emit("join_user", userId);
+          this.socket.emit("join_officer", userId);
+        }
+        if (empId) {
+          this.socket.emit("join_user", empId);
+          this.socket.emit("join_officer", empId);
+        }
         this.socket.emit("register_user", {
           userId: userId ? Number(userId) : undefined,
           empId: empId || undefined,
