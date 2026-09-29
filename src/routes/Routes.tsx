@@ -92,6 +92,10 @@ export function withRoleGuard<P extends object>(
 
       if (!jobRole) {
         if (navigationRef.isReady()) {
+          const currentRoute = navigationRef.getCurrentRoute() as any;
+          if (currentRoute?.name === "BannedScreen") {
+            return;
+          }
           navigationRef.reset({
             index: 0,
             routes: [{ name: UNAUTHORIZED_FALLBACK_ROUTE }],

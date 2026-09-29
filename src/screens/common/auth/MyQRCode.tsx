@@ -31,6 +31,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import QRCode from "react-native-qrcode-svg";
 import { captureRef } from "react-native-view-shot";
 
+const defaultLogo = require("@/assets/images/public/polygon-logo.png");
+
 type MyQRCodeNavigationProp = StackNavigationProp<RootStackParamList, "MyQRCode">;
 
 interface MyQRCodeProps {
@@ -51,6 +53,7 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
   const [companyLogo, setCompanyLogo] = useState<string>(
     (userProfile as any)?.company?.logo || ""
   );
+  const [logoError, setLogoError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(!userProfile?.QRcode && !userProfile?.qrCode);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [processing, setProcessing] = useState<boolean>(false);
@@ -287,16 +290,15 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
           }
         >
           <View className="flex-1 justify-center px-4">
-            {/* Company Logo — only shown when the API actually returns one */}
-            {companyLogo ? (
-              <View className="items-center mb-4">
-                <Image
-                  source={{ uri: companyLogo }}
-                  className="w-[180px] h-[54px]"
-                  resizeMode="contain"
-                />
-              </View>
-            ) : null}
+            {/* Company Logo — DB logo if available, otherwise default Polygon logo */}
+            <View className="items-center mb-4">
+              <Image
+                source={companyLogo && !logoError ? { uri: companyLogo } : defaultLogo}
+                className="w-[180px] h-[54px]"
+                resizeMode="contain"
+                onError={() => setLogoError(true)}
+              />
+            </View>
 
             {/* Driver Name and ID */}
             <View className="items-center mb-6">
@@ -371,16 +373,14 @@ const MyQRCode: React.FC<MyQRCodeProps> = ({ navigation }) => {
             borderRadius: 24,
           }}
         >
-          {/* Top: Company logo — only rendered when the API actually returns one, otherwise nothing is shown */}
-          {companyLogo ? (
-            <View style={{ alignItems: "center", marginBottom: 22 }}>
-              <Image
-                source={{ uri: companyLogo }}
-                style={{ width: 240, height: 72 }}
-                resizeMode="contain"
-              />
-            </View>
-          ) : null}
+          {/* Top: Company logo if available, otherwise default Polygon logo */}
+          <View style={{ alignItems: "center", marginBottom: 22 }}>
+            <Image
+              source={companyLogo && !logoError ? { uri: companyLogo } : defaultLogo}
+              style={{ width: 240, height: 72 }}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Middle: QR Code Container */}
           <View

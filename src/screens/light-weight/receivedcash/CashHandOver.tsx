@@ -215,7 +215,7 @@ const handleUploadSlip = () => {
               </Text>
               <View className="bg-[#FEF3D4] rounded-md px-2 py-0.5 mt-2">
                 <Text className="text-[11px] text-[#7A4A0E]">
-                  Total : {orders.length} Orders
+                  Total : {orders.length} {orders.length === 1 ? "Order" : "Orders"}
                 </Text>
               </View>
             </View>
