@@ -152,7 +152,6 @@ const Splash: React.FC = () => {
             status === OFFICER_STATUS.REJECTED
               ? OFFICER_STATUS.REJECTED
               : OFFICER_STATUS.NOT_APPROVED;
-          await clearStorage();
           navigation.replace("BannedScreen", {
             status: exactStatus,
             statusType: exactStatus,

@@ -49,41 +49,12 @@ interface CropLoadData {
   gradeSets: GradeSetItem[];
 }
 
-const MOCK_SUMMARY_ITEMS: CropLoadData[] = [
-  {
-    id: "red_bell_pepper",
-    cropName: "Red Bell Pepper",
-    imageUri:
-      "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=150&auto=format&fit=crop&q=80",
-    totalWeightKg: 25.92,
-    totalCrates: 22,
-    gradeSets: [
-      { grade: "Grade A", set: 1, crates: 9, weightKg: 10.02 },
-      { grade: "Grade A", set: 2, crates: 1, weightKg: 1.02 },
-      { grade: "Grade B", set: 1, crates: 2, weightKg: 5.0 },
-      { grade: "Grade C", set: 1, crates: 10, weightKg: 9.88 },
-    ],
-  },
-  {
-    id: "red_onion",
-    cropName: "Red Onion",
-    imageUri:
-      "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=150&auto=format&fit=crop&q=80",
-    totalWeightKg: 111.87,
-    totalCrates: 9,
-    gradeSets: [
-      { grade: "Grade A", set: 1, crates: 8, weightKg: 111.67 },
-      { grade: "Grade A", set: 2, crates: 1, weightKg: 0.2 },
-    ],
-  },
-];
-
 const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
   const mode = route.params?.mode || "accept";
   const loadCode = route.params?.loadCode || "L-DRV00001260914001";
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [items, setItems] = useState<CropLoadData[]>(MOCK_SUMMARY_ITEMS);
+  const [items, setItems] = useState<CropLoadData[]>([]);
   const [loadInfo, setLoadInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [journeyStarted, setJourneyStarted] = useState(false);
@@ -109,11 +80,13 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
       if (
         response.data &&
         response.data.status === "success" &&
-        response.data.data &&
-        Array.isArray(response.data.data.crops) &&
-        response.data.data.crops.length > 0
+        response.data.data
       ) {
-        setItems(response.data.data.crops);
+        setItems(
+          Array.isArray(response.data.data.crops)
+            ? response.data.data.crops
+            : []
+        );
         setLoadInfo(response.data.data.load || null);
 
         const currentJourneyStatus = response.data.data.load?.journeyStatus;
@@ -280,7 +253,12 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
         >
           {/* Main items section */}
           <View>
-            {items.map((crop) => (
+            {items.length === 0 ? (
+              <View className="items-center justify-center py-12">
+                <Text className="text-gray-400 text-sm">-- No items found --</Text>
+              </View>
+            ) : (
+              items.map((crop) => (
               <View
                 key={crop.id}
                 className="bg-white rounded-3xl p-4 mb-5"
@@ -330,7 +308,7 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                   {/* Divider */}
                   <View className="w-[1px] h-14 bg-gray-600 mx-2" />
 
-                  {/* Total Crates */}
+                  {/* Total Containers */}
                   <View className="flex-1 items-center">
                     <FontAwesome5
                       name="boxes"
@@ -339,7 +317,7 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                       style={{ marginBottom: 4 }}
                     />
                     <Text className="text-gray-300 text-xs text-center">
-                      Total{`\n`}Crates
+                      Total{`\n`}Containers
                     </Text>
                     <Text className="text-white text-base font-bold mt-1">
                       {crop.totalCrates}
@@ -376,7 +354,7 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                           </View>
                           <View>
                             <Text className="text-[10px] text-black font-medium">
-                              Crates
+                              Containers
                             </Text>
                             <Text className="text-sm font-bold text-black">
                               {gs.crates}
@@ -407,7 +385,8 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                   ))}
                 </View>
               </View>
-            ))}
+            ))
+            )}
           </View>
 
           {/* Action buttons section - Bottom of ScrollView */}
