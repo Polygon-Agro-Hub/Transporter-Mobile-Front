@@ -13,6 +13,8 @@ import { RootStackParamList } from "@/types/types";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import LottieView from "lottie-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDispatch } from "react-redux";
+import { logoutUser } from "@/store/authSlice";
 import { OFFICER_STATUS } from "@/constants/officer-status";
 
 type BannedScreenNavigationProp = StackNavigationProp<
@@ -53,6 +55,8 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
     }, []),
   );
 
+  const dispatch = useDispatch();
+
   const handleBackToLogin = async () => {
     try {
       await AsyncStorage.multiRemove([
@@ -62,12 +66,14 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
         "empid",
         "userProfile",
       ]);
+      dispatch(logoutUser());
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }],
       });
     } catch (e) {
       console.error("Error logging out from banned screen:", e);
+      dispatch(logoutUser());
       navigation.navigate("Login");
     }
   };
