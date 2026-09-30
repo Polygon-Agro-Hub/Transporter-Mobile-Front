@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   Platform,
   BackHandler,
   ActivityIndicator,
+  ScrollView,
+  Keyboard,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { FontAwesome5, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import environment from "@/environment/environment";
-import { Keyboard } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
@@ -43,22 +43,57 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [empIdHasError, setEmpIdHasError] = useState(false);
   const [passwordHasError, setPasswordHasError] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const keyboardTopRef = useRef(0);
+  const keyboardOpenRef = useRef(false);
+  const focusedFieldRef = useRef<"emp" | "password">("emp");
+  const empWrapRef = useRef<View>(null);
+  const passwordWrapRef = useRef<View>(null);
+
+  // Scroll only as much as needed so the focused field (and the Login
+  // button below it) sits just above the keyboard, not at the top.
+  const ensureVisible = useCallback(() => {
+    const isPassword = focusedFieldRef.current === "password";
+    const target = isPassword ? passwordWrapRef : empWrapRef;
+    const extraSpace = isPassword ? 100 : 30; // room for Login button / gap
+
+    target.current?.measureInWindow((_x, y, _w, h) => {
+      const limit = keyboardTopRef.current - extraSpace;
+      const overflow = y + h - limit;
+      if (overflow > 0) {
+        scrollRef.current?.scrollTo({
+          y: scrollYRef.current + overflow,
+          animated: true,
+        });
+      }
+    });
+  }, []);
+
+  // Track keyboard visibility + height
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => setKeyboardVisible(true),
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardVisible(false),
-    );
+    const showListener = Keyboard.addListener("keyboardDidShow", (e) => {
+      keyboardOpenRef.current = true;
+      keyboardTopRef.current = e.endCoordinates.screenY;
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates.height);
+      // wait for the bottom padding to render, then scroll
+      setTimeout(ensureVisible, 150);
+    });
+    const hideListener = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardOpenRef.current = false;
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
 
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showListener.remove();
+      hideListener.remove();
     };
-  }, []);
+  }, [ensureVisible]);
+
   const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -93,6 +128,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setPasswordError("");
     }
   };
+
+  const normalizeStatus = (value: unknown) =>
+    String(value ?? "")
+      .toLowerCase()
+      .replace(/[\s_-]/g, "");
 
   const handleLogin = async () => {
     Keyboard.dismiss();
@@ -189,17 +229,25 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
         const message = data.message?.toLowerCase() || "";
         const statusCode = response.status;
-        const status = data.status;
 
-        if (
-          status === OFFICER_STATUS.REJECTED ||
-          status === OFFICER_STATUS.NOT_APPROVED ||
-          statusCode === 403
-        ) {
-          const exactStatus =
-            status === OFFICER_STATUS.REJECTED
-              ? OFFICER_STATUS.REJECTED
-              : OFFICER_STATUS.NOT_APPROVED;
+        // Backend may send the value in `status` or `statusType`
+        const rawStatus = normalizeStatus(data.status ?? data.statusType);
+
+        // Rejected is checked first so it is never mislabeled as "not approved"
+        const isRejected =
+          rawStatus === normalizeStatus(OFFICER_STATUS.REJECTED) ||
+          message.includes("rejected");
+
+        const isNotApproved =
+          !isRejected &&
+          (rawStatus === normalizeStatus(OFFICER_STATUS.NOT_APPROVED) ||
+            message.includes("not approved"));
+
+        if (isRejected || isNotApproved || statusCode === 403) {
+          const exactStatus = isRejected
+            ? OFFICER_STATUS.REJECTED
+            : OFFICER_STATUS.NOT_APPROVED;
+
           navigation.navigate("BannedScreen", {
             status: exactStatus,
             statusType: exactStatus,
@@ -218,23 +266,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setEmpIdHasError(true);
           showModal(
             "EMP ID Not Registered",
-            "This Employee ID is not registered yet. ",
+            "This Employee ID is not registered yet.",
             "error",
           );
         } else if (
-          message.includes("rejected") ||
-          message.includes("emp id is rejected")
+          statusCode === 429 ||
+          message.includes("too many") ||
+          message.includes("attempts")
         ) {
-          setEmpIdHasError(true);
-          showModal("Rejected EMP ID", "This EMP ID is Rejected.", "error");
-        } else if (
-          message.includes("not approved") ||
-          message.includes("emp id not approved")
-        ) {
-          setEmpIdHasError(true);
           showModal(
-            "Not Approved EMP ID",
-            "This EMP ID is not approved.",
+            "Too Many Attempts",
+            data.message ||
+              "Too many login attempts. Please try again after 15 minutes.",
             "error",
           );
         } else if (
@@ -248,17 +291,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           showModal(
             "Invalid Password!",
             "Please check the Password and retry again.",
-            "error",
-          );
-        } else if (
-          statusCode === 429 ||
-          message.includes("too many") ||
-          message.includes("attempts")
-        ) {
-          showModal(
-            "Too Many Attempts",
-            data.message ||
-              "Too many login attempts. Please try again after 15 minutes.",
             "error",
           );
         } else {
@@ -342,10 +374,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  // Block hardware back button on the login screen (single listener, cleaned up)
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => true;
-      BackHandler.addEventListener("hardwareBackPress", onBackPress);
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
         onBackPress,
@@ -361,16 +393,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
     >
-      <KeyboardAwareScrollView
+      <ScrollView
+        ref={scrollRef}
         style={{ flex: 1, backgroundColor: "#0E0E0E" }}
-        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
-        enableOnAndroid={true}
+        contentContainerStyle={{
+          flexGrow: 1,
+          backgroundColor: "#0E0E0E",
+          // Manually lift the content above the keyboard.
+          // Works in production builds even with edge-to-edge enabled.
+          paddingBottom: keyboardHeight,
+        }}
         keyboardShouldPersistTaps="handled"
         bounces={false}
         showsVerticalScrollIndicator={false}
-        extraScrollHeight={Platform.OS === "android" ? 80 : 20}
-        enableAutomaticScroll={true}
-        keyboardOpeningTime={0}
+        onScroll={(e) => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#F7CA21] ">
           <Image
@@ -404,6 +443,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View>
               {/* EMP ID */}
+              <View ref={empWrapRef} collapsable={false}>
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
@@ -435,14 +475,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   onChangeText={handleEmpIdChange}
                   placeholder="Your EMP ID"
                   placeholderTextColor="#F6F9FF"
+                  onFocus={() => {
+                    focusedFieldRef.current = "emp";
+                    if (keyboardOpenRef.current) setTimeout(ensureVisible, 150);
+                  }}
                 />
               </LinearGradient>
+              </View>
               {empIdError && (
                 <Text className="text-red-500 text-sm pl-3 mb-4">
                   {empIdError}
                 </Text>
               )}
 
+              {/* PASSWORD */}
+              <View ref={passwordWrapRef} collapsable={false}>
               <LinearGradient
                 colors={["#474747", "#242424"]}
                 start={{ x: 0, y: 0 }}
@@ -450,7 +497,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 className={`flex-row items-center rounded-[30px] px-4 h-[62px] gap-3 border-2 ${
                   passwordError ? "mb-3" : "mb-6"
                 } ${passwordHasError ? "border-red-500" : "border-transparent"}`}
-                // note: overflow-hidden removed here
               >
                 <MaterialIcons name="lock" size={22} color="#F7CA21" />
 
@@ -469,6 +515,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   onChangeText={handlePasswordChange}
                   placeholder="Your Password"
                   placeholderTextColor="#F6F9FF"
+                  onFocus={() => {
+                    focusedFieldRef.current = "password";
+                    if (keyboardOpenRef.current) setTimeout(ensureVisible, 150);
+                  }}
                 />
 
                 <TouchableOpacity
@@ -481,6 +531,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   />
                 </TouchableOpacity>
               </LinearGradient>
+              </View>
               {passwordError && (
                 <Text className="text-red-500 text-sm pl-3 mb-4">
                   {passwordError}
@@ -513,7 +564,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           duration={4000}
           autoClose={true}
         />
-      </KeyboardAwareScrollView>
+      </ScrollView>
     </LinearGradient>
   );
 };
