@@ -3,19 +3,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   Image,
-  Platform,
   BackHandler,
   Keyboard,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import axios from "axios";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import environment from "@/environment/environment";
 import { AntDesign, FontAwesome5 } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -34,6 +32,16 @@ interface ChangePasswordProps {
   navigation: ChangePasswordNavigationProp;
 }
 
+type FieldName = "current" | "new" | "confirm";
+
+// Space (px) to keep between the focused field and the keyboard,
+// so the fields / Update button below it stay visible.
+const EXTRA_SPACE: Record<FieldName, number> = {
+  current: 30,
+  new: 60,
+  confirm: 100,
+};
+
 const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const route = useRoute<RouteProp<RootStackParamList, "ChangePassword">>();
   const { passwordUpdated } = route.params;
@@ -49,22 +57,69 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState<"success" | "error">("error");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const keyboardTopRef = useRef(0);
+  const keyboardOpenRef = useRef(false);
+  const focusedFieldRef = useRef<FieldName>("current");
+  const currentWrapRef = useRef<View>(null);
+  const newWrapRef = useRef<View>(null);
+  const confirmWrapRef = useRef<View>(null);
+
+  // Scroll only as much as needed so the focused field sits just above
+  // the keyboard (not at the top of the screen).
+  const ensureVisible = useCallback(() => {
+    const field = focusedFieldRef.current;
+    const target =
+      field === "current"
+        ? currentWrapRef
+        : field === "new"
+          ? newWrapRef
+          : confirmWrapRef;
+
+    target.current?.measureInWindow((_x, y, _w, h) => {
+      const limit = keyboardTopRef.current - EXTRA_SPACE[field];
+      const overflow = y + h - limit;
+      if (overflow > 0) {
+        scrollRef.current?.scrollTo({
+          y: scrollYRef.current + overflow,
+          animated: true,
+        });
+      }
+    });
+  }, []);
+
+  const handleFocus = (field: FieldName) => {
+    focusedFieldRef.current = field;
+    // if keyboard is already open (switching fields), adjust now
+    if (keyboardOpenRef.current) {
+      setTimeout(ensureVisible, 150);
+    }
+  };
+
+  // Track keyboard visibility + height
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => setKeyboardVisible(true),
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardVisible(false),
-    );
+    const showListener = Keyboard.addListener("keyboardDidShow", (e) => {
+      keyboardOpenRef.current = true;
+      keyboardTopRef.current = e.endCoordinates.screenY;
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates.height);
+      // wait for bottom padding to render, then scroll
+      setTimeout(ensureVisible, 150);
+    });
+    const hideListener = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardOpenRef.current = false;
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
 
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showListener.remove();
+      hideListener.remove();
     };
-  }, []);
+  }, [ensureVisible]);
 
   const showModal = (
     title: string,
@@ -159,7 +214,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
-      const response = await axios.post(
+      await axios.post(
         `${environment.API_BASE_URL}api/auth/change-password`,
         {
           currentPassword,
@@ -216,7 +271,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
     }, [passwordUpdated]),
   );
 
- 
   return (
     <LinearGradient
       colors={["#323232", "#0E0E0E"]}
@@ -224,14 +278,23 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
     >
-      <KeyboardAwareScrollView
-        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#0E0E0E" }}
-        enableOnAndroid={true}
-        extraScrollHeight={20}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{
+          flexGrow: 1,
+          backgroundColor: "#0E0E0E",
+          // Manually lift content above the keyboard (works in production
+          // builds even with edge-to-edge enabled).
+          paddingBottom: keyboardHeight,
+        }}
         keyboardShouldPersistTaps="handled"
         bounces={false}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1, backgroundColor: "#0E0E0E" }}
+        onScroll={(e) => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         <View className="h-96 flex-1 justify-center items-center bg-[#FFF2BF] ">
           <Image
@@ -267,105 +330,113 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
 
             <View>
               {/* Current Password */}
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[62px] mb-4 gap-3"
-                // note: overflow-hidden removed — it was clipping descenders (j, y, g, p, q)
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                  style={{
-                    flex: 1,
-                    color: "white",
-                    paddingVertical: 0,
-                    includeFontPadding: false,
-                  }}
-                  secureTextEntry={secureCurrent}
-                  onChangeText={setCurrentPassword}
-                  value={currentPassword}
-                  placeholder="Current Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity
-                  onPress={() => setSecureCurrent(!secureCurrent)}
+              <View ref={currentWrapRef} collapsable={false}>
+                <LinearGradient
+                  colors={["#474747", "#242424"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  className="flex-row items-center rounded-full px-4 h-[62px] mb-4 gap-3"
                 >
-                  <FontAwesome5
-                    name={secureCurrent ? "eye-slash" : "eye"}
-                    size={20}
-                    color="white"
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      color: "white",
+                      paddingVertical: 0,
+                      includeFontPadding: false,
+                    }}
+                    secureTextEntry={secureCurrent}
+                    onChangeText={setCurrentPassword}
+                    value={currentPassword}
+                    placeholder="Current Password"
+                    placeholderTextColor={"#F6F9FF"}
+                    onFocus={() => handleFocus("current")}
                   />
-                </TouchableOpacity>
-              </LinearGradient>
+                  <TouchableOpacity
+                    onPress={() => setSecureCurrent(!secureCurrent)}
+                  >
+                    <FontAwesome5
+                      name={secureCurrent ? "eye-slash" : "eye"}
+                      size={20}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
 
               {/* New Password */}
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                 style={{
-                    flex: 1,
-                    color: "white",
-                    paddingVertical: 0,
-                    includeFontPadding: false,
-                  }}
-                  secureTextEntry={secureNew}
-                  value={newPassword}
-                  onChangeText={(text) => {
-                    const cleanText = text.replace(/\s/g, "");
-                    setNewPassword(cleanText);
-                  }}
-                  placeholder="New Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity onPress={() => setSecureNew(!secureNew)}>
-                  <FontAwesome5
-                    name={secureNew ? "eye-slash" : "eye"}
-                    size={20}
-                    color="white"
+              <View ref={newWrapRef} collapsable={false}>
+                <LinearGradient
+                  colors={["#474747", "#242424"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
+                >
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      color: "white",
+                      paddingVertical: 0,
+                      includeFontPadding: false,
+                    }}
+                    secureTextEntry={secureNew}
+                    value={newPassword}
+                    onChangeText={(text) => {
+                      const cleanText = text.replace(/\s/g, "");
+                      setNewPassword(cleanText);
+                    }}
+                    placeholder="New Password"
+                    placeholderTextColor={"#F6F9FF"}
+                    onFocus={() => handleFocus("new")}
                   />
-                </TouchableOpacity>
-              </LinearGradient>
+                  <TouchableOpacity onPress={() => setSecureNew(!secureNew)}>
+                    <FontAwesome5
+                      name={secureNew ? "eye-slash" : "eye"}
+                      size={20}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
 
               {/* Confirm New Password */}
-              <LinearGradient
-                colors={["#474747", "#242424"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
-              >
-                <MaterialIcons name="lock" size={26} color="#F7CA21" />
-                <TextInput
-                 style={{
-                    flex: 1,
-                    color: "white",
-                    paddingVertical: 0,
-                    includeFontPadding: false,
-                  }}
-                  secureTextEntry={secureConfirm}
-                  onChangeText={(text) => {
-                    const cleanText = text.replace(/\s/g, "");
-                    setConfirmPassword(cleanText);
-                  }}
-                  value={confirmPassword}
-                  placeholder="Re-enter New Password"
-                  placeholderTextColor={"#F6F9FF"}
-                />
-                <TouchableOpacity
-                  onPress={() => setSecureConfirm(!secureConfirm)}
+              <View ref={confirmWrapRef} collapsable={false}>
+                <LinearGradient
+                  colors={["#474747", "#242424"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  className="flex-row items-center rounded-full px-4 h-[62px] mb-6 gap-3"
                 >
-                  <FontAwesome5
-                    name={secureConfirm ? "eye-slash" : "eye"}
-                    size={20}
-                    color="white"
+                  <MaterialIcons name="lock" size={26} color="#F7CA21" />
+                  <TextInput
+                    style={{
+                      flex: 1,
+                      color: "white",
+                      paddingVertical: 0,
+                      includeFontPadding: false,
+                    }}
+                    secureTextEntry={secureConfirm}
+                    onChangeText={(text) => {
+                      const cleanText = text.replace(/\s/g, "");
+                      setConfirmPassword(cleanText);
+                    }}
+                    value={confirmPassword}
+                    placeholder="Re-enter New Password"
+                    placeholderTextColor={"#F6F9FF"}
+                    onFocus={() => handleFocus("confirm")}
                   />
-                </TouchableOpacity>
-              </LinearGradient>
+                  <TouchableOpacity
+                    onPress={() => setSecureConfirm(!secureConfirm)}
+                  >
+                    <FontAwesome5
+                      name={secureConfirm ? "eye-slash" : "eye"}
+                      size={20}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
 
               <TouchableOpacity
                 className="rounded-full  overflow-hidden bg-[#F7CA21] py-4 items-center justify-center"
@@ -395,7 +466,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
           duration={4000}
           autoClose={true}
         />
-      </KeyboardAwareScrollView>
+      </ScrollView>
     </LinearGradient>
   );
 };
