@@ -79,7 +79,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
     };
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
-      handleHardwareBackPress
+      handleHardwareBackPress,
     );
     return () => subscription.remove();
   }, [navigation, onClose, onBackPress, targetReturnScreen]);
@@ -112,7 +112,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
 
     const subscription = AppState.addEventListener(
       "change",
-      handleAppStateChange
+      handleAppStateChange,
     );
     return () => subscription.remove();
   }, [
@@ -133,7 +133,9 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
       if (onRequestPermission) {
         const response = await onRequestPermission();
         if (response && typeof response === "object") {
-          isGranted = Boolean(response.granted || response.status === "granted");
+          isGranted = Boolean(
+            response.granted || response.status === "granted",
+          );
           isDenied = !isGranted && response.status === "denied";
         } else {
           const check = await Camera.getCameraPermissionsAsync();
@@ -179,7 +181,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
               text: "Open Settings",
               onPress: () => Linking.openSettings(),
             },
-          ]
+          ],
         );
       }
     } catch (error) {
@@ -187,7 +189,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
       Alert.alert(
         "Error",
         "Unable to request camera permission. Please try again.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
     } finally {
       setIsLoading(false);
@@ -236,7 +238,8 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
 
           {/* Intro */}
           <Text className="text-gray-300 text-sm text-center mb-5 leading-5">
-            GoVi-Trans requires camera access to enable the following operational features:
+            GoVi-Trans requires camera access to enable the following
+            operational features:
           </Text>
 
           {/* Feature 1: QR Scanning */}
@@ -253,7 +256,8 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
                 Instant QR & Barcode Scanning
               </Text>
               <Text className="text-gray-400 text-xs leading-4">
-                Scan assigned package QR codes, return orders, and invoice barcodes for quick delivery dispatch and handover.
+                Scan assigned package QR codes, return orders, and invoice
+                barcodes for quick delivery dispatch and handover.
               </Text>
             </View>
           </View>
@@ -272,7 +276,8 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
                 Delivery Proof & Document Photos
               </Text>
               <Text className="text-gray-400 text-xs leading-4">
-                Capture real-time delivery confirmation photos, return item condition, and bank transfer slip uploads.
+                Capture real-time delivery confirmation photos, return item
+                condition, and bank transfer slip uploads.
               </Text>
             </View>
           </View>
@@ -286,7 +291,9 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
               style={{ marginTop: 2, marginRight: 8 }}
             />
             <Text className="text-gray-300 text-xs flex-1 leading-4">
-              Camera access is only active while scanning barcodes or capturing delivery proof photos. No photos or videos are captured without your explicit tap.
+              Camera access is only active while scanning barcodes or capturing
+              delivery proof photos. No photos or videos are captured without
+              your explicit tap.
             </Text>
           </View>
 
@@ -322,7 +329,15 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
                     color="#000000"
                     style={{ marginRight: 8 }}
                   />
-                  <Text className="text-black font-extrabold text-base tracking-wide">
+                  <Text
+                    style={{
+                      color: "#000000",
+                      fontWeight: "800",
+                      fontSize: 14,
+                      lineHeight: 24,
+                      letterSpacing: 0.4,
+                    }}
+                  >
                     {isLoading ? "Requesting..." : "Agree & Continue"}
                   </Text>
                 </View>
