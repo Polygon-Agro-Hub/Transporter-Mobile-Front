@@ -118,6 +118,54 @@ const UploadBankTransferSlip: React.FC = () => {
     setAlertVisible(true);
   };
 
+  const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf"];
+  const ALLOWED_MIME_TYPES = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "application/pdf",
+  ];
+
+  const isSupportedFileFormat = (
+    fileName?: string | null,
+    mimeType?: string | null,
+    uri?: string | null,
+  ): boolean => {
+    // 1. Check MIME type if present
+    if (mimeType) {
+      const lowerMime = mimeType.toLowerCase();
+      if (ALLOWED_MIME_TYPES.includes(lowerMime)) {
+        return true;
+      }
+      if (
+        lowerMime.startsWith("image/") ||
+        lowerMime.startsWith("application/")
+      ) {
+        return false;
+      }
+    }
+
+    // 2. Check extension from fileName or uri
+    const nameToCheck =
+      (fileName || "").trim() ||
+      (uri || "").split("/").pop()?.split("?")[0] ||
+      "";
+    const ext = nameToCheck.split(".").pop()?.toLowerCase();
+    if (ext && ALLOWED_EXTENSIONS.includes(ext)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const showInvalidFormatAlert = () => {
+    showAlert(
+      "Unsupported File Format",
+      "Please upload a valid file. Only PNG, JPG, and PDF formats are supported.",
+      "error",
+    );
+  };
+
   const showFileTooLargeAlert = () => {
     showAlert(
       "File Too Large",
@@ -137,11 +185,6 @@ const UploadBankTransferSlip: React.FC = () => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
 
-        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
-          showFileTooLargeAlert();
-          return;
-        }
-
         let originalName = asset.fileName;
         if (!originalName) {
           const uriName = asset.uri.split("/").pop()?.split("?")[0];
@@ -149,7 +192,18 @@ const UploadBankTransferSlip: React.FC = () => {
             originalName = uriName;
           }
         }
-        const ext = originalName?.split(".").pop() || "jpg";
+
+        if (!isSupportedFileFormat(originalName, asset.mimeType, asset.uri)) {
+          showInvalidFormatAlert();
+          return;
+        }
+
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
+          showFileTooLargeAlert();
+          return;
+        }
+
+        const ext = originalName?.split(".").pop()?.toLowerCase() || "jpg";
         const safeName = sanitizeFileName(
           originalName,
           asset.uri,
@@ -196,13 +250,19 @@ const UploadBankTransferSlip: React.FC = () => {
 
   const pickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/*", "application/pdf"],
+      type: ["image/jpeg", "image/png", "application/pdf"],
       copyToCacheDirectory: true,
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) return;
 
     const asset = result.assets[0];
+
+    if (!isSupportedFileFormat(asset.name, asset.mimeType, asset.uri)) {
+      showInvalidFormatAlert();
+      return;
+    }
+
     const isPdf =
       asset.mimeType === "application/pdf" ||
       asset.name?.toLowerCase().endsWith(".pdf") ||
@@ -213,7 +273,7 @@ const UploadBankTransferSlip: React.FC = () => {
       return;
     }
 
-    const ext = asset.name?.split(".").pop() || (isPdf ? "pdf" : "png");
+    const ext = asset.name?.split(".").pop()?.toLowerCase() || (isPdf ? "pdf" : "png");
     const safeName = sanitizeFileName(
       asset.name,
       asset.uri,
@@ -318,6 +378,12 @@ const UploadBankTransferSlip: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!file) return;
+
+    if (!isSupportedFileFormat(file.name, null, file.uri)) {
+      showInvalidFormatAlert();
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -338,8 +404,6 @@ const UploadBankTransferSlip: React.FC = () => {
         jpg: "image/jpeg",
         jpeg: "image/jpeg",
         png: "image/png",
-        heic: "image/heic",
-        heif: "image/heif",
       };
       const fileMime =
         file.type === "pdf"
