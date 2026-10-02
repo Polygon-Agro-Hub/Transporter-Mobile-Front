@@ -118,12 +118,16 @@ const UploadBankTransferSlip: React.FC = () => {
     setAlertVisible(true);
   };
 
-  const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf"];
+  const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf", "heic", "heif"];
   const ALLOWED_MIME_TYPES = [
     "image/jpeg",
     "image/jpg",
     "image/png",
     "application/pdf",
+    "image/heic",
+    "image/heif",
+    "image/heic-sequence",
+    "image/heif-sequence",
   ];
 
   const isSupportedFileFormat = (
@@ -131,7 +135,17 @@ const UploadBankTransferSlip: React.FC = () => {
     mimeType?: string | null,
     uri?: string | null,
   ): boolean => {
-    // 1. Check MIME type if present
+    // 1. Check extension from fileName or uri first (handles Apple HEIC/HEIF reliably)
+    const nameToCheck =
+      (fileName || "").trim() ||
+      (uri || "").split("/").pop()?.split("?")[0] ||
+      "";
+    const ext = nameToCheck.split(".").pop()?.toLowerCase();
+    if (ext && ALLOWED_EXTENSIONS.includes(ext)) {
+      return true;
+    }
+
+    // 2. Check MIME type if present
     if (mimeType) {
       const lowerMime = mimeType.toLowerCase();
       if (ALLOWED_MIME_TYPES.includes(lowerMime)) {
@@ -145,23 +159,13 @@ const UploadBankTransferSlip: React.FC = () => {
       }
     }
 
-    // 2. Check extension from fileName or uri
-    const nameToCheck =
-      (fileName || "").trim() ||
-      (uri || "").split("/").pop()?.split("?")[0] ||
-      "";
-    const ext = nameToCheck.split(".").pop()?.toLowerCase();
-    if (ext && ALLOWED_EXTENSIONS.includes(ext)) {
-      return true;
-    }
-
     return false;
   };
 
   const showInvalidFormatAlert = () => {
     showAlert(
       "Unsupported File Format",
-      "Please upload a valid file. Only PNG, JPG, and PDF formats are supported.",
+      "Please upload a valid file. Only JPG, PNG, HEIC, and PDF formats are supported.",
       "error",
     );
   };
@@ -250,7 +254,13 @@ const UploadBankTransferSlip: React.FC = () => {
 
   const pickDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/jpeg", "image/png", "application/pdf"],
+      type: [
+        "image/jpeg",
+        "image/png",
+        "application/pdf",
+        "image/heic",
+        "image/heif",
+      ],
       copyToCacheDirectory: true,
     });
 
@@ -404,6 +414,8 @@ const UploadBankTransferSlip: React.FC = () => {
         jpg: "image/jpeg",
         jpeg: "image/jpeg",
         png: "image/png",
+        heic: "image/heic",
+        heif: "image/heif",
       };
       const fileMime =
         file.type === "pdf"
@@ -522,7 +534,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 Tap to Upload
               </Text>
               <Text className="mt-1 text-xs text-gray-400">
-                JPG, PNG, PDF up to 5MB
+                JPG, PNG, HEIC, PDF up to 5MB
               </Text>
             </TouchableOpacity>
           </View>
