@@ -22,6 +22,7 @@ import HeavyHomeSkeleton from "@/component/common/HeavyHomeSkeleton";
 const scanQRImage = require("@/assets/images/home/scan.webp");
 const myComplaintImage = require("@/assets/images/home/complaints.webp");
 const packsImage = require("@/assets/images/home/packs.webp");
+const ongoingImage = require("@/assets/images/home/ongoing.webp");
 
 type HeavyDriverHomeNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -35,17 +36,19 @@ interface HeavyDriverHomeProps {
 const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loadsCount, setLoadsCount] = useState(0);
+  const [ongoingLoadsCount, setOngoingLoadsCount] = useState(0);
+  const [ongoingLoadCode, setOngoingLoadCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const userProfile = useSelector(selectUserProfile);
 
-  const fetchLoadsCount = useCallback(async () => {
+  const fetchLoadsData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
       const response = await axios.get(
-        `${environment.API_BASE_URL}api/load/get-driver-loads-count`,
+        `${environment.API_BASE_URL}api/load/get-driver-loads`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -58,15 +61,23 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
         response.data.status === "success" &&
         response.data.data
       ) {
-        const count =
-          response.data.data.todoLoads ??
-          response.data.data.todoLoadsCount ??
-          response.data.data.todoCount ??
-          0;
-        setLoadsCount(Number(count));
+        const todoLoads = response.data.data.todoLoads || [];
+        setLoadsCount(todoLoads.length);
+
+        // Find ongoing loads (journeyStatus = "Start")
+        const ongoingLoads = todoLoads.filter(
+          (load: any) => load.journeyStatus === "Start",
+        );
+        setOngoingLoadsCount(ongoingLoads.length);
+
+        if (ongoingLoads.length > 0) {
+          setOngoingLoadCode(ongoingLoads[0].loadCode || null);
+        } else {
+          setOngoingLoadCode(null);
+        }
       }
     } catch (error) {
-      console.warn("Could not fetch heavy driver loads count:", error);
+      console.warn("Could not fetch heavy driver loads:", error);
     } finally {
       setLoading(false);
     }
@@ -74,15 +85,15 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchLoadsCount();
-    }, [fetchLoadsCount]),
+      fetchLoadsData();
+    }, [fetchLoadsData]),
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchLoadsCount();
+    await fetchLoadsData();
     setRefreshing(false);
-  }, [fetchLoadsCount]);
+  }, [fetchLoadsData]);
 
   const buttons = [
     {
@@ -112,6 +123,26 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
       },
       disabled: false,
     },
+    ...(ongoingLoadsCount > 0
+      ? [
+          {
+            image: ongoingImage,
+            label: "Ongoing",
+            color: "#FFF2BF",
+            action: () => {
+              if (ongoingLoadCode) {
+                navigation.navigate("LoadSummary", {
+                  loadCode: ongoingLoadCode,
+                  mode: "journey",
+                });
+              } else {
+                navigation.navigate("Loads");
+              }
+            },
+            disabled: false,
+          },
+        ]
+      : []),
   ];
 
   const chunkArray = (arr: any[], size: number) => {
@@ -194,7 +225,8 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
                 disabled={button.disabled}
                 style={{
                   width: "48%",
-                  backgroundColor: "#fff",
+                  backgroundColor:
+                    button.label === "Ongoing" ? button.color : "#fff",
                   borderRadius: 12,
                   padding: 16,
                   alignItems: "center",
@@ -222,6 +254,17 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
                 </View>
 
                 <View className="flex-row items-center justify-center">
+                  {button.label === "Ongoing" && (
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: "#F7CA21",
+                        marginRight: 6,
+                      }}
+                    />
+                  )}
                   <Text className="text-sm font-bold text-gray-800 text-center">
                     {button.label}
                   </Text>
