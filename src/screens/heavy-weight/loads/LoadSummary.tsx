@@ -15,7 +15,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
-import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { MaterialCommunityIcons, FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { AlertModal } from "@/component/common/AlertModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -291,8 +291,8 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                 >
                   {/* Total Weight */}
                   <View className="flex-1 items-center">
-                    <MaterialCommunityIcons
-                      name="scale"
+                    <FontAwesome6
+                      name="weight-scale"
                       size={24}
                       color="#FFFFFF"
                       style={{ marginBottom: 4 }}
@@ -365,8 +365,8 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                         {/* Weight Column */}
                         <View className="flex-row items-center gap-x-2">
                           <View className="w-8 h-8 rounded-full bg-[#E5E7EB] items-center justify-center">
-                            <MaterialCommunityIcons
-                              name="scale"
+                            <FontAwesome6
+                              name="weight-scale"
                               size={16}
                               color="#000000"
                             />
@@ -423,9 +423,15 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                   elevation: 4,
                 }}
               >
-                <Text className="text-black font-extrabold text-base">
-                  Start Journey
-                </Text>
+                <Text
+  style={{
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 15,
+  }}
+>
+  Start Journey
+</Text>
               </TouchableOpacity>
             )}
 
@@ -463,9 +469,16 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                   }}
                 >
                   <FontAwesome5 name="map-marked-alt" size={18} color="#000000" />
-                  <Text className="text-black font-extrabold text-base ml-2">
-                    Continue to map
-                  </Text>
+                  <Text
+  style={{
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 16,
+    marginLeft: 8,
+  }}
+>
+  Continue to map
+</Text>
                 </TouchableOpacity>
               </View>
             )}
