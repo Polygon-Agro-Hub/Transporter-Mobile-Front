@@ -271,7 +271,12 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
       } else {
         const errorMsg =
           response.data?.message || "Failed to validate Load QR code";
-        setModalTitle("Error!");
+        const isUnauthorized =
+          errorMsg.toLowerCase().includes("already assigned to another driver") ||
+          errorMsg.toLowerCase().includes("already assigned to you") ||
+          errorMsg.toLowerCase().includes("cannot take this load") ||
+          errorMsg.toLowerCase().includes("unauthorized");
+        setModalTitle(isUnauthorized ? "Unauthorized!" : "Error!");
         setModalMessage(errorMsg);
         setShowRescanButton(false);
         setModalType("error");
@@ -287,7 +292,15 @@ const AssignLoadQR: React.FC<AssignLoadQRProps> = ({ navigation }) => {
         error.message ||
         "Failed to process QR code. Please try again.";
 
-      setModalTitle("Error!");
+      const isUnauthorized =
+        error.response?.status === 401 ||
+        error.response?.status === 403 ||
+        errorMessage.toLowerCase().includes("already assigned to another driver") ||
+        errorMessage.toLowerCase().includes("already assigned to you") ||
+        errorMessage.toLowerCase().includes("cannot take this load") ||
+        errorMessage.toLowerCase().includes("unauthorized");
+
+      setModalTitle(isUnauthorized ? "Unauthorized!" : "Error!");
       setModalMessage(errorMessage);
       setShowRescanButton(false);
       setModalType("error");
