@@ -344,29 +344,14 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
 
     try {
       const dcmEmpId = extractDcmEmpId(data);
-      const scannedInvoice = extractInvoiceNumber(data);
 
-      const targetDcm = dcmEmpId || "";
-
-      const normInv = (v: any) =>
-        String(v || "")
-          .replace(/[#\s_-]/g, "")
-          .toUpperCase();
-
-      // Accept either a DCM QR, or THIS order's invoice QR. Anything else = error.
+      // Strictly allow ONLY DCM QR code. Scanning invoice/order QR is disallowed.
       if (!dcmEmpId) {
-        const matchesThisOrder =
-          !!scannedInvoice &&
-          (!orderInvoiceNumber ||
-            normInv(scannedInvoice) === normInv(orderInvoiceNumber));
-
-        if (!matchesThisOrder) {
-          setModalTitle("Invalid QR!");
-          setModalMessage(GENERIC_QR_ERROR);
-          setModalType("error");
-          setShowErrorModal(true);
-          return;
-        }
+        setModalTitle("Invalid QR!");
+        setModalMessage(DCM_QR_REQUIRED_MSG);
+        setModalType("error");
+        setShowErrorModal(true);
+        return;
       }
 
       setLoading(true);
@@ -385,10 +370,8 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         `${environment.API_BASE_URL}api/return/scan-dcm-generate-otp`,
         {
           orderId,
-          invoiceNumber: dcmEmpId
-            ? orderInvoiceNumber || scannedInvoice || ""
-            : scannedInvoice || orderInvoiceNumber,
-          dcmEmpId: targetDcm,
+          invoiceNumber: orderInvoiceNumber || "",
+          dcmEmpId,
         },
         {
           headers: {
@@ -405,7 +388,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
         .trim()
         .toUpperCase();
 
-      const dcmOk = !targetDcm || confirmedDcm === targetDcm.toUpperCase();
+      const dcmOk = confirmedDcm === dcmEmpId.toUpperCase();
 
       if (response.data && response.data.status === "success" && dcmOk) {
         setScanned(false);
@@ -413,7 +396,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           orderId,
           invoiceNumber:
             response.data.data?.invoiceNumber || orderInvoiceNumber,
-          dcmEmpId: response.data.data?.dcmEmpId || targetDcm || "Manager",
+          dcmEmpId: response.data.data?.dcmEmpId || dcmEmpId,
           drvOrderId: response.data.data?.drvOrderId,
         });
       } else {
@@ -517,7 +500,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           <View className="bg-black/80 p-6 rounded-xl items-center">
             <ActivityIndicator size="large" color="#F7CA21" />
             <Text className="text-white text-lg font-semibold mt-4">
-              Checking Return Order
+              Verifying Manager QR Code
             </Text>
           </View>
         </View>
@@ -747,7 +730,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           {/* Subtitle helper badge */}
           <View className="mt-8 bg-black/60 px-5 py-2.5 rounded-full">
             <Text className="text-white text-xs font-semibold text-center">
-              Align the QR code within the frame to scan
+              Scan Distribution Centre Manager (DCM) QR Code
             </Text>
           </View>
         </View>
