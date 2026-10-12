@@ -338,6 +338,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     } else {
       navigation.navigate("EndJourneyConfirmation", {
         processOrderIds: processOrderIds,
+        orderData: orders && orders.length > 0 ? orders[0] : undefined,
       });
     }
   };
