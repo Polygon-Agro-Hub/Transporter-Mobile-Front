@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import environment from "@/environment/environment";
 const locationImage = require("@/assets/images/orders/location.webp");
 
 type EndJourneyNavigationProp = StackNavigationProp<
@@ -51,6 +54,63 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
   const latitude = orderData?.latitude;
   const longitude = orderData?.longitude;
   const address = orderData?.address || "";
+
+  // Payment status state (may be enriched via fallback fetch)
+  const [currentOrderData, setCurrentOrderData] = useState(orderData ?? null);
+
+  useEffect(() => {
+    // If orderData was not passed (e.g. navigated from OrderDetails quick path), fetch it
+    if (!currentOrderData && currentOrderId) {
+      (async () => {
+        try {
+          const token = await AsyncStorage.getItem("token");
+          if (!token) return;
+          const res = await axios.get(
+            `${environment.API_BASE_URL}api/order/get-order-user-details`,
+            {
+              params: { orderIds: currentOrderId, isProcessOrderIds: 1 },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (
+            res.data.status === "success" &&
+            res.data.data?.orders?.length > 0
+          ) {
+            setCurrentOrderData(res.data.data.orders[0]);
+          }
+        } catch (_) {
+          // silently ignore – payment card simply won't render
+        }
+      })();
+    }
+  }, []);
+
+  // Currency formatter
+  const formatCurrency = (val: string | number | null | undefined): string => {
+    const num =
+      typeof val === "number" ? val : parseFloat((val as string) || "0");
+    if (isNaN(num)) return "Rs. 0.00";
+    return `Rs. ${num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+  };
+
+  // Determine payment display
+  const paymentMethod =
+    currentOrderData?.processOrder?.paymentMethod?.toLowerCase() ?? "";
+  const isPaid = currentOrderData?.processOrder?.isPaid ?? false;
+  const cashAmountDue = currentOrderData?.processOrder?.cashAmountDue ?? null;
+  const pricing = currentOrderData?.pricing ?? null;
+
+  // "Already Paid" when method is not cash AND isPaid flag is true, OR non-cash with no amount due
+  const isAlreadyPaid =
+    paymentMethod !== "cash" && (isPaid || (cashAmountDue === null && !pricing));
+
+  // Amount to display for collect-cash case
+  const amountDue =
+    paymentMethod === "cash"
+      ? cashAmountDue ?? pricing ?? 0
+      : cashAmountDue ?? pricing ?? 0;
+
+  const showPaymentCard = !!currentOrderData?.processOrder;
 
   // Function to open Google Maps with directions
   const openGoogleMapsNavigation = () => {
@@ -221,6 +281,33 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
           <Text className="text-xs text-[#808080] mb-6 text-center">
             Collect digital signature to confirm delivery.
           </Text>
+
+          {/* Payment Status Card */}
+          {showPaymentCard && (
+            <View
+              className="w-full mb-4 py-4 px-6 rounded-2xl bg-[#FFFDF0] border border-[#F7CA21] flex-row items-center justify-center"
+            >
+              {isAlreadyPaid ? (
+                <>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={26}
+                    color="#F7CA21"
+                  />
+                  <Text className="ml-3 text-lg font-bold text-black">
+                    Already Paid!
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <FontAwesome6 name="coins" size={24} color="#F7CA21" />
+                  <Text className="ml-3 text-lg font-bold text-black">
+                    {formatCurrency(amountDue)}
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
 
           <TouchableOpacity
             onPress={handleGetSignature}
