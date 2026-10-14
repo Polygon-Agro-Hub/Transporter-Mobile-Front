@@ -76,6 +76,13 @@ const formatLongDate = (date: Date | null) => {
   )}, ${date.getFullYear()}`;
 };
 
+const toLocalISODate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const formatOrderTimestamp = (isoString: string) => {
   try {
     const date = new Date(isoString);
@@ -173,8 +180,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
     try {
       setIsLoading(true);
 
-      const from = fromDate!.toISOString().split("T")[0];
-      const to = toDate!.toISOString().split("T")[0];
+      const from = toLocalISODate(fromDate!);
+      const to = toLocalISODate(toDate!);
 
       const response = await fetch(
         `${environment.API_BASE_URL}api/auth/get-earnings-history?from=${from}&to=${to}`,
@@ -209,8 +216,8 @@ const MyEarnings: React.FC<MyEarningsProps> = ({ navigation }) => {
     } catch (error) {
       console.error("Error fetching earnings history:", error);
       setSummary({
-        fromDate: fromDate!.toISOString().split("T")[0],
-        toDate: toDate!.toISOString().split("T")[0],
+        fromDate: toLocalISODate(fromDate!),
+        toDate: toLocalISODate(toDate!),
         cashEarnings: 0,
         cashOrders: 0,
         cardEarnings: 0,

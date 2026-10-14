@@ -148,7 +148,7 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
           "File and media access is required to select photos and documents. Please enable it in settings.",
           [
             {
-              text: "Not Now",
+              text: "Cancel",
               style: "cancel",
               onPress: handleDenyOrClose,
             },
@@ -277,8 +277,7 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
               onPress={requestMediaPermission}
               activeOpacity={0.8}
               disabled={isLoading}
-              className="w-full mb-3"
-              style={{ borderRadius: 999, overflow: "hidden" }}
+              style={{ width: "100%", borderRadius: 999, overflow: "hidden" }}
             >
               <LinearGradient
                 colors={["#F7CA21", "#FBBA2F"]}
@@ -290,30 +289,34 @@ const MediaAccess: React.FC<MediaAccessProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   width: "100%",
+                  paddingHorizontal: 16,
                 }}
               >
-                <View className="flex-row items-center justify-center">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <MaterialCommunityIcons
                     name="image-multiple-outline"
                     size={20}
                     color="#000000"
                     style={{ marginRight: 8 }}
                   />
-                  <Text className="text-black font-extrabold text-base tracking-wide">
-                    {isLoading ? "Requesting..." : "Agree & Continue"}
+                  <Text
+                    style={{
+                      color: "#000000",
+                      fontWeight: "800",
+                      fontSize: 16,
+                      textAlign: "center",
+                    }}
+                  >
+                    {isLoading ? "Requesting..." : "Continue"}
                   </Text>
                 </View>
               </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleDenyOrClose}
-              activeOpacity={0.7}
-              className="py-3 px-6 items-center justify-center"
-            >
-              <Text className="text-gray-400 font-semibold text-sm">
-                Not Now
-              </Text>
             </TouchableOpacity>
           </View>
         </View>

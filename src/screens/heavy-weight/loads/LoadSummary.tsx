@@ -323,10 +323,13 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
                   <View className="flex-row items-center mb-3">
                     <Image
                       source={{ uri: crop.imageUri }}
-                      className="w-12 h-12 rounded-xl mr-3"
+                      className="w-12 h-12 rounded-xl mr-3 shrink-0"
                       resizeMode="contain"
                     />
-                    <Text className="text-base font-bold text-black">
+                    <Text
+                      className="text-base font-bold text-black flex-1"
+                      style={{ flexShrink: 1 }}
+                    >
                       {crop.cropName}
                     </Text>
                   </View>
