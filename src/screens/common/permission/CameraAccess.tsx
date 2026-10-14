@@ -173,7 +173,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
           "Camera access is required. Please enable it in settings.",
           [
             {
-              text: "Not Now",
+              text: "Cancel",
               style: "cancel",
               onPress: handleDenyOrClose,
             },
@@ -307,8 +307,7 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
               onPress={requestCameraPermission}
               activeOpacity={0.8}
               disabled={isLoading}
-              className="w-full mb-3"
-              style={{ borderRadius: 999, overflow: "hidden" }}
+              style={{ width: "100%", borderRadius: 999, overflow: "hidden" }}
             >
               <LinearGradient
                 colors={["#F7CA21", "#FBBA2F"]}
@@ -320,9 +319,16 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   width: "100%",
+                  paddingHorizontal: 16,
                 }}
               >
-                <View className="flex-row items-center justify-center">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <Ionicons
                     name="camera-outline"
                     size={20}
@@ -333,25 +339,14 @@ const CameraAccess: React.FC<CameraAccessProps> = ({
                     style={{
                       color: "#000000",
                       fontWeight: "800",
-                      fontSize: 14,
-                      lineHeight: 24,
-                      letterSpacing: 0.4,
+                      fontSize: 16,
+                      textAlign: "center",
                     }}
                   >
-                    {isLoading ? "Requesting..." : "Agree & Continue"}
+                    {isLoading ? "Requesting..." : "Continue"}
                   </Text>
                 </View>
               </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleDenyOrClose}
-              activeOpacity={0.7}
-              className="py-3 px-6 items-center justify-center"
-            >
-              <Text className="text-gray-400 font-semibold text-sm">
-                Not Now
-              </Text>
             </TouchableOpacity>
           </View>
         </View>
