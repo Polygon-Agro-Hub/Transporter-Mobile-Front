@@ -337,10 +337,14 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
 
-      if (currentStatus === "Return" || currentStatus === "Return Received") {
+      if (currentStatus === "Return Received") {
         title = "Already Returned!";
         message =
           "This order has already been returned to the center and cannot proceed again!";
+      } else if (currentStatus === "Return") {
+        title = "Return Order!";
+        message =
+          "This order has been marked as Return. Please complete the return handover process at the distribution center.";
       } else if (currentStatus === "Ready to Pickup") {
         title = "Cannot Proceed!";
         message =

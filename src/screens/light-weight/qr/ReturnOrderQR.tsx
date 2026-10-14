@@ -309,11 +309,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       setModalMessage("This Distribution Centre Manager is not active.");
     } else if (
       currentStatus === "Return Received" ||
-      currentStatus === "Return" ||
       msg.includes("already been marked as return received") ||
       msg.includes("already been returned") ||
       msg.includes("already returned") ||
-      msg.includes("return received") ||
       msg.includes("cannot proceed again")
     ) {
       setModalTitle("Already Returned!");
