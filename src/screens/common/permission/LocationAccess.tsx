@@ -121,7 +121,7 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
           "Location access is required for this feature. Please enable it in settings.",
           [
             {
-              text: "Not Now",
+              text: "Cancel",
               style: "cancel",
               onPress: handleNotNowPress,
             },
@@ -139,7 +139,8 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
         "Unable to request location permission. Please try again.",
         [
           {
-            text: "Not Now",
+            text: "Cancel",
+            style: "cancel",
             onPress: handleNotNowPress,
           },
           { text: "OK" },
@@ -256,8 +257,7 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
               onPress={requestLocationPermission}
               activeOpacity={0.8}
               disabled={isLoading}
-              className="w-full mb-3"
-              style={{ borderRadius: 999, overflow: "hidden" }}
+              style={{ width: "100%", borderRadius: 999, overflow: "hidden" }}
             >
               <LinearGradient
                 colors={["#F7CA21", "#FBBA2F"]}
@@ -269,30 +269,34 @@ const LocationAccess: React.FC<LocationAccessProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   width: "100%",
+                  paddingHorizontal: 16,
                 }}
               >
-                <View className="flex-row items-center justify-center">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <Ionicons
                     name="location-outline"
                     size={20}
                     color="#000000"
                     style={{ marginRight: 8 }}
                   />
-                  <Text className="text-black font-extrabold text-base tracking-wide">
-                    {isLoading ? "Requesting..." : "Agree & Continue"}
+                  <Text
+                    style={{
+                      color: "#000000",
+                      fontWeight: "800",
+                      fontSize: 16,
+                      textAlign: "center",
+                    }}
+                  >
+                    {isLoading ? "Requesting..." : "Continue"}
                   </Text>
                 </View>
               </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleNotNowPress}
-              activeOpacity={0.7}
-              className="py-3 px-6 items-center justify-center"
-            >
-              <Text className="text-gray-400 font-semibold text-sm">
-                Not Now
-              </Text>
             </TouchableOpacity>
           </View>
         </View>
