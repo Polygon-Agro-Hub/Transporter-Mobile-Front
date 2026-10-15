@@ -280,7 +280,7 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
             return startA - startB;
           }
 
-          return a.orderId - b.orderId;
+          return (a.processOrder?.id || a.orderId) - (b.processOrder?.id || b.orderId);
         });
 
         setUserDetails(data.user);
@@ -463,8 +463,10 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     };
   };
 
-  const findOrdersWithSameLocation = (orderId: number) => {
-    const currentOrder = orders.find((order) => order.orderId === orderId);
+  const findOrdersWithSameLocation = (processOrderId: number) => {
+    const currentOrder = orders.find(
+      (order) => order.processOrder?.id === processOrderId,
+    );
     if (!currentOrder || !currentOrder.longitude || !currentOrder.latitude) {
       return [currentOrder];
     }
@@ -495,9 +497,9 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
     });
   };
 
-  const handleStartJourneyForOrder = async (orderId: number) => {
+  const handleStartJourneyForOrder = async (processOrderId: number) => {
     try {
-      setStartingJourney(orderId.toString());
+      setStartingJourney(processOrderId.toString());
       setError(null);
 
       const token = await AsyncStorage.getItem("token");
@@ -507,12 +509,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
         return;
       }
 
-      const currentOrder = orders.find((order) => order.orderId === orderId);
+      const currentOrder = orders.find(
+        (order) => order.processOrder?.id === processOrderId,
+      );
       if (!currentOrder || !currentOrder.processOrder?.id) {
         throw new Error("Order not found");
       }
 
-      const processOrderId = currentOrder.processOrder.id;
       const currentStatus = currentOrder.processOrder.status.toLowerCase();
       const latitude = currentOrder.latitude;
       const longitude = currentOrder.longitude;
@@ -848,13 +851,13 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
               !isButtonActive;
 
             const sameLocationOrders = findOrdersWithSameLocation(
-              order.orderId,
+              order.processOrder.id,
             );
             const showSameLocationNotice = sameLocationOrders.length > 1;
 
             return (
               <View
-                key={`${order.orderId}-${index}`}
+                key={`${order.processOrder.id}-${index}`}
                 style={getCardStyle(status)}
                 className="rounded-xl p-4"
               >
@@ -970,13 +973,15 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     shadowRadius: 5,
                     elevation: !shouldDisableButton ? 4 : 0,
                   }}
-                  onPress={() => handleStartJourneyForOrder(order.orderId)}
+                  onPress={() =>
+                    handleStartJourneyForOrder(order.processOrder.id)
+                  }
                   disabled={
-                    startingJourney === order.orderId.toString() ||
+                    startingJourney === order.processOrder.id.toString() ||
                     shouldDisableButton
                   }
                 >
-                  {startingJourney === order.orderId.toString() ? (
+                  {startingJourney === order.processOrder.id.toString() ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
                     <Text
