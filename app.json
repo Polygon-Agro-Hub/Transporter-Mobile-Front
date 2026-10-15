@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 23,
+      "versionCode": 24,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -128,7 +128,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "364d8ee4-2767-4b1f-8d5c-ac4e35e4aa26"
+        "projectId": ""
       }
     }
   }
