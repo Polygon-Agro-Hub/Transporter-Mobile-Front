@@ -8,7 +8,6 @@ import {
   Alert,
   Modal,
   StatusBar,
-  ActivityIndicator,
   Platform,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -16,7 +15,7 @@ import { RootStackParamList } from "@/types/types";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import CustomHeader from "@/component/common/CustomHeader";
 import { formatNumberWithCommas } from "@/utils/formatNumberWithCommas";
-import { Ionicons, Feather, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
@@ -35,8 +34,6 @@ type UploadBankTransferSlipNavigationProp = StackNavigationProp<
 >;
 
 const TRANSFER_DETAILS = {
-  // Fallback only — used if no amount param is passed in.
-  amount: 9000.0,
   accountName: "Polygon Holdings Pvt Ltd",
   accountNumber: "701020161763",
   bankName: "Hatton National Bank",
@@ -82,19 +79,16 @@ const UploadBankTransferSlip: React.FC = () => {
   const navigation = useNavigation<UploadBankTransferSlipNavigationProp>();
   const insets = useSafeAreaInsets();
   const route = useRoute();
-  const routeParams = route.params as { amount?: number } | undefined;
+  const routeParams = route.params as { amount?: number | string } | undefined;
 
-  // This is the FULL received amount (not reduced by earnings) — it
-  // comes straight from CashHandOver's Total Received figure.
   const rawAmount = routeParams?.amount;
-  const receivedAmount: number =
-    typeof rawAmount === "number" && !isNaN(rawAmount) && rawAmount > 0
+  const parsedAmount =
+    typeof rawAmount === "number"
       ? rawAmount
-      : typeof rawAmount === "string" &&
-          !isNaN(parseFloat(rawAmount)) &&
-          parseFloat(rawAmount) > 0
-        ? parseFloat(rawAmount)
-        : (TRANSFER_DETAILS.amount ?? 9000.0);
+      : parseFloat(String(rawAmount ?? ""));
+
+  const receivedAmount: number | null =
+    !isNaN(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
 
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -105,6 +99,9 @@ const UploadBankTransferSlip: React.FC = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState<"success" | "error">("error");
   const [onAlertClose, setOnAlertClose] = useState<() => void>(() => () => {});
+
+  const canSubmit = !!file && receivedAmount !== null && !submitting;
+  const buttonActive = !!file && receivedAmount !== null;
 
   const showAlert = (
     title: string,
@@ -283,7 +280,8 @@ const UploadBankTransferSlip: React.FC = () => {
       return;
     }
 
-    const ext = asset.name?.split(".").pop()?.toLowerCase() || (isPdf ? "pdf" : "png");
+    const ext =
+      asset.name?.split(".").pop()?.toLowerCase() || (isPdf ? "pdf" : "png");
     const safeName = sanitizeFileName(
       asset.name,
       asset.uri,
@@ -352,7 +350,6 @@ const UploadBankTransferSlip: React.FC = () => {
   };
 
   const removeFile = () => setFile(null);
-  
 
   const openPdfExternally = async () => {
     if (!file || file.type !== "pdf") return;
@@ -388,6 +385,14 @@ const UploadBankTransferSlip: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!file) return;
+
+    if (receivedAmount === null) {
+      showAlert(
+        "Error",
+        "Transfer amount is missing. Please go back and try again.",
+      );
+      return;
+    }
 
     if (!isSupportedFileFormat(file.name, null, file.uri)) {
       showInvalidFormatAlert();
@@ -442,14 +447,20 @@ const UploadBankTransferSlip: React.FC = () => {
       );
 
       if (response.data.status === "success") {
+        const slipStatus: string | undefined =
+          response.data?.data?.status ?? response.data?.slip_status;
+
         setAlertTitle("Success!");
-        setAlertMessage("Bank transfer slip uploaded successfully.");
+        setAlertMessage(
+          response.data.message || "Bank transfer slip uploaded successfully.",
+        );
         setAlertType("success");
         setOnAlertClose(() => () => {
           setAlertVisible(false);
-          navigation.navigate("BankTransferSlipStatus" as any, {
-            status: "pending",
-          });
+          navigation.navigate(
+            "BankTransferSlipStatus" as any,
+            slipStatus ? ({ status: slipStatus } as any) : undefined,
+          );
         });
         setAlertVisible(true);
       } else {
@@ -484,7 +495,7 @@ const UploadBankTransferSlip: React.FC = () => {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Amount to Transfer (full received amount) */}
+        {/* Amount to Transfer (full received amount from route params) */}
         <View className="mt-6 self-center items-center rounded-2xl bg-[#FFFBE9] px-12 py-4">
           <Text numberOfLines={1} className="text-sm text-black">
             Amount to Transfer
@@ -493,7 +504,9 @@ const UploadBankTransferSlip: React.FC = () => {
             className="mt-1 text-2xl font-bold text-gray-900"
             numberOfLines={1}
           >
-            Rs. {formatNumberWithCommas(receivedAmount.toFixed(2))}
+            {receivedAmount !== null
+              ? `Rs. ${formatNumberWithCommas(receivedAmount.toFixed(2))}`
+              : "—"}
           </Text>
         </View>
 
@@ -638,11 +651,11 @@ const UploadBankTransferSlip: React.FC = () => {
       {/* Submit */}
       <View className="px-5 pb-6 pt-2">
         <TouchableOpacity
-          disabled={!file || submitting}
+          disabled={!canSubmit}
           onPress={handleSubmit}
           activeOpacity={0.8}
           className={`items-center rounded-full py-4 ${
-            file ? "bg-amber-400" : "bg-gray-200"
+            buttonActive ? "bg-amber-400" : "bg-gray-200"
           }`}
           style={{
             shadowColor: "#000",
@@ -654,7 +667,7 @@ const UploadBankTransferSlip: React.FC = () => {
         >
           <Text
             className={`text-base font-bold ${
-              file ? "text-gray-900" : "text-gray-400"
+              buttonActive ? "text-gray-900" : "text-gray-400"
             }`}
           >
             {submitting ? "Submitting..." : "Submit"}
