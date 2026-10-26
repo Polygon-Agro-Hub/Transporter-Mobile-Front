@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PdfViewer from "./PdfViewer";
 import axios from "axios";
@@ -98,7 +99,7 @@ const UploadBankTransferSlip: React.FC = () => {
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState<"success" | "error">("error");
-  const [onAlertClose, setOnAlertClose] = useState<() => void>(() => () => {});
+  const onAlertCloseCallback = useRef<(() => void) | null>(null);
 
   const canSubmit = !!file && receivedAmount !== null && !submitting;
   const buttonActive = !!file && receivedAmount !== null;
@@ -107,12 +108,22 @@ const UploadBankTransferSlip: React.FC = () => {
     title: string,
     message: string,
     type: "success" | "error" = "error",
+    onClose?: () => void,
   ) => {
     setAlertTitle(title);
     setAlertMessage(message);
     setAlertType(type);
-    setOnAlertClose(() => () => setAlertVisible(false));
+    onAlertCloseCallback.current = onClose || null;
     setAlertVisible(true);
+  };
+
+  const handleAlertClose = () => {
+    setAlertVisible(false);
+    if (onAlertCloseCallback.current) {
+      const cb = onAlertCloseCallback.current;
+      onAlertCloseCallback.current = null;
+      cb();
+    }
   };
 
   const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf", "heic", "heif"];
@@ -132,28 +143,38 @@ const UploadBankTransferSlip: React.FC = () => {
     mimeType?: string | null,
     uri?: string | null,
   ): boolean => {
-    // 1. Check extension from fileName or uri first (handles Apple HEIC/HEIF reliably)
     const nameToCheck =
       (fileName || "").trim() ||
       (uri || "").split("/").pop()?.split("?")[0] ||
       "";
     const ext = nameToCheck.split(".").pop()?.toLowerCase();
+
+    // If an explicit extension exists, it MUST be an allowed extension
+    if (ext && ext !== nameToCheck.toLowerCase()) {
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        return false;
+      }
+    }
+
+    // If MIME type is present, it must be an allowed MIME type
+    if (mimeType) {
+      const lowerMime = mimeType.toLowerCase();
+      if (
+        lowerMime !== "application/octet-stream" &&
+        !ALLOWED_MIME_TYPES.includes(lowerMime)
+      ) {
+        return false;
+      }
+    }
+
+    // If extension is allowed, accept
     if (ext && ALLOWED_EXTENSIONS.includes(ext)) {
       return true;
     }
 
-    // 2. Check MIME type if present
-    if (mimeType) {
-      const lowerMime = mimeType.toLowerCase();
-      if (ALLOWED_MIME_TYPES.includes(lowerMime)) {
-        return true;
-      }
-      if (
-        lowerMime.startsWith("image/") ||
-        lowerMime.startsWith("application/")
-      ) {
-        return false;
-      }
+    // If MIME type is allowed, accept
+    if (mimeType && ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
+      return true;
     }
 
     return false;
@@ -162,7 +183,7 @@ const UploadBankTransferSlip: React.FC = () => {
   const showInvalidFormatAlert = () => {
     showAlert(
       "Unsupported File Format",
-      "Please upload a valid file. Only JPG, PNG, HEIC, and PDF formats are supported.",
+      "Please upload a valid file. Only PNG, JPG, and PDF formats are supported.",
       "error",
     );
   };
@@ -175,12 +196,55 @@ const UploadBankTransferSlip: React.FC = () => {
     );
   };
 
+  const convertImageToPng = async (
+    imageUri: string,
+    fileName: string,
+  ): Promise<{ uri: string; name: string; sizeMB: string }> => {
+    const manipResult = await ImageManipulator.manipulateAsync(
+      imageUri,
+      [],
+      { format: ImageManipulator.SaveFormat.PNG },
+    );
+
+    const baseName = fileName.replace(/\.[^/.]+$/, "");
+    const safePngName = `${baseName.replace(/[^a-zA-Z0-9._-]/g, "_")}.png`;
+    const finalUri = `${FileSystem.cacheDirectory}${safePngName}`;
+
+    try {
+      await FileSystem.copyAsync({
+        from: manipResult.uri,
+        to: finalUri,
+      });
+    } catch (e) {
+      console.log("Copy PNG cache error:", e);
+    }
+
+    const info = await FileSystem.getInfoAsync(finalUri).catch(() => null);
+    const targetUri = info && info.exists ? finalUri : manipResult.uri;
+
+    let sizeMB = "—";
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(targetUri);
+      if (fileInfo.exists && fileInfo.size) {
+        sizeMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
+      }
+    } catch (e) {
+      console.log("File size check error:", e);
+    }
+
+    return {
+      uri: targetUri,
+      name: safePngName,
+      sizeMB,
+    };
+  };
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.8,
+        quality: 1,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -204,11 +268,69 @@ const UploadBankTransferSlip: React.FC = () => {
           return;
         }
 
-        const ext = originalName?.split(".").pop()?.toLowerCase() || "jpg";
+        const fallbackName = `Transfer_Slip_${Date.now()}.png`;
+        const initialName = originalName || fallbackName;
+
+        try {
+          const converted = await convertImageToPng(asset.uri, initialName);
+
+          const sizeNumber = parseFloat(converted.sizeMB);
+          if (!isNaN(sizeNumber) && sizeNumber > MAX_FILE_SIZE_MB) {
+            showFileTooLargeAlert();
+            return;
+          }
+
+          setFile({
+            uri: converted.uri,
+            name: converted.name,
+            sizeMB: `${converted.sizeMB} MB`,
+            type: "image",
+          });
+        } catch (convErr) {
+          console.error("Error converting picked image to PNG:", convErr);
+          showAlert(
+            "Image Processing Error",
+            "Could not process the selected image. Please try another image.",
+            "error",
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
+
+      if (!isSupportedFileFormat(asset.name, asset.mimeType, asset.uri)) {
+        showInvalidFormatAlert();
+        return;
+      }
+
+      if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
+        showFileTooLargeAlert();
+        return;
+      }
+
+      const isPdf =
+        asset.mimeType === "application/pdf" ||
+        asset.name?.toLowerCase().endsWith(".pdf") ||
+        asset.uri.toLowerCase().endsWith(".pdf");
+
+      if (isPdf) {
         const safeName = sanitizeFileName(
-          originalName,
+          asset.name,
           asset.uri,
-          `Transfer_Slip_${Date.now()}.${ext}`,
+          `Transfer_Slip_${Date.now()}.pdf`,
         );
 
         let finalUri = asset.uri;
@@ -219,21 +341,25 @@ const UploadBankTransferSlip: React.FC = () => {
             to: localUri,
           });
           finalUri = localUri;
-        } catch (e) {
-          console.log("Copy image cache error:", e);
+        } catch (err) {
+          console.error("Failed to copy PDF file:", err);
         }
 
         let sizeMB = "—";
-        if (asset.fileSize) {
-          sizeMB = (asset.fileSize / (1024 * 1024)).toFixed(1);
+        if (asset.size) {
+          sizeMB = (asset.size / (1024 * 1024)).toFixed(1);
         } else {
           try {
             const info = await FileSystem.getInfoAsync(finalUri);
             if (info.exists && info.size) {
+              if (info.size > MAX_FILE_SIZE_BYTES) {
+                showFileTooLargeAlert();
+                return;
+              }
               sizeMB = (info.size / (1024 * 1024)).toFixed(1);
             }
-          } catch (e) {
-            console.log("File size check error:", e);
+          } catch (err) {
+            console.error("Failed to check file size:", err);
           }
         }
 
@@ -241,91 +367,37 @@ const UploadBankTransferSlip: React.FC = () => {
           uri: finalUri,
           name: safeName,
           sizeMB: `${sizeMB} MB`,
-          type: "image",
+          type: "pdf",
         });
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-    }
-  };
+      } else {
+        const initialName = asset.name || `Transfer_Slip_${Date.now()}.png`;
+        try {
+          const converted = await convertImageToPng(asset.uri, initialName);
 
-  const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        "image/jpeg",
-        "image/png",
-        "application/pdf",
-        "image/heic",
-        "image/heif",
-      ],
-      copyToCacheDirectory: true,
-    });
-
-    if (result.canceled || !result.assets || result.assets.length === 0) return;
-
-    const asset = result.assets[0];
-
-    if (!isSupportedFileFormat(asset.name, asset.mimeType, asset.uri)) {
-      showInvalidFormatAlert();
-      return;
-    }
-
-    const isPdf =
-      asset.mimeType === "application/pdf" ||
-      asset.name?.toLowerCase().endsWith(".pdf") ||
-      asset.uri.toLowerCase().endsWith(".pdf");
-
-    if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
-      showFileTooLargeAlert();
-      return;
-    }
-
-    const ext =
-      asset.name?.split(".").pop()?.toLowerCase() || (isPdf ? "pdf" : "png");
-    const safeName = sanitizeFileName(
-      asset.name,
-      asset.uri,
-      isPdf
-        ? `Transfer_Slip_${Date.now()}.pdf`
-        : `Transfer_Slip_${Date.now()}.${ext}`,
-    );
-
-    let finalUri = asset.uri;
-    try {
-      const localUri = `${FileSystem.cacheDirectory}${safeName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      await FileSystem.copyAsync({
-        from: asset.uri,
-        to: localUri,
-      });
-      finalUri = localUri;
-    } catch (err) {
-      console.error("Failed to copy file:", err);
-    }
-
-    let sizeMB = "—";
-    if (asset.size) {
-      sizeMB = (asset.size / (1024 * 1024)).toFixed(1);
-    } else {
-      try {
-        const info = await FileSystem.getInfoAsync(finalUri);
-        if (info.exists && info.size) {
-          if (info.size > MAX_FILE_SIZE_BYTES) {
+          const sizeNumber = parseFloat(converted.sizeMB);
+          if (!isNaN(sizeNumber) && sizeNumber > MAX_FILE_SIZE_MB) {
             showFileTooLargeAlert();
             return;
           }
-          sizeMB = (info.size / (1024 * 1024)).toFixed(1);
-        }
-      } catch (err) {
-        console.error("Failed to check file size:", err);
-      }
-    }
 
-    setFile({
-      uri: finalUri,
-      name: safeName,
-      sizeMB: `${sizeMB} MB`,
-      type: isPdf ? "pdf" : "image",
-    });
+          setFile({
+            uri: converted.uri,
+            name: converted.name,
+            sizeMB: `${converted.sizeMB} MB`,
+            type: "image",
+          });
+        } catch (convErr) {
+          console.error("Error converting document image to PNG:", convErr);
+          showAlert(
+            "Image Processing Error",
+            "Could not process the selected image. Please try another image.",
+            "error",
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error picking document:", error);
+    }
   };
 
   const handleUploadPress = () => {
@@ -410,22 +482,10 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const formData = new FormData();
       const fileUri = file.uri;
-      const fileExt = (
-        fileUri.split(".").pop() || (file.type === "pdf" ? "pdf" : "jpg")
-      ).toLowerCase();
+      const isPdf = file.type === "pdf";
+      const fileExt = isPdf ? "pdf" : "png";
       const fileName = file.name || `transfer_slip.${fileExt}`;
-
-      const IMAGE_MIME_MAP: Record<string, string> = {
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        png: "image/png",
-        heic: "image/heic",
-        heif: "image/heif",
-      };
-      const fileMime =
-        file.type === "pdf"
-          ? "application/pdf"
-          : (IMAGE_MIME_MAP[fileExt] ?? "image/jpeg");
+      const fileMime = isPdf ? "application/pdf" : "image/png";
 
       formData.append("slip", {
         uri: fileUri,
@@ -450,19 +510,17 @@ const UploadBankTransferSlip: React.FC = () => {
         const slipStatus: string | undefined =
           response.data?.data?.status ?? response.data?.slip_status;
 
-        setAlertTitle("Success!");
-        setAlertMessage(
+        showAlert(
+          "Success!",
           response.data.message || "Bank transfer slip uploaded successfully.",
+          "success",
+          () => {
+            navigation.navigate(
+              "BankTransferSlipStatus" as any,
+              slipStatus ? ({ status: slipStatus } as any) : undefined,
+            );
+          },
         );
-        setAlertType("success");
-        setOnAlertClose(() => () => {
-          setAlertVisible(false);
-          navigation.navigate(
-            "BankTransferSlipStatus" as any,
-            slipStatus ? ({ status: slipStatus } as any) : undefined,
-          );
-        });
-        setAlertVisible(true);
       } else {
         showAlert(
           "Upload Failed",
@@ -547,7 +605,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 Tap to Upload
               </Text>
               <Text className="mt-1 text-xs text-gray-400">
-                JPG, PNG, HEIC, PDF up to 5MB
+                PNG, JPG, PDF up to 5MB
               </Text>
             </TouchableOpacity>
           </View>
@@ -748,7 +806,7 @@ const UploadBankTransferSlip: React.FC = () => {
         title={alertTitle}
         message={alertMessage}
         type={alertType}
-        onClose={onAlertClose}
+        onClose={handleAlertClose}
         autoClose={true}
       />
     </View>
