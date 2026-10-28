@@ -11,12 +11,14 @@ import {
   BackHandler,
   ActivityIndicator,
   Keyboard,
+  InputAccessoryView,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import CustomHeader from "@/component/common/CustomHeader";
 import { AlertModal } from "@/component/common/AlertModal";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
@@ -38,6 +40,7 @@ interface ReturnOrderOTPVerificationProps {
 
 const OTP_LENGTH = 5;
 const INITIAL_TIMER_SECONDS = 120; // 2 minutes
+const EMPTY_INPUT_ACCESSORY_ID = "emptyOtpInputAccessoryView";
 
 const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
   navigation,
@@ -56,6 +59,8 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
   const [modalMessage, setModalMessage] = useState<string | React.ReactNode>("");
   const [modalType, setModalType] = useState<"success" | "error">("error");
   const [showRetryButton, setShowRetryButton] = useState<boolean>(false);
+  const [rescanButtonText, setRescanButtonText] = useState<string>("Retry");
+  const [isSessionExpired, setIsSessionExpired] = useState<boolean>(false);
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -192,6 +197,42 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
     inputRefs.current[0]?.focus();
   };
 
+  const redirectToLogin = async () => {
+    setModalVisible(false);
+    setIsSessionExpired(false);
+    try {
+      await AsyncStorage.multiRemove(["token", "user", "userData", "role"]);
+    } catch (e) {
+      console.warn("Error clearing tokens:", e);
+    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" as any }],
+    });
+  };
+
+  const showSessionExpiredModal = () => {
+    setIsSessionExpired(true);
+    setModalTitle("Session Expired");
+    setModalMessage(
+      <View className="items-center px-1">
+        <View className="w-14 h-14 rounded-full bg-[#FFFBE9] border border-[#F7CA21]/50 items-center justify-center mb-3">
+          <Ionicons name="lock-closed" size={26} color="#B45309" />
+        </View>
+        <Text className="text-center text-base font-bold text-gray-900 mb-1">
+          Your session has timed out
+        </Text>
+        <Text className="text-center text-xs text-[#52525B] leading-5 px-2">
+          For your account security, your login session has expired. Please log in again to complete returning this order.
+        </Text>
+      </View>,
+    );
+    setModalType("error");
+    setShowRetryButton(true);
+    setRescanButtonText("Log In Again");
+    setModalVisible(true);
+  };
+
   const handleResendOtp = async () => {
     if (timer > 0 || resending) return;
 
@@ -200,11 +241,7 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         setResending(false);
-        setModalTitle("Error!");
-        setModalMessage("Authentication token not found. Please log in again.");
-        setModalType("error");
-        setShowRetryButton(false);
-        setModalVisible(true);
+        showSessionExpiredModal();
         return;
       }
 
@@ -232,6 +269,7 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
         setModalTitle("Error!");
         setModalMessage(response.data?.message || "Failed to resend OTP");
         setModalType("error");
+        setRescanButtonText("Retry");
         setShowRetryButton(true);
         setModalVisible(true);
       }
@@ -239,9 +277,21 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       setResending(false);
       const errMsg =
         error.response?.data?.message || error.message || "Failed to resend OTP";
+
+      if (
+        error.response?.status === 401 ||
+        errMsg.toLowerCase().includes("invalid token") ||
+        errMsg.toLowerCase().includes("no token") ||
+        errMsg.toLowerCase().includes("unauthorized")
+      ) {
+        showSessionExpiredModal();
+        return;
+      }
+
       setModalTitle("Error!");
       setModalMessage(errMsg);
       setModalType("error");
+      setRescanButtonText("Retry");
       setShowRetryButton(true);
       setModalVisible(true);
     }
@@ -256,11 +306,7 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
       const token = await AsyncStorage.getItem("token");
       if (!token) {
         setVerifying(false);
-        setModalTitle("Error!");
-        setModalMessage("Authentication token not found. Please log in again.");
-        setModalType("error");
-        setShowRetryButton(false);
-        setModalVisible(true);
+        showSessionExpiredModal();
         return;
       }
 
@@ -299,6 +345,7 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
         setModalTitle("Error!");
         setModalMessage(response.data?.message || "Verification failed");
         setModalType("error");
+        setRescanButtonText("Retry");
         setShowRetryButton(true);
         setModalVisible(true);
       }
@@ -308,6 +355,16 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
         error.response?.data?.message || error.message || "Verification failed";
       const currentStatus =
         error.response?.data?.currentStatus || error.data?.currentStatus;
+
+      if (
+        error.response?.status === 401 ||
+        errMsg.toLowerCase().includes("invalid token") ||
+        errMsg.toLowerCase().includes("no token") ||
+        errMsg.toLowerCase().includes("unauthorized")
+      ) {
+        showSessionExpiredModal();
+        return;
+      }
 
       if (
         currentStatus === "Return Received" ||
@@ -329,10 +386,12 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
             </Text>
           </View>,
         );
+        setRescanButtonText("Retry");
         setShowRetryButton(true);
       } else {
         setModalTitle("Error!");
         setModalMessage(errMsg);
+        setRescanButtonText("Retry");
         setShowRetryButton(true);
       }
 
@@ -343,14 +402,20 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
 
   const handleModalClose = () => {
     setModalVisible(false);
-    if (modalType === "success") {
+    if (isSessionExpired) {
+      redirectToLogin();
+    } else if (modalType === "success") {
       navigation.navigate("ReturnOrders");
     }
   };
 
   const handleModalRetry = () => {
-    setModalVisible(false);
-    clearOtpInputs();
+    if (isSessionExpired) {
+      redirectToLogin();
+    } else {
+      setModalVisible(false);
+      clearOtpInputs();
+    }
   };
 
   const isOtpComplete = otp.join("").length === OTP_LENGTH;
@@ -417,6 +482,11 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
 
             {/* 5-Digit OTP Input Boxes */}
             <View className="flex-row justify-center items-center gap-x-3 mb-2">
+              {Platform.OS === "ios" && (
+                <InputAccessoryView nativeID={EMPTY_INPUT_ACCESSORY_ID}>
+                  <View style={{ height: 0 }} />
+                </InputAccessoryView>
+              )}
               {otp.map((digit, index) => {
                 const isFilled = digit.length > 0;
                 return (
@@ -447,9 +517,11 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
                       onKeyPress={(e) => handleKeyPress(e, index)}
                       keyboardType="number-pad"
                       maxLength={OTP_LENGTH}
-                      returnKeyType={index === OTP_LENGTH - 1 ? "done" : "next"}
                       blurOnSubmit={index === OTP_LENGTH - 1}
                       textAlign="center"
+                      textContentType="oneTimeCode"
+                      autoComplete="one-time-code"
+                      inputAccessoryViewID={Platform.OS === "ios" ? EMPTY_INPUT_ACCESSORY_ID : undefined}
                       style={{
                         width: "100%",
                         height: "100%",
@@ -535,7 +607,7 @@ const ReturnOrderOTPVerification: React.FC<ReturnOrderOTPVerificationProps> = ({
         type={modalType}
         onClose={handleModalClose}
         showRescanButton={showRetryButton}
-        rescanButtonText="Retry"
+        rescanButtonText={rescanButtonText}
         onRescan={handleModalRetry}
         duration={5000}
         autoClose={modalType === "success"}
