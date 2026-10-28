@@ -147,43 +147,69 @@ const UploadBankTransferSlip: React.FC = () => {
       (fileName || "").trim() ||
       (uri || "").split("/").pop()?.split("?")[0] ||
       "";
-    const ext = nameToCheck.split(".").pop()?.toLowerCase();
+    const hasDot = nameToCheck.includes(".");
+    const ext = hasDot ? nameToCheck.split(".").pop()?.toLowerCase() : "";
 
-    // If an explicit extension exists, it MUST be an allowed extension
-    if (ext && ext !== nameToCheck.toLowerCase()) {
-      if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        return false;
-      }
+    // If an explicit extension exists, verify it against allowed list
+    if (ext) {
+      return ALLOWED_EXTENSIONS.includes(ext);
     }
 
-    // If MIME type is present, it must be an allowed MIME type
+    // If MIME type is present
     if (mimeType) {
       const lowerMime = mimeType.toLowerCase();
-      if (
-        lowerMime !== "application/octet-stream" &&
-        !ALLOWED_MIME_TYPES.includes(lowerMime)
-      ) {
-        return false;
+      if (ALLOWED_MIME_TYPES.includes(lowerMime)) {
+        return true;
       }
-    }
-
-    // If extension is allowed, accept
-    if (ext && ALLOWED_EXTENSIONS.includes(ext)) {
-      return true;
-    }
-
-    // If MIME type is allowed, accept
-    if (mimeType && ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
-      return true;
+      if (lowerMime.startsWith("image/")) {
+        return true;
+      }
     }
 
     return false;
   };
 
+  const isHeicImage = (
+    fileName?: string | null,
+    mimeType?: string | null,
+    uri?: string | null,
+  ): boolean => {
+    const name = (fileName || "").toLowerCase();
+    const u = (uri || "").toLowerCase();
+    const mime = (mimeType || "").toLowerCase();
+
+    return (
+      name.endsWith(".heic") ||
+      name.endsWith(".heif") ||
+      u.endsWith(".heic") ||
+      u.endsWith(".heif") ||
+      mime.includes("heic") ||
+      mime.includes("heif")
+    );
+  };
+
+  const getFileSizeBytes = async (
+    uri: string,
+    reportedSize?: number | null,
+  ): Promise<number> => {
+    if (typeof reportedSize === "number" && reportedSize > 0) {
+      return reportedSize;
+    }
+    try {
+      const info = await FileSystem.getInfoAsync(uri);
+      if (info.exists && typeof info.size === "number" && info.size > 0) {
+        return info.size;
+      }
+    } catch (e) {
+      console.log("Error checking file size:", e);
+    }
+    return 0;
+  };
+
   const showInvalidFormatAlert = () => {
     showAlert(
       "Unsupported File Format",
-      "Please upload a valid file. Only PNG, JPG, and PDF formats are supported.",
+      "Please upload a valid file. Only PNG, JPG, HEIC, and PDF formats are supported.",
       "error",
     );
   };
@@ -196,47 +222,135 @@ const UploadBankTransferSlip: React.FC = () => {
     );
   };
 
-  const convertImageToPng = async (
-    imageUri: string,
-    fileName: string,
-  ): Promise<{ uri: string; name: string; sizeMB: string }> => {
-    const manipResult = await ImageManipulator.manipulateAsync(
-      imageUri,
-      [],
-      { format: ImageManipulator.SaveFormat.PNG },
-    );
-
-    const baseName = fileName.replace(/\.[^/.]+$/, "");
-    const safePngName = `${baseName.replace(/[^a-zA-Z0-9._-]/g, "_")}.png`;
-    const finalUri = `${FileSystem.cacheDirectory}${safePngName}`;
-
-    try {
-      await FileSystem.copyAsync({
-        from: manipResult.uri,
-        to: finalUri,
-      });
-    } catch (e) {
-      console.log("Copy PNG cache error:", e);
+  const processImage = async (
+    uri: string,
+    fileName?: string | null,
+    mimeType?: string | null,
+    reportedSize?: number | null,
+  ): Promise<UploadedFile | null> => {
+    if (!isSupportedFileFormat(fileName, mimeType, uri)) {
+      showInvalidFormatAlert();
+      return null;
     }
 
-    const info = await FileSystem.getInfoAsync(finalUri).catch(() => null);
-    const targetUri = info && info.exists ? finalUri : manipResult.uri;
+    // Check original file size against 5 MB limit
+    const originalSizeBytes = await getFileSizeBytes(uri, reportedSize);
+    if (originalSizeBytes > MAX_FILE_SIZE_BYTES) {
+      showFileTooLargeAlert();
+      return null;
+    }
 
-    let sizeMB = "—";
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(targetUri);
-      if (fileInfo.exists && fileInfo.size) {
-        sizeMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
+    const fallbackName = `Transfer_Slip_${Date.now()}.jpg`;
+    const cleanFileName = sanitizeFileName(fileName, uri, fallbackName);
+
+    // If image is HEIC/HEIF, convert to JPEG so that mobile preview and upload work reliably
+    if (isHeicImage(cleanFileName, mimeType, uri)) {
+      try {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          uri,
+          [],
+          {
+            format: ImageManipulator.SaveFormat.JPEG,
+            compress: 0.9,
+          },
+        );
+
+        const baseName = cleanFileName.replace(/\.[^/.]+$/, "");
+        const safeJpgName = `${baseName.replace(/[^a-zA-Z0-9._-]/g, "_")}.jpg`;
+
+        let sizeMB =
+          originalSizeBytes > 0
+            ? (originalSizeBytes / (1024 * 1024)).toFixed(1)
+            : "—";
+
+        try {
+          const manipInfo = await FileSystem.getInfoAsync(manipResult.uri);
+          if (manipInfo.exists && typeof manipInfo.size === "number" && manipInfo.size > 0) {
+            sizeMB = (manipInfo.size / (1024 * 1024)).toFixed(1);
+          }
+        } catch {}
+
+        return {
+          uri: manipResult.uri,
+          name: safeJpgName,
+          sizeMB: `${sizeMB} MB`,
+          type: "image",
+        };
+      } catch (convErr) {
+        console.warn("Could not convert HEIC to JPEG on client, fallback to original:", convErr);
+        // Fallback to original HEIC file since backend s3upload converts HEIC server-side
+        const sizeMB =
+          originalSizeBytes > 0
+            ? (originalSizeBytes / (1024 * 1024)).toFixed(1)
+            : "—";
+        return {
+          uri,
+          name: cleanFileName,
+          sizeMB: `${sizeMB} MB`,
+          type: "image",
+        };
       }
-    } catch (e) {
-      console.log("File size check error:", e);
+    }
+
+    // For non-HEIC images (JPG, PNG), keep original format without inflating to PNG
+    let sizeMB =
+      originalSizeBytes > 0
+        ? (originalSizeBytes / (1024 * 1024)).toFixed(1)
+        : "—";
+
+    if (sizeMB === "—") {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (fileInfo.exists && typeof fileInfo.size === "number" && fileInfo.size > 0) {
+          sizeMB = (fileInfo.size / (1024 * 1024)).toFixed(1);
+        }
+      } catch (e) {
+        console.log("File size check error:", e);
+      }
     }
 
     return {
-      uri: targetUri,
-      name: safePngName,
-      sizeMB,
+      uri,
+      name: cleanFileName,
+      sizeMB: `${sizeMB} MB`,
+      type: "image",
     };
+  };
+
+  const takePhoto = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        showAlert(
+          "Permission Required",
+          "Camera permission is required to capture your bank transfer slip.",
+          "error",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.9,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const processed = await processImage(
+          asset.uri,
+          asset.fileName,
+          asset.mimeType,
+          asset.fileSize,
+        );
+        if (processed) {
+          setFile(processed);
+        }
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+    }
   };
 
   const pickImage = async () => {
@@ -249,50 +363,14 @@ const UploadBankTransferSlip: React.FC = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-
-        let originalName = asset.fileName;
-        if (!originalName) {
-          const uriName = asset.uri.split("/").pop()?.split("?")[0];
-          if (uriName && uriName.includes(".")) {
-            originalName = uriName;
-          }
-        }
-
-        if (!isSupportedFileFormat(originalName, asset.mimeType, asset.uri)) {
-          showInvalidFormatAlert();
-          return;
-        }
-
-        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_BYTES) {
-          showFileTooLargeAlert();
-          return;
-        }
-
-        const fallbackName = `Transfer_Slip_${Date.now()}.png`;
-        const initialName = originalName || fallbackName;
-
-        try {
-          const converted = await convertImageToPng(asset.uri, initialName);
-
-          const sizeNumber = parseFloat(converted.sizeMB);
-          if (!isNaN(sizeNumber) && sizeNumber > MAX_FILE_SIZE_MB) {
-            showFileTooLargeAlert();
-            return;
-          }
-
-          setFile({
-            uri: converted.uri,
-            name: converted.name,
-            sizeMB: `${converted.sizeMB} MB`,
-            type: "image",
-          });
-        } catch (convErr) {
-          console.error("Error converting picked image to PNG:", convErr);
-          showAlert(
-            "Image Processing Error",
-            "Could not process the selected image. Please try another image.",
-            "error",
-          );
+        const processed = await processImage(
+          asset.uri,
+          asset.fileName,
+          asset.mimeType,
+          asset.fileSize,
+        );
+        if (processed) {
+          setFile(processed);
         }
       }
     } catch (error) {
@@ -311,22 +389,18 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const asset = result.assets[0];
 
-      if (!isSupportedFileFormat(asset.name, asset.mimeType, asset.uri)) {
-        showInvalidFormatAlert();
-        return;
-      }
-
-      if (asset.size && asset.size > MAX_FILE_SIZE_BYTES) {
-        showFileTooLargeAlert();
-        return;
-      }
-
       const isPdf =
         asset.mimeType === "application/pdf" ||
         asset.name?.toLowerCase().endsWith(".pdf") ||
         asset.uri.toLowerCase().endsWith(".pdf");
 
       if (isPdf) {
+        const originalSizeBytes = await getFileSizeBytes(asset.uri, asset.size);
+        if (originalSizeBytes > MAX_FILE_SIZE_BYTES) {
+          showFileTooLargeAlert();
+          return;
+        }
+
         const safeName = sanitizeFileName(
           asset.name,
           asset.uri,
@@ -345,17 +419,15 @@ const UploadBankTransferSlip: React.FC = () => {
           console.error("Failed to copy PDF file:", err);
         }
 
-        let sizeMB = "—";
-        if (asset.size) {
-          sizeMB = (asset.size / (1024 * 1024)).toFixed(1);
-        } else {
+        let sizeMB =
+          originalSizeBytes > 0
+            ? (originalSizeBytes / (1024 * 1024)).toFixed(1)
+            : "—";
+
+        if (sizeMB === "—") {
           try {
             const info = await FileSystem.getInfoAsync(finalUri);
-            if (info.exists && info.size) {
-              if (info.size > MAX_FILE_SIZE_BYTES) {
-                showFileTooLargeAlert();
-                return;
-              }
+            if (info.exists && typeof info.size === "number" && info.size > 0) {
               sizeMB = (info.size / (1024 * 1024)).toFixed(1);
             }
           } catch (err) {
@@ -370,29 +442,14 @@ const UploadBankTransferSlip: React.FC = () => {
           type: "pdf",
         });
       } else {
-        const initialName = asset.name || `Transfer_Slip_${Date.now()}.png`;
-        try {
-          const converted = await convertImageToPng(asset.uri, initialName);
-
-          const sizeNumber = parseFloat(converted.sizeMB);
-          if (!isNaN(sizeNumber) && sizeNumber > MAX_FILE_SIZE_MB) {
-            showFileTooLargeAlert();
-            return;
-          }
-
-          setFile({
-            uri: converted.uri,
-            name: converted.name,
-            sizeMB: `${converted.sizeMB} MB`,
-            type: "image",
-          });
-        } catch (convErr) {
-          console.error("Error converting document image to PNG:", convErr);
-          showAlert(
-            "Image Processing Error",
-            "Could not process the selected image. Please try another image.",
-            "error",
-          );
+        const processed = await processImage(
+          asset.uri,
+          asset.name,
+          asset.mimeType,
+          asset.size,
+        );
+        if (processed) {
+          setFile(processed);
         }
       }
     } catch (error) {
@@ -405,6 +462,10 @@ const UploadBankTransferSlip: React.FC = () => {
       "Select Upload Source",
       "Choose how you want to upload your bank transfer slip",
       [
+        {
+          text: "Take Photo",
+          onPress: takePhoto,
+        },
         {
           text: "Photo Library",
           onPress: pickImage,
@@ -482,10 +543,23 @@ const UploadBankTransferSlip: React.FC = () => {
 
       const formData = new FormData();
       const fileUri = file.uri;
-      const isPdf = file.type === "pdf";
-      const fileExt = isPdf ? "pdf" : "png";
-      const fileName = file.name || `transfer_slip.${fileExt}`;
-      const fileMime = isPdf ? "application/pdf" : "image/png";
+      const ext =
+        file.name.split(".").pop()?.toLowerCase() ||
+        (file.type === "pdf" ? "pdf" : "jpg");
+      let fileMime = "image/jpeg";
+      if (file.type === "pdf" || ext === "pdf") {
+        fileMime = "application/pdf";
+      } else if (ext === "png") {
+        fileMime = "image/png";
+      } else if (ext === "heic") {
+        fileMime = "image/heic";
+      } else if (ext === "heif") {
+        fileMime = "image/heif";
+      } else {
+        fileMime = "image/jpeg";
+      }
+
+      const fileName = file.name || `transfer_slip.${ext}`;
 
       formData.append("slip", {
         uri: fileUri,
@@ -605,7 +679,7 @@ const UploadBankTransferSlip: React.FC = () => {
                 Tap to Upload
               </Text>
               <Text className="mt-1 text-xs text-gray-400">
-                PNG, JPG, PDF up to 5MB
+                PNG, JPG, HEIC, PDF up to 5MB
               </Text>
             </TouchableOpacity>
           </View>

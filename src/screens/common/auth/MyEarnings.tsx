@@ -49,6 +49,7 @@ interface OrderItem {
   dateTime: string;
   method: "cash" | "card";
   earnings: number;
+  status?: string;
 }
 
 const screenWidth = Dimensions.get("window").width;
@@ -78,7 +79,12 @@ const formatLongDate = (date: Date | null) => {
 
 const formatOrderTimestamp = (isoString: string) => {
   try {
-    const date = new Date(isoString);
+    if (!isoString) return "";
+    const cleanStr = isoString.includes("T")
+      ? isoString
+      : isoString.replace(" ", "T");
+    const date = new Date(cleanStr);
+    if (isNaN(date.getTime())) return "";
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const ampm = hours >= 12 ? "PM" : "AM";
