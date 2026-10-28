@@ -15,6 +15,7 @@ import { RootStackParamList } from "@/types/types";
 import { MaterialIcons, Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import CustomHeader from "@/component/common/CustomHeader";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import * as ScreenOrientation from "expo-screen-orientation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
@@ -165,7 +166,11 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
     });
   };
 
+  const [isNavigating, setIsNavigating] = useState(false);
+
   const handleGetSignature = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
     navigation.navigate("SignatureScreen", {
       processOrderIds: [currentOrderId],
       allProcessOrderIds,
@@ -187,6 +192,9 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
 
   useFocusEffect(
     React.useCallback(() => {
+      setIsNavigating(false);
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+
       const onBackPress = () => {
         handleBackPress();
         return true;
