@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
+  BackHandler,
 } from "react-native";
 import Signature from "react-native-signature-canvas";
 import { Svg, Rect } from "react-native-svg";
@@ -123,7 +125,23 @@ export default function SignatureScreen({
     onOrderComplete,
   } = route.params;
 
-  const handleBackPress = () => {
+  const isExitingRef = useRef(false);
+
+  const handleBackPress = async () => {
+    if (isExitingRef.current) return;
+    isExitingRef.current = true;
+
+    try {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
+      if (Platform.OS === "ios") {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+    } catch (err) {
+      console.warn("Failed to reset orientation on exit:", err);
+    }
+
     navigation.goBack();
   };
 
@@ -172,21 +190,36 @@ export default function SignatureScreen({
 
       checkPermissionAndOrientation();
 
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+
       return () => {
         isActive = false;
+        subscription.remove();
         setIsOrientationLocked(false);
-        ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.PORTRAIT_UP,
-        );
+        if (!isExitingRef.current) {
+          ScreenOrientation.lockAsync(
+            ScreenOrientation.OrientationLock.PORTRAIT_UP,
+          );
+        }
       };
     }, []),
   );
 
   useEffect(() => {
     return () => {
-      ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.PORTRAIT_UP,
-      );
+      if (!isExitingRef.current) {
+        ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.PORTRAIT_UP,
+        );
+      }
     };
   }, []);
 
