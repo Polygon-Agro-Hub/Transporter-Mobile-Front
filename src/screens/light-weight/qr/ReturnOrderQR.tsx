@@ -36,11 +36,11 @@ interface ReturnOrderQRProps {
 const GENERIC_QR_ERROR =
   "The QR code is not identified. Please check and try again.";
 const ALREADY_RETURNED_MSG =
-  "This order has already been returned to the center and cannot proceed again!";
+  "This order has already been returned to the centre and cannot proceed again!";
 const DCM_QR_REQUIRED_MSG =
   "Invalid QR. Please scan your Distribution Centre Manager's QR code.";
 const CENTER_MISMATCH_MSG =
-  "This manager belongs to a different distribution center. Please scan your own center's DCM QR code.";
+  "This manager belongs to a different distribution centre. Please scan your own centre's DCM QR code.";
 
 const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
   const { orderId, invoiceNumber: routeInvoiceNumber } = (route.params ||
@@ -230,7 +230,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
           if (emp && String(emp).toUpperCase().startsWith("DCM")) {
             return String(emp).trim().toUpperCase();
           }
-        } catch (e) {}
+        } catch (e) { }
         return null;
       }
 
@@ -262,7 +262,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
             parsed.orderId ||
             parsed.id;
           if (inv) return String(inv).trim();
-        } catch (e) {}
+        } catch (e) { }
         return null;
       }
 
@@ -296,7 +296,7 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
     const msg = (message || "").toLowerCase();
 
     if (errorType === "CENTER_MISMATCH") {
-      setModalTitle("Invalid Center!");
+      setModalTitle("Invalid Centre!");
       setModalMessage(CENTER_MISMATCH_MSG);
     } else if (errorType === "INVALID_QR") {
       setModalTitle("Invalid QR!");
@@ -309,11 +309,9 @@ const ReturnOrderQR: React.FC<ReturnOrderQRProps> = ({ navigation, route }) => {
       setModalMessage("This Distribution Centre Manager is not active.");
     } else if (
       currentStatus === "Return Received" ||
-      currentStatus === "Return" ||
       msg.includes("already been marked as return received") ||
       msg.includes("already been returned") ||
       msg.includes("already returned") ||
-      msg.includes("return received") ||
       msg.includes("cannot proceed again")
     ) {
       setModalTitle("Already Returned!");
