@@ -269,7 +269,7 @@ const handleUploadSlip = () => {
                 <>
                   <FontAwesome6 name="upload" size={18} color="#1f2937" />
                   <Text className="text-gray-900 font-semibold ">
-                    Upload Transfer Slip
+                    {"  "}Upload Transfer Slip
                   </Text>
                 </>
               )}

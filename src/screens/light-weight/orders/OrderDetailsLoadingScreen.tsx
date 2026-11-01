@@ -41,7 +41,7 @@ const OrderDetailsLoadingScreen: React.FC<OrderDetailsLoadingScreenProps> = ({
     address = "",
   } = route.params;
 
-  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const appState = useRef(AppState.currentState);
   const mapOpened = useRef(false);
   const hasNavigated = useRef(false);
 
@@ -90,7 +90,7 @@ const OrderDetailsLoadingScreen: React.FC<OrderDetailsLoadingScreenProps> = ({
       (nextAppState: AppStateStatus) => {
         if (
           mapOpened.current &&
-          appState.current.match(/inactive|background/) &&
+          appState.current?.match(/inactive|background/) &&
           nextAppState === "active"
         ) {
           navigateToEndJourney();

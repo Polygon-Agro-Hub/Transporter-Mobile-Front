@@ -4,13 +4,11 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
-  Alert,
   BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RouteProp, useFocusEffect, useRoute } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { RootStackParamList } from "@/types/types";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
@@ -27,11 +25,6 @@ type BankTransferSlipStatusNavigationProp = StackNavigationProp<
   "BankTransferSlipStatus"
 >;
 
-type BankTransferSlipStatusRouteProp = RouteProp<
-  RootStackParamList,
-  "BankTransferSlipStatus"
->;
-
 type SlipStatus = "pending" | "approved" | "rejected";
 
 interface StatusData {
@@ -41,6 +34,19 @@ interface StatusData {
   amount: number;
   rejectionReason?: string;
 }
+
+// Maps the status string returned by the API to our SlipStatus type.
+// Returns null for anything unrecognised so we never silently guess a status.
+const mapApiStatus = (apiStatus: unknown): SlipStatus | null => {
+  const s = String(apiStatus ?? "")
+    .trim()
+    .toLowerCase();
+  if (s.includes("reject") || s.includes("declin")) return "rejected";
+  if (s.includes("approv")) return "approved";
+  if (s.includes("pend") || s.includes("submit") || s.includes("review"))
+    return "pending";
+  return null;
+};
 
 const formatDateTime = (iso?: string) => {
   if (!iso) return "—";
@@ -73,12 +79,14 @@ const formatDateTime = (iso?: string) => {
 
 const BankTransferSlipStatus: React.FC = () => {
   const navigation = useNavigation<BankTransferSlipStatusNavigationProp>();
-  const route = useRoute<BankTransferSlipStatusRouteProp>();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<StatusData | null>(null);
 
+  // Data comes ONLY from the API. If the request fails or the response is
+  // invalid, `data` stays as it was (null on first load) and the error view
+  // with a "Try Again" button is shown instead of made-up values.
   const fetchStatus = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -87,47 +95,49 @@ const BankTransferSlipStatus: React.FC = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      console.log(response.data.data);
+      console.log("STATUS RESPONSE:", JSON.stringify(response.data));
 
       if (response.data.status === "success" && response.data.data) {
         const result = response.data.data;
-        let mappedStatus: SlipStatus = "pending";
-        if (result.transStatus === "Approved") mappedStatus = "approved";
-        else if (result.transStatus === "Rejected") mappedStatus = "rejected";
+
+        const mappedStatus = mapApiStatus(result.transStatus);
+        if (!mappedStatus) {
+          throw new Error(`Unknown transStatus: ${result.transStatus}`);
+        }
+
+        const parsedAmount = Number(
+          String(result.transAmount ?? result.amount ?? "").replace(/,/g, ""),
+        );
+        if (isNaN(parsedAmount)) {
+          throw new Error(`Invalid amount: ${result.transAmount}`);
+        }
 
         setData({
           status: mappedStatus,
           submittedAt: result.createdAt,
-
           rejectedAt:
-            result.transStatus === "Rejected" ? result.updatedAt : undefined,
-          amount: parseFloat(result.transAmount) || 0,
-
+            mappedStatus === "rejected" ? result.updatedAt : undefined,
+          amount: parsedAmount,
           rejectionReason:
-            result.transStatus === "Rejected"
-              ? result.rejectReason || "No reason provided."
+            mappedStatus === "rejected"
+              ? result.rejectReason || undefined
               : undefined,
         });
       } else {
-        throw new Error("No transaction found");
+        throw new Error("No transaction found in response");
       }
-    } catch (error) {
-      const fallbackStatus: SlipStatus =
-        (route.params as any)?.status ?? "rejected";
-
-      setData({
-        status: fallbackStatus,
-        submittedAt: new Date().toISOString(),
-        rejectedAt:
-          fallbackStatus === "rejected" ? new Date().toISOString() : undefined,
-        amount: 9000.0,
-        rejectionReason: "Transfer slip is unclear.",
-      });
+    } catch (error: any) {
+      console.log(
+        "STATUS ERROR:",
+        error?.response?.status,
+        JSON.stringify(error?.response?.data),
+        error?.message,
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [route.params]);
+  }, []);
 
   useEffect(() => {
     fetchStatus();
@@ -135,6 +145,11 @@ const BankTransferSlipStatus: React.FC = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
+    fetchStatus();
+  };
+
+  const retry = () => {
+    setLoading(true);
     fetchStatus();
   };
 
@@ -162,7 +177,8 @@ const BankTransferSlipStatus: React.FC = () => {
   );
 
   const reUpload = () => {
-    navigation.navigate("UploadBankTransferSlip", { amount: data?.amount });
+    if (!data) return;
+    navigation.navigate("UploadBankTransferSlip", { amount: data.amount });
   };
 
   if (loading) {
@@ -181,17 +197,25 @@ const BankTransferSlipStatus: React.FC = () => {
 
   if (!data) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-8">
-        <Text className="text-center text-sm text-gray-500">
-          Something went wrong loading your submission status.
-        </Text>
-        <TouchableOpacity
-          onPress={fetchStatus}
-          activeOpacity={0.8}
-          className="mt-4 rounded-full bg-amber-400 px-6 py-3"
-        >
-          <Text className="text-sm font-bold text-gray-900">Try Again</Text>
-        </TouchableOpacity>
+      <View className="flex-1 bg-white">
+        <CustomHeader
+          title="Transfer Slip Status"
+          navigation={navigation}
+          onBackPress={() => goHome()}
+          showBackButton={true}
+        />
+        <View className="flex-1 items-center justify-center px-8">
+          <Text className="text-center text-sm text-gray-500">
+            Something went wrong loading your submission status.
+          </Text>
+          <TouchableOpacity
+            onPress={retry}
+            activeOpacity={0.8}
+            className="mt-4 rounded-full bg-amber-400 px-6 py-3"
+          >
+            <Text className="text-sm font-bold text-gray-900">Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -300,7 +324,7 @@ const BankTransferSlipStatus: React.FC = () => {
               />
               <View className="h-px mt-1 mb-1 bg-[#D5D9E4]" />
               <View className="mt-1 border-gray-100 pt-3">
-                <Text className="text- font-bold text-[#CF0000]">
+                <Text className="text-sm font-bold text-[#CF0000]">
                   Reason for Rejection
                 </Text>
                 <Text className="mt-1 text-xs text-[#32445C]">
@@ -373,19 +397,13 @@ const DetailRow: React.FC<{
   label: string;
   value: string;
   boldValue?: boolean;
-}> = ({ icon, label, value, boldValue }) => (
+}> = ({ icon, label, value }) => (
   <View className="flex-row items-center py-1.5">
     <View className="w-10 h-10 bg-[#F3F3F3] rounded-full items-center justify-center">
       <FontAwesome6 name={icon} size={14} color="#000000" />
     </View>
     <Text className="ml-2 flex-1 text-xs text-[#32445C]">{label}</Text>
-    <Text
-      className={`text-xs ${
-        boldValue ? "font-bold text-[#32445C]" : "font-bold text-[#32445C]"
-      }`}
-    >
-      {value}
-    </Text>
+    <Text className="text-xs font-bold text-[#32445C]">{value}</Text>
   </View>
 );
 

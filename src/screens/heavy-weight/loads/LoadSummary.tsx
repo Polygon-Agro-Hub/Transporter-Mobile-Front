@@ -42,7 +42,10 @@ interface GradeSetItem {
 
 interface CropLoadData {
   id: string;
+  varietyId?: number;
   cropName: string;
+  varietyName?: string;
+  varietyNameSinhala?: string;
   imageUri: string;
   totalWeightKg: number;
   totalCrates: number;
@@ -87,11 +90,20 @@ const LoadSummary: React.FC<LoadSummaryProps> = ({ navigation, route }) => {
         response.data.status === "success" &&
         response.data.data
       ) {
-        setItems(
-          Array.isArray(response.data.data.crops)
-            ? response.data.data.crops
-            : [],
+        const rawCrops = Array.isArray(response.data.data.crops)
+          ? response.data.data.crops
+          : [];
+        const sortedCrops = [...rawCrops].sort(
+          (a: CropLoadData, b: CropLoadData) => {
+            const nameA = (a.cropName || a.varietyName || "").trim();
+            const nameB = (b.cropName || b.varietyName || "").trim();
+            return nameA.localeCompare(nameB, undefined, {
+              sensitivity: "base",
+              numeric: true,
+            });
+          },
         );
+        setItems(sortedCrops);
         setLoadInfo(response.data.data.load || null);
 
         const currentJourneyStatus = response.data.data.load?.journeyStatus;
