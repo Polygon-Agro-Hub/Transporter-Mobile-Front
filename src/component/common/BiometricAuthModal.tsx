@@ -7,9 +7,9 @@ import {
   Easing,
   TouchableOpacity,
   Dimensions,
-  Image,
 } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import Svg, { Circle } from "react-native-svg";
 
 interface BiometricAuthModalProps {
   visible: boolean;
@@ -144,22 +144,31 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
               marginBottom: 20,
             }}
           >
-            {/* Spinning Radar Ring (Apple Pay style) */}
+            {/* Spinning Radar Ring (Apple Pay style - smooth SVG anti-aliased, zero polygon facets) */}
             {status === "scanning" && (
               <Animated.View
                 style={{
                   position: "absolute",
-                  width: 136,
-                  height: 136,
-                  borderRadius: 68,
-                  borderWidth: 3.5,
-                  borderColor: "transparent",
-                  borderTopColor: "#F7CA21",
-                  borderRightColor: "rgba(247, 202, 33, 0.5)",
-                  borderLeftColor: "#F7CA21",
+                  width: 140,
+                  height: 140,
+                  justifyContent: "center",
+                  alignItems: "center",
                   transform: [{ rotate: spin }],
                 }}
-              />
+              >
+                <Svg width={140} height={140} viewBox="0 0 140 140">
+                  <Circle
+                    cx="70"
+                    cy="70"
+                    r="66"
+                    stroke="#F7CA21"
+                    strokeWidth="3.5"
+                    fill="none"
+                    strokeDasharray="180, 240"
+                    strokeLinecap="round"
+                  />
+                </Svg>
+              </Animated.View>
             )}
 
             {/* Static Success Outer Ring */}
@@ -171,8 +180,8 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
                   height: 136,
                   borderRadius: 68,
                   borderWidth: 3.5,
-                  borderColor: "#10B981",
-                  backgroundColor: "rgba(16, 185, 129, 0.12)",
+                  borderColor: "#F7CA21",
+                  backgroundColor: "rgba(247, 202, 33, 0.15)",
                 }}
               />
             )}
@@ -192,24 +201,19 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
               />
             )}
 
-            {/* Center Content: Fingerprint while scanning */}
+            {/* Center Content: Pure Fingerprint while scanning */}
             {status === "scanning" && (
               <Animated.View
                 style={{
                   width: 104,
                   height: 104,
                   borderRadius: 52,
-                  backgroundColor: "rgba(247, 202, 33, 0.1)",
+                  backgroundColor: "rgba(247, 202, 33, 0.12)",
                   borderWidth: 1.5,
                   borderColor: "rgba(247, 202, 33, 0.35)",
                   justifyContent: "center",
                   alignItems: "center",
                   transform: [{ scale: pulseAnim }],
-                  shadowColor: "#F7CA21",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 10,
-                  elevation: 6,
                 }}
               >
                 <FontAwesome5 name="fingerprint" size={50} color="#F7CA21" />
@@ -223,18 +227,18 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
                   width: 104,
                   height: 104,
                   borderRadius: 52,
-                  backgroundColor: "#10B981",
+                  backgroundColor: "#F7CA21",
                   justifyContent: "center",
                   alignItems: "center",
                   transform: [{ scale: scaleSuccessAnim }],
-                  shadowColor: "#10B981",
+                  shadowColor: "#F7CA21",
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.45,
                   shadowRadius: 12,
                   elevation: 8,
                 }}
               >
-                <Ionicons name="checkmark" size={56} color="#FFFFFF" />
+                <Ionicons name="checkmark" size={56} color="#0E0E0E" />
               </Animated.View>
             )}
 
@@ -310,7 +314,7 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
                 style={{
                   fontSize: 20,
                   fontWeight: "700",
-                  color: "#10B981",
+                  color: "#F7CA21",
                   textAlign: "center",
                   marginBottom: 6,
                 }}
