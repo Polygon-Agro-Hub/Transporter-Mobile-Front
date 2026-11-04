@@ -93,6 +93,7 @@ export const clearBiometricCredentials = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(SECURE_EMP_ID_KEY);
     await SecureStore.deleteItemAsync(SECURE_PASSWORD_KEY);
+    await AsyncStorage.removeItem(BIOMETRIC_ENABLED_KEY);
     await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, "false");
   } catch (error) {
     console.warn("Error clearing biometric credentials:", error);
