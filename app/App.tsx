@@ -11,7 +11,6 @@ import { selectAuthToken, selectEmpId, logoutUser } from "@/store/authSlice";
 import environment from "@/environment/environment";
 import NetInfo from "@react-native-community/netinfo";
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import RootStackNavigator from "@/routes/Routes";
 import { AppUpdateProvider } from "@/features/app-update";
 import socketService, { AccountStatusData } from "@/services/socket/socket.service";
