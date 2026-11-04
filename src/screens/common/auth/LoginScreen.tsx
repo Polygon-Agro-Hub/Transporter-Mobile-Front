@@ -88,8 +88,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState<"success" | "error">("error");
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const scrollRef = useRef<ScrollView>(null);
   const passwordInputRef = useRef<TextInput>(null);
+
+  // Track keyboard height to provide generous scrolling space for bottom buttons
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      },
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+      },
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Show AlertModal
   const showModal = (
@@ -570,7 +593,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         style={{ flex: 1, backgroundColor: THEME.bgDark }}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: Platform.OS === "android" ? 50 : 30,
+          paddingBottom:
+            keyboardHeight > 0
+              ? (Platform.OS === "android" ? 140 : keyboardHeight + 40)
+              : (Platform.OS === "android" ? 50 : 30),
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
