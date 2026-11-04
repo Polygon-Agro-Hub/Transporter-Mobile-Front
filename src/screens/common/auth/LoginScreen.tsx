@@ -584,8 +584,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       style={{ flex: 1, backgroundColor: THEME.bgDark }}
+      enabled
     >
       <StatusBar barStyle="dark-content" backgroundColor={THEME.primaryYellow} />
       <ScrollView
@@ -593,10 +595,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         style={{ flex: 1, backgroundColor: THEME.bgDark }}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom:
-            keyboardHeight > 0
-              ? (Platform.OS === "android" ? 140 : keyboardHeight + 40)
-              : (Platform.OS === "android" ? 50 : 30),
+          paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 40,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
