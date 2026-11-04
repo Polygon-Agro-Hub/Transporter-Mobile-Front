@@ -21,7 +21,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.USE_BIOMETRIC"
       ],
       "blockedPermissions": [
         "com.google.android.gms.permission.AD_ID",
@@ -61,10 +62,11 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "NSCameraUsageDescription": "Camera access is required to scan QR codes and capture delivery photos.",
-        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport and delivery proof images.",
-        "NSPhotoLibraryAddUsageDescription": "Photo library access is required to save related images.",
-        "NSLocationWhenInUseUsageDescription": "Location access is required to verify delivery location during order completion."
+        "NSCameraUsageDescription": "Camera access is required to scan delivery QR codes, capture proof of delivery photos, and attach images to complaints.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload proof of delivery and complaint images.",
+        "NSPhotoLibraryAddUsageDescription": "Photo library access is required to save delivery receipts and complaint images.",
+        "NSLocationWhenInUseUsageDescription": "Location access is required to verify delivery location during order completion.",
+        "NSFaceIDUsageDescription": "Allow GoVi Transport to use Face ID or Touch ID for fast and secure login."
       }
     },
     "web": {
@@ -90,6 +92,12 @@
       ],
       "expo-font",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow GoVi Transport to use Face ID or Touch ID for fast and secure login."
+        }
+      ],
+      [
         "expo-screen-orientation",
         {
           "initialOrientation": "PORTRAIT_UP"
@@ -101,7 +109,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "cameraPermission": "Camera access is required to scan delivery QR codes, capture proof of delivery photos, and attach images to complaints.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -109,8 +117,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Photo library access is required to upload related images.",
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "photosPermission": "Photo library access is required to upload proof of delivery and complaint images.",
+          "cameraPermission": "Camera access is required to scan delivery QR codes, capture proof of delivery photos, and attach images to complaints.",
           "microphonePermission": false
         }
       ],
