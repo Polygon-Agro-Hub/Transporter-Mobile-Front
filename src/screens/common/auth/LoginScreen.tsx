@@ -595,7 +595,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         style={{ flex: 1, backgroundColor: THEME.bgDark }}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 40,
+          paddingBottom: keyboardHeight > 0 ? (Platform.OS === "android" ? 50 : 40) : 30,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
