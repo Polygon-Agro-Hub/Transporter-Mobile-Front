@@ -520,25 +520,37 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // Show Apple Pay style verifying modal
-    setIsBiometricModalVisible(true);
-    setBiometricModalStatus("scanning");
-    setBiometricModalMode("enable");
+    // Show verifying modal on Android only (iOS has native system Face ID / Touch ID UI)
+    if (Platform.OS === "android") {
+      setIsBiometricModalVisible(true);
+      setBiometricModalStatus("scanning");
+      setBiometricModalMode("enable");
+    }
 
     const verified = await biometricService.authenticateWithBiometrics(
-      "Confirm fingerprint to enable biometric login",
+      Platform.OS === "ios"
+        ? "Verify identity to enable biometric sign-in"
+        : "Confirm fingerprint to enable biometric login",
     );
 
     if (verified) {
-      setBiometricModalStatus("success");
-      setTimeout(async () => {
-        setIsBiometricModalVisible(false);
+      if (Platform.OS === "android") {
+        setBiometricModalStatus("success");
+        setTimeout(async () => {
+          setIsBiometricModalVisible(false);
+          await executeLogin(trimmedEmpId, password, {
+            saveBiometricsOnSuccess: true,
+          });
+        }, 650);
+      } else {
         await executeLogin(trimmedEmpId, password, {
           saveBiometricsOnSuccess: true,
         });
-      }, 650);
+      }
     } else {
-      setIsBiometricModalVisible(false);
+      if (Platform.OS === "android") {
+        setIsBiometricModalVisible(false);
+      }
     }
   };
 
@@ -557,28 +569,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // Show Apple Pay style verifying modal
-    setIsBiometricModalVisible(true);
-    setBiometricModalStatus("scanning");
-    setBiometricModalMode("login");
+    // Show verifying modal on Android only (iOS has native system Face ID / Touch ID UI)
+    if (Platform.OS === "android") {
+      setIsBiometricModalVisible(true);
+      setBiometricModalStatus("scanning");
+      setBiometricModalMode("login");
+    }
 
     const verified = await biometricService.authenticateWithBiometrics(
-      "Scan your fingerprint to sign in",
+      Platform.OS === "ios"
+        ? "Sign in with Face ID / Touch ID"
+        : "Scan your fingerprint to sign in",
     );
 
     if (verified) {
-      setBiometricModalStatus("success");
       setEmpid(creds.empId);
       setPassword(creds.password);
 
-      setTimeout(async () => {
-        setIsBiometricModalVisible(false);
+      if (Platform.OS === "android") {
+        setBiometricModalStatus("success");
+        setTimeout(async () => {
+          setIsBiometricModalVisible(false);
+          await executeLogin(creds.empId, creds.password, {
+            saveBiometricsOnSuccess: false,
+          });
+        }, 650);
+      } else {
         await executeLogin(creds.empId, creds.password, {
           saveBiometricsOnSuccess: false,
         });
-      }, 650);
+      }
     } else {
-      setIsBiometricModalVisible(false);
+      if (Platform.OS === "android") {
+        setIsBiometricModalVisible(false);
+      }
     }
   };
 
@@ -967,14 +991,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         </LinearGradient>
       </ScrollView>
 
-      {/* Biometric Verification Modal (Apple Pay Style) */}
-      <BiometricAuthModal
-        visible={isBiometricModalVisible}
-        status={biometricModalStatus}
-        mode={biometricModalMode}
-        biometricLabel={biometricLabel}
-        onCancel={() => setIsBiometricModalVisible(false)}
-      />
+      {/* Biometric Verification Modal (Android Only - Apple Pay Style) */}
+      {Platform.OS === "android" && (
+        <BiometricAuthModal
+          visible={isBiometricModalVisible}
+          status={biometricModalStatus}
+          mode={biometricModalMode}
+          biometricLabel={biometricLabel}
+          onCancel={() => setIsBiometricModalVisible(false)}
+        />
+      )}
 
       {/* Feedback Alert Modal */}
       <AlertModal
