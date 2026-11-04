@@ -71,6 +71,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [hasStoredBiometrics, setHasStoredBiometrics] = useState(false);
+  const [storedBiometricEmpId, setStoredBiometricEmpId] = useState<string | null>(null);
   const [biometricLabel, setBiometricLabel] = useState("Fingerprint");
   const [isBiometricModalVisible, setIsBiometricModalVisible] = useState(false);
   const [biometricModalStatus, setBiometricModalStatus] = useState<
@@ -142,9 +143,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setBiometricLabel(label);
         }
 
+        const bioCreds = await biometricService.getBiometricCredentials();
         const bioEnabled = await biometricService.isBiometricEnabled();
         if (isMounted) {
-          setHasStoredBiometrics(bioEnabled);
+          const hasBio = Boolean(bioEnabled && bioCreds?.empId && bioCreds?.password);
+          setHasStoredBiometrics(hasBio);
+          setStoredBiometricEmpId(hasBio && bioCreds?.empId ? bioCreds.empId.trim().toUpperCase() : null);
         }
 
         const remembered = await biometricService.getRememberMeCredentials();
@@ -359,13 +363,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         await biometricService.clearRememberMeCredentials();
       }
 
-      // Save Biometric credentials if this flow requested it
+      // Save Biometric credentials only if this flow requested it (e.g. Enable Biometrics)
       if (options.saveBiometricsOnSuccess) {
         await biometricService.saveBiometricCredentials(
           loginEmpId.trim(),
           loginPassword,
         );
         setHasStoredBiometrics(true);
+        setStoredBiometricEmpId(loginEmpId.trim().toUpperCase());
       }
 
       // Smooth navigate after brief transition
@@ -566,6 +571,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         "error",
       );
       setHasStoredBiometrics(false);
+      setStoredBiometricEmpId(null);
       return;
     }
 
@@ -605,6 +611,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
     }
   };
+
+  // Biometrics is usable ONLY if credentials exist AND the current input matches the stored biometric user (or input is empty)
+  const isMatchingBiometricUser = Boolean(
+    hasStoredBiometrics &&
+      storedBiometricEmpId &&
+      (empid.trim() === "" ||
+        empid.trim().toUpperCase() === storedBiometricEmpId.toUpperCase()),
+  );
 
   return (
     <KeyboardAvoidingView
@@ -950,7 +964,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={
-                hasStoredBiometrics
+                isMatchingBiometricUser
                   ? handleUseBiometrics
                   : handleEnableBiometrics
               }
@@ -982,7 +996,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   fontWeight: "600",
                 }}
               >
-                {hasStoredBiometrics
+                {isMatchingBiometricUser
                   ? "Use Biometrics"
                   : "Enable Biometrics"}
               </Text>
