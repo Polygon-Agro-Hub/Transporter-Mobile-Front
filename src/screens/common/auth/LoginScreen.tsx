@@ -88,8 +88,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState<"success" | "error">("error");
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const scrollRef = useRef<ScrollView>(null);
   const passwordInputRef = useRef<TextInput>(null);
+
+  // Track keyboard height to provide generous scrolling space for bottom buttons
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      },
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+      },
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Show AlertModal
   const showModal = (
@@ -561,17 +584,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       style={{ flex: 1, backgroundColor: THEME.bgDark }}
+      enabled
     >
       <StatusBar barStyle="dark-content" backgroundColor={THEME.primaryYellow} />
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ flexGrow: 1 }}
+        style={{ flex: 1, backgroundColor: THEME.bgDark }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 40,
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        bounces={false}
-        style={{ backgroundColor: THEME.bgDark }}
+        nestedScrollEnabled={true}
+        overScrollMode="always"
       >
         {/* Top Yellow Header Section with Branding */}
         <View
@@ -604,7 +633,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{
-            flex: 1,
+            flexGrow: 1,
             borderTopLeftRadius: 36,
             borderTopRightRadius: 36,
             marginTop: -28,
@@ -760,6 +789,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 onChangeText={handlePasswordChange}
                 returnKeyType="done"
                 onSubmitEditing={handleNormalSignIn}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
               />
               <TouchableOpacity
                 onPress={() => setSecureTextEntry(!secureTextEntry)}
@@ -931,27 +965,27 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-
-        {/* Biometric Verification Modal (Apple Pay Style) */}
-        <BiometricAuthModal
-          visible={isBiometricModalVisible}
-          status={biometricModalStatus}
-          mode={biometricModalMode}
-          biometricLabel={biometricLabel}
-          onCancel={() => setIsBiometricModalVisible(false)}
-        />
-
-        {/* Feedback Alert Modal */}
-        <AlertModal
-          visible={modalVisible}
-          title={modalTitle}
-          message={modalMessage}
-          type={modalType}
-          onClose={() => setModalVisible(false)}
-          duration={4000}
-          autoClose={true}
-        />
       </ScrollView>
+
+      {/* Biometric Verification Modal (Apple Pay Style) */}
+      <BiometricAuthModal
+        visible={isBiometricModalVisible}
+        status={biometricModalStatus}
+        mode={biometricModalMode}
+        biometricLabel={biometricLabel}
+        onCancel={() => setIsBiometricModalVisible(false)}
+      />
+
+      {/* Feedback Alert Modal */}
+      <AlertModal
+        visible={modalVisible}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+        onClose={() => setModalVisible(false)}
+        duration={4000}
+        autoClose={true}
+      />
     </KeyboardAvoidingView>
   );
 };
