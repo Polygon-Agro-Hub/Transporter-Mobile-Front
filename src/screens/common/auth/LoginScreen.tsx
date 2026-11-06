@@ -149,6 +149,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setEmpid(remembered.empId);
           setPassword(remembered.password);
           setRememberMe(true);
+        } else {
+          // If Remember Me was not clicked, auto-fill Employee ID from last biometric login
+          const lastBioEmpId = await biometricService.getLastBiometricEmpId();
+          if (isMounted && lastBioEmpId) {
+            setEmpid(lastBioEmpId);
+          }
         }
       } catch (err) {
         console.warn("Initialization error in LoginScreen:", err);
@@ -192,14 +198,38 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     };
   }, [empid]);
 
-  // Prevent screenshots and screen recordings on the login screen
+  // Prevent screenshots and screen recordings on the login screen & refresh saved credentials
   useFocusEffect(
     useCallback(() => {
+      let isActive = true;
+
+      const refreshSavedEmpId = async () => {
+        try {
+          const remembered = await biometricService.getRememberMeCredentials();
+          if (isActive && remembered && remembered.empId && remembered.password) {
+            setEmpid(remembered.empId);
+            setPassword(remembered.password);
+            setRememberMe(true);
+            return;
+          }
+
+          const lastBioEmpId = await biometricService.getLastBiometricEmpId();
+          if (isActive && lastBioEmpId) {
+            setEmpid((prev) => (prev ? prev : lastBioEmpId));
+          }
+        } catch (err) {
+          console.warn("Error refreshing credentials on focus:", err);
+        }
+      };
+
+      refreshSavedEmpId();
+
       ScreenCapture.preventScreenCaptureAsync().catch((err) => {
         console.warn("Could not activate screen capture protection:", err);
       });
 
       return () => {
+        isActive = false;
         ScreenCapture.allowScreenCaptureAsync().catch((err) => {
           console.warn("Could not deactivate screen capture protection:", err);
         });
@@ -408,6 +438,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           loginPassword,
         );
         setIsBiometricEnabledForCurrentEmp(true);
+      } else {
+        const isBio = await biometricService.isBiometricEnabled(loginEmpId.trim());
+        if (isBio) {
+          await biometricService.setLastBiometricEmpId(loginEmpId.trim());
+        }
       }
 
       // Smooth navigate after brief transition
@@ -615,6 +650,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     );
 
     if (verified) {
+      await biometricService.setLastBiometricEmpId(creds.empId);
       setEmpid(creds.empId);
       setPassword(creds.password);
 

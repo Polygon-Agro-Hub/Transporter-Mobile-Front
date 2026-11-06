@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const BIOMETRIC_ENABLED_PREFIX = "isBiometricEnabled_";
 const SECURE_PASSWORD_PREFIX = "biometric_pwd_";
 const SECURE_EMPID_PREFIX = "biometric_emp_";
+const LAST_BIOMETRIC_EMP_ID_KEY = "last_biometric_emp_id";
 
 // Legacy keys for backward compatibility
 const LEGACY_BIOMETRIC_ENABLED_KEY = "isBiometricEnabled";
@@ -116,6 +117,7 @@ export const saveBiometricCredentials = async (
       `${BIOMETRIC_ENABLED_PREFIX}${normalized}`,
       "true",
     );
+    await AsyncStorage.setItem(LAST_BIOMETRIC_EMP_ID_KEY, normalized);
     return true;
   } catch (error) {
     console.error("Error saving biometric credentials:", error);
@@ -168,14 +170,47 @@ export const clearBiometricCredentials = async (
       await SecureStore.deleteItemAsync(`${SECURE_EMPID_PREFIX}${normalized}`);
       await AsyncStorage.removeItem(`${BIOMETRIC_ENABLED_PREFIX}${normalized}`);
       await AsyncStorage.setItem(`${BIOMETRIC_ENABLED_PREFIX}${normalized}`, "false");
+      const lastEmpId = await AsyncStorage.getItem(LAST_BIOMETRIC_EMP_ID_KEY);
+      if (lastEmpId && normalizeEmpId(lastEmpId) === normalized) {
+        await AsyncStorage.removeItem(LAST_BIOMETRIC_EMP_ID_KEY);
+      }
     } else {
       await SecureStore.deleteItemAsync(LEGACY_SECURE_EMP_ID_KEY);
       await SecureStore.deleteItemAsync(LEGACY_SECURE_PASSWORD_KEY);
       await AsyncStorage.removeItem(LEGACY_BIOMETRIC_ENABLED_KEY);
       await AsyncStorage.setItem(LEGACY_BIOMETRIC_ENABLED_KEY, "false");
+      await AsyncStorage.removeItem(LAST_BIOMETRIC_EMP_ID_KEY);
     }
   } catch (error) {
     console.warn("Error clearing biometric credentials:", error);
+  }
+};
+
+export const setLastBiometricEmpId = async (empId: string): Promise<void> => {
+  try {
+    const normalized = normalizeEmpId(empId);
+    if (normalized) {
+      await AsyncStorage.setItem(LAST_BIOMETRIC_EMP_ID_KEY, normalized);
+    }
+  } catch (error) {
+    console.warn("Error saving last biometric empId:", error);
+  }
+};
+
+export const getLastBiometricEmpId = async (): Promise<string | null> => {
+  try {
+    const lastEmpId = await AsyncStorage.getItem(LAST_BIOMETRIC_EMP_ID_KEY);
+    if (lastEmpId) {
+      const normalized = normalizeEmpId(lastEmpId);
+      const isEnabled = await isBiometricEnabled(normalized);
+      if (isEnabled) {
+        return normalized;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.warn("Error retrieving last biometric empId:", error);
+    return null;
   }
 };
 
@@ -255,6 +290,8 @@ export default {
   getBiometricCredentials,
   clearBiometricCredentials,
   authenticateWithBiometrics,
+  setLastBiometricEmpId,
+  getLastBiometricEmpId,
   saveRememberMeCredentials,
   getRememberMeCredentials,
   clearRememberMeCredentials,
