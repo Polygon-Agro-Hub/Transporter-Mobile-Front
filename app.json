@@ -2,13 +2,13 @@
   "expo": {
     "name": "GoVi-Transport",
     "slug": "GoVi-Transport",
-    "version": "1.1.2",
+    "version": "1.1.4",
     "orientation": "portrait",
     "icon": "./src/assets/images/app-icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 24,
+      "versionCode": 25,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -21,7 +21,9 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ],
       "blockedPermissions": [
         "com.google.android.gms.permission.AD_ID",
@@ -59,13 +61,13 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
+          "NSAllowsLocalNetworking": true
         },
-        "NSCameraUsageDescription": "Camera access is required to scan QR codes and capture delivery photos.",
-        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload transport and delivery proof images.",
-        "NSPhotoLibraryAddUsageDescription": "Photo library access is required to save related images.",
+        "NSCameraUsageDescription": "Camera access is required to scan order and return QR codes, capture proof of delivery photos, and upload bank transfer slips or complaint images.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is required to upload proof of delivery and complaint images.",
+        "NSPhotoLibraryAddUsageDescription": "Photo library access is required to save delivery receipts and complaint images.",
         "NSLocationWhenInUseUsageDescription": "Location access is required to verify delivery location during order completion.",
-        "NSUserTrackingUsageDescription": "Tracking is used to improve app experience."
+        "NSFaceIDUsageDescription": "Allow GoVi Transport to use Face ID or Touch ID for fast and secure login."
       }
     },
     "web": {
@@ -91,6 +93,12 @@
       ],
       "expo-font",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow GoVi Transport to use Face ID or Touch ID for fast and secure login."
+        }
+      ],
+      [
         "expo-screen-orientation",
         {
           "initialOrientation": "PORTRAIT_UP"
@@ -102,7 +110,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "cameraPermission": "Camera access is required to scan order and return QR codes, capture proof of delivery photos, and upload bank transfer slips or complaint images.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -110,12 +118,19 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Photo library access is required to upload related images.",
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "photosPermission": "Photo library access is required to upload proof of delivery and complaint images.",
+          "cameraPermission": "Camera access is required to scan order and return QR codes, capture proof of delivery photos, and upload bank transfer slips or complaint images.",
           "microphonePermission": false
         }
       ],
-      "expo-location",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Location access is required to verify delivery location during order completion.",
+          "locationWhenInUsePermission": "Location access is required to verify delivery location during order completion.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
       "./plugins/withCustomAndroidPermissions",
       [
         "expo-splash-screen",

@@ -12,6 +12,7 @@ interface AlertModalProps {
   showRescanButton?: boolean;
   onRescan?: () => void;
   rescanButtonText?: string;
+  rescanIconName?: string;
   showOpenOngoingButton?: boolean;
   onOpenOngoing?: () => void;
   duration?: number;
@@ -27,6 +28,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
   showRescanButton = false,
   onRescan,
   rescanButtonText,
+  rescanIconName,
   showOpenOngoingButton = false,
   onOpenOngoing,
   duration = 4000,
@@ -124,7 +126,11 @@ export const AlertModal: React.FC<AlertModalProps> = ({
                 activeOpacity={0.8}
                 className="bg-[#F7CA21] py-3 px-6 rounded-full flex-row items-center justify-center gap-x-2 shadow-md"
               >
-                <FontAwesome5 name="undo" size={18} color="black" />
+                <FontAwesome5
+                  name={rescanIconName || (rescanButtonText?.toLowerCase().includes("log") ? "sign-in-alt" : "undo")}
+                  size={18}
+                  color="black"
+                />
                 <Text className="text-black font-bold text-base">
                   {rescanButtonText || "Re-Scan"}
                 </Text>
