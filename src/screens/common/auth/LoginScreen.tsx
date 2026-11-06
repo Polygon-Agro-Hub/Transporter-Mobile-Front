@@ -29,6 +29,7 @@ import { OFFICER_STATUS } from "@/constants/officer-status";
 import { AlertModal } from "@/component/common/AlertModal";
 import { BiometricAuthModal } from "@/component/common/BiometricAuthModal";
 import biometricService from "@/services/biometric/biometric.service";
+import * as ScreenCapture from "expo-screen-capture";
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -70,13 +71,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
-  const [hasStoredBiometrics, setHasStoredBiometrics] = useState(false);
-  const [storedBiometricEmpId, setStoredBiometricEmpId] = useState<string | null>(null);
-  const [biometricLabel, setBiometricLabel] = useState("Fingerprint");
+  const [isBiometricEnabledForCurrentEmp, setIsBiometricEnabledForCurrentEmp] =
+    useState(false);
+  const [biometricLabel, setBiometricLabel] = useState("Face ID / Fingerprint");
   const [isBiometricModalVisible, setIsBiometricModalVisible] = useState(false);
   const [biometricModalStatus, setBiometricModalStatus] = useState<
     "scanning" | "success" | "error"
-  >("scanning");
+  >("success");
   const [biometricModalMode, setBiometricModalMode] = useState<
     "login" | "enable"
   >("login");
@@ -143,14 +144,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setBiometricLabel(label);
         }
 
-        const bioCreds = await biometricService.getBiometricCredentials();
-        const bioEnabled = await biometricService.isBiometricEnabled();
-        if (isMounted) {
-          const hasBio = Boolean(bioEnabled && bioCreds?.empId && bioCreds?.password);
-          setHasStoredBiometrics(hasBio);
-          setStoredBiometricEmpId(hasBio && bioCreds?.empId ? bioCreds.empId.trim().toUpperCase() : null);
-        }
-
         const remembered = await biometricService.getRememberMeCredentials();
         if (isMounted && remembered && remembered.empId && remembered.password) {
           setEmpid(remembered.empId);
@@ -168,6 +161,51 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       isMounted = false;
     };
   }, []);
+
+  // Dynamically check if biometrics is enabled for the currently entered Employee ID
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkBiometricForEmp = async () => {
+      const trimmed = empid.trim().toUpperCase();
+      if (!trimmed) {
+        if (isMounted) setIsBiometricEnabledForCurrentEmp(false);
+        return;
+      }
+
+      try {
+        const enabled = await biometricService.isBiometricEnabled(trimmed);
+        if (isMounted) {
+          setIsBiometricEnabledForCurrentEmp(enabled);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setIsBiometricEnabledForCurrentEmp(false);
+        }
+      }
+    };
+
+    checkBiometricForEmp();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [empid]);
+
+  // Prevent screenshots and screen recordings on the login screen
+  useFocusEffect(
+    useCallback(() => {
+      ScreenCapture.preventScreenCaptureAsync().catch((err) => {
+        console.warn("Could not activate screen capture protection:", err);
+      });
+
+      return () => {
+        ScreenCapture.allowScreenCaptureAsync().catch((err) => {
+          console.warn("Could not deactivate screen capture protection:", err);
+        });
+      };
+    }, []),
+  );
 
   // Block hardware back button on the login screen
   useFocusEffect(
@@ -276,7 +314,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           showModal(
             "Too Many Attempts",
             data.message ||
-              "Too many login attempts. Please try again after 15 minutes.",
+            "Too many login attempts. Please try again after 15 minutes.",
             "error",
           );
         } else if (
@@ -369,8 +407,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           loginEmpId.trim(),
           loginPassword,
         );
-        setHasStoredBiometrics(true);
-        setStoredBiometricEmpId(loginEmpId.trim().toUpperCase());
+        setIsBiometricEnabledForCurrentEmp(true);
       }
 
       // Smooth navigate after brief transition
@@ -525,36 +562,25 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // Show verifying modal on Android only (iOS has native system Face ID / Touch ID UI)
-    if (Platform.OS === "android") {
-      setIsBiometricModalVisible(true);
-      setBiometricModalStatus("scanning");
-      setBiometricModalMode("enable");
-    }
-
     const verified = await biometricService.authenticateWithBiometrics(
-      Platform.OS === "ios"
-        ? "Verify identity to enable biometric sign-in"
-        : "Confirm fingerprint to enable biometric login",
+      "Verify your identity to sign in",
     );
 
     if (verified) {
       if (Platform.OS === "android") {
+        setBiometricModalMode("enable");
         setBiometricModalStatus("success");
+        setIsBiometricModalVisible(true);
         setTimeout(async () => {
           setIsBiometricModalVisible(false);
           await executeLogin(trimmedEmpId, password, {
             saveBiometricsOnSuccess: true,
           });
-        }, 650);
+        }, 2000);
       } else {
         await executeLogin(trimmedEmpId, password, {
           saveBiometricsOnSuccess: true,
         });
-      }
-    } else {
-      if (Platform.OS === "android") {
-        setIsBiometricModalVisible(false);
       }
     }
   };
@@ -563,29 +589,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const handleUseBiometrics = async () => {
     Keyboard.dismiss();
 
-    const creds = await biometricService.getBiometricCredentials();
-    if (!creds || !creds.empId || !creds.password) {
+    const trimmedEmpId = empid.trim().toUpperCase();
+    if (!trimmedEmpId) {
       showModal(
-        "Biometrics Not Found",
-        "No saved credentials found. Please sign in with your password to re-enable biometrics.",
+        "Employee ID Required",
+        "Please enter your Employee ID before using biometric sign-in.",
         "error",
       );
-      setHasStoredBiometrics(false);
-      setStoredBiometricEmpId(null);
       return;
     }
 
-    // Show verifying modal on Android only (iOS has native system Face ID / Touch ID UI)
-    if (Platform.OS === "android") {
-      setIsBiometricModalVisible(true);
-      setBiometricModalStatus("scanning");
-      setBiometricModalMode("login");
+    const creds = await biometricService.getBiometricCredentials(trimmedEmpId);
+    if (!creds || !creds.empId || !creds.password) {
+      showModal(
+        "Biometrics Not Found",
+        "No saved credentials found for this account. Please sign in with your password to re-enable biometrics.",
+        "error",
+      );
+      setIsBiometricEnabledForCurrentEmp(false);
+      return;
     }
 
     const verified = await biometricService.authenticateWithBiometrics(
-      Platform.OS === "ios"
-        ? "Sign in with Face ID / Touch ID"
-        : "Scan your fingerprint to sign in",
+      "Verify your identity to sign in",
     );
 
     if (verified) {
@@ -593,31 +619,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setPassword(creds.password);
 
       if (Platform.OS === "android") {
+        setBiometricModalMode("login");
         setBiometricModalStatus("success");
+        setIsBiometricModalVisible(true);
         setTimeout(async () => {
           setIsBiometricModalVisible(false);
           await executeLogin(creds.empId, creds.password, {
             saveBiometricsOnSuccess: false,
           });
-        }, 650);
+        }, 2000);
       } else {
         await executeLogin(creds.empId, creds.password, {
           saveBiometricsOnSuccess: false,
         });
       }
-    } else {
-      if (Platform.OS === "android") {
-        setIsBiometricModalVisible(false);
-      }
     }
   };
 
-  // Biometrics is usable ONLY if credentials exist AND the current input matches the stored biometric user (or input is empty)
-  const isMatchingBiometricUser = Boolean(
-    hasStoredBiometrics &&
-      storedBiometricEmpId &&
-      (empid.trim() === "" ||
-        empid.trim().toUpperCase() === storedBiometricEmpId.toUpperCase()),
+  // Biometrics is usable ONLY if hardware is enrolled, this account enabled biometrics, and empId is present
+  const isBiometricEligible = Boolean(
+    isBiometricAvailable && isBiometricEnabledForCurrentEmp && empid.trim() !== "",
   );
 
   return (
@@ -964,7 +985,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={
-                isMatchingBiometricUser
+                isBiometricEligible
                   ? handleUseBiometrics
                   : handleEnableBiometrics
               }
@@ -996,7 +1017,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   fontWeight: "600",
                 }}
               >
-                {isMatchingBiometricUser
+                {isBiometricEligible
                   ? "Use Biometrics"
                   : "Enable Biometrics"}
               </Text>

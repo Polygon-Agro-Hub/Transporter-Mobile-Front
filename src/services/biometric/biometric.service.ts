@@ -2,9 +2,19 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BIOMETRIC_ENABLED_KEY = "isBiometricEnabled";
-const SECURE_EMP_ID_KEY = "biometric_emp_id";
-const SECURE_PASSWORD_KEY = "biometric_password";
+const BIOMETRIC_ENABLED_PREFIX = "isBiometricEnabled_";
+const SECURE_PASSWORD_PREFIX = "biometric_pwd_";
+const SECURE_EMPID_PREFIX = "biometric_emp_";
+
+// Legacy keys for backward compatibility
+const LEGACY_BIOMETRIC_ENABLED_KEY = "isBiometricEnabled";
+const LEGACY_SECURE_EMP_ID_KEY = "biometric_emp_id";
+const LEGACY_SECURE_PASSWORD_KEY = "biometric_password";
+
+// Helper to normalize Employee ID
+const normalizeEmpId = (empId?: string | null): string => {
+  return empId ? empId.trim().toUpperCase() : "";
+};
 
 // Remember Me keys
 const REMEMBER_ME_KEY = "remember_me_enabled";
@@ -32,25 +42,54 @@ export const checkBiometricAvailability = async (): Promise<BiometricAvailabilit
 export const getBiometricTypeLabel = async (): Promise<string> => {
   try {
     const { biometricTypes } = await checkBiometricAvailability();
-    if (biometricTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    const hasFace = biometricTypes.includes(
+      LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
+    );
+    const hasFingerprint = biometricTypes.includes(
+      LocalAuthentication.AuthenticationType.FINGERPRINT,
+    );
+
+    if (hasFace && hasFingerprint) {
+      return "Face ID / Fingerprint";
+    }
+    if (hasFace) {
       return "Face ID";
     }
-    if (biometricTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+    if (hasFingerprint) {
       return "Fingerprint";
     }
-    return "Biometrics";
+    return "Face ID / Fingerprint";
   } catch {
-    return "Biometrics";
+    return "Face ID / Fingerprint";
   }
 };
 
-export const isBiometricEnabled = async (): Promise<boolean> => {
+export const isBiometricEnabled = async (empId?: string | null): Promise<boolean> => {
   try {
-    const enabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
-    if (enabled !== "true") return false;
-    const empId = await SecureStore.getItemAsync(SECURE_EMP_ID_KEY);
-    const password = await SecureStore.getItemAsync(SECURE_PASSWORD_KEY);
-    return Boolean(empId && password);
+    const normalized = normalizeEmpId(empId);
+    if (!normalized) {
+      return false;
+    }
+
+    const enabled = await AsyncStorage.getItem(`${BIOMETRIC_ENABLED_PREFIX}${normalized}`);
+    if (enabled === "true") {
+      const password = await SecureStore.getItemAsync(`${SECURE_PASSWORD_PREFIX}${normalized}`);
+      return Boolean(password);
+    }
+
+    // Check legacy storage for backward compatibility
+    const legacyEmpId = await SecureStore.getItemAsync(LEGACY_SECURE_EMP_ID_KEY);
+    if (legacyEmpId && normalizeEmpId(legacyEmpId) === normalized) {
+      const legacyEnabled = await AsyncStorage.getItem(LEGACY_BIOMETRIC_ENABLED_KEY);
+      const legacyPassword = await SecureStore.getItemAsync(LEGACY_SECURE_PASSWORD_KEY);
+      if (legacyEnabled === "true" && legacyPassword) {
+        // Automatically migrate to per-user key
+        await saveBiometricCredentials(normalized, legacyPassword);
+        return true;
+      }
+    }
+
+    return false;
   } catch (error) {
     console.warn("Error checking if biometric is enabled:", error);
     return false;
@@ -62,9 +101,21 @@ export const saveBiometricCredentials = async (
   password: string,
 ): Promise<boolean> => {
   try {
-    await SecureStore.setItemAsync(SECURE_EMP_ID_KEY, empId.trim());
-    await SecureStore.setItemAsync(SECURE_PASSWORD_KEY, password);
-    await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, "true");
+    const normalized = normalizeEmpId(empId);
+    if (!normalized) return false;
+
+    await SecureStore.setItemAsync(
+      `${SECURE_PASSWORD_PREFIX}${normalized}`,
+      password,
+    );
+    await SecureStore.setItemAsync(
+      `${SECURE_EMPID_PREFIX}${normalized}`,
+      normalized,
+    );
+    await AsyncStorage.setItem(
+      `${BIOMETRIC_ENABLED_PREFIX}${normalized}`,
+      "true",
+    );
     return true;
   } catch (error) {
     console.error("Error saving biometric credentials:", error);
@@ -72,16 +123,34 @@ export const saveBiometricCredentials = async (
   }
 };
 
-export const getBiometricCredentials = async (): Promise<{
+export const getBiometricCredentials = async (
+  empId?: string | null,
+): Promise<{
   empId: string;
   password: string;
 } | null> => {
   try {
-    const empId = await SecureStore.getItemAsync(SECURE_EMP_ID_KEY);
-    const password = await SecureStore.getItemAsync(SECURE_PASSWORD_KEY);
-    if (empId && password) {
-      return { empId, password };
+    const normalized = normalizeEmpId(empId);
+    if (!normalized) {
+      return null;
     }
+
+    const password = await SecureStore.getItemAsync(
+      `${SECURE_PASSWORD_PREFIX}${normalized}`,
+    );
+    if (password) {
+      return { empId: normalized, password };
+    }
+
+    // Fallback to legacy
+    const legacyEmpId = await SecureStore.getItemAsync(LEGACY_SECURE_EMP_ID_KEY);
+    if (legacyEmpId && normalizeEmpId(legacyEmpId) === normalized) {
+      const legacyPassword = await SecureStore.getItemAsync(LEGACY_SECURE_PASSWORD_KEY);
+      if (legacyPassword) {
+        return { empId: normalized, password: legacyPassword };
+      }
+    }
+
     return null;
   } catch (error) {
     console.error("Error retrieving biometric credentials:", error);
@@ -89,19 +158,29 @@ export const getBiometricCredentials = async (): Promise<{
   }
 };
 
-export const clearBiometricCredentials = async (): Promise<void> => {
+export const clearBiometricCredentials = async (
+  empId?: string | null,
+): Promise<void> => {
   try {
-    await SecureStore.deleteItemAsync(SECURE_EMP_ID_KEY);
-    await SecureStore.deleteItemAsync(SECURE_PASSWORD_KEY);
-    await AsyncStorage.removeItem(BIOMETRIC_ENABLED_KEY);
-    await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, "false");
+    const normalized = normalizeEmpId(empId);
+    if (normalized) {
+      await SecureStore.deleteItemAsync(`${SECURE_PASSWORD_PREFIX}${normalized}`);
+      await SecureStore.deleteItemAsync(`${SECURE_EMPID_PREFIX}${normalized}`);
+      await AsyncStorage.removeItem(`${BIOMETRIC_ENABLED_PREFIX}${normalized}`);
+      await AsyncStorage.setItem(`${BIOMETRIC_ENABLED_PREFIX}${normalized}`, "false");
+    } else {
+      await SecureStore.deleteItemAsync(LEGACY_SECURE_EMP_ID_KEY);
+      await SecureStore.deleteItemAsync(LEGACY_SECURE_PASSWORD_KEY);
+      await AsyncStorage.removeItem(LEGACY_BIOMETRIC_ENABLED_KEY);
+      await AsyncStorage.setItem(LEGACY_BIOMETRIC_ENABLED_KEY, "false");
+    }
   } catch (error) {
     console.warn("Error clearing biometric credentials:", error);
   }
 };
 
 export const authenticateWithBiometrics = async (
-  promptMessage = "Log in with Biometrics",
+  promptMessage = "Verify your identity to sign in",
 ): Promise<boolean> => {
   try {
     const { hasHardware, isEnrolled } = await checkBiometricAvailability();
