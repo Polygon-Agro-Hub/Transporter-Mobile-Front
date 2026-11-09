@@ -268,6 +268,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
           },
         },
       );
+      console.log(response.data.data)
 
       if (response.data.status === "success" && response.data.data) {
         setAmountData({ ...defaultAmountData, ...response.data.data });
@@ -293,6 +294,8 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
         `${environment.API_BASE_URL}api/load/get-driver-loads`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
+
+      console.log(response.data.data)
 
       if (
         response.data &&
@@ -351,12 +354,6 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
 
   /* ======================= DELIVER ORDERS: logic ======================= */
 
-  const getCashAmount = () => {
-    const cash = amountData?.totalCashAmount;
-    if (cash === undefined || cash === null || isNaN(cash)) return 0;
-    return cash;
-  };
-
   const getPacksCount = () =>
     (amountData?.todoOrders || 0) +
     (amountData?.holdOrders || 0) +
@@ -364,44 +361,15 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
 
   const shouldShowEndShiftButton = () => {
     const returnOrders = amountData?.returnOrders || 0;
-    return (
-      getPacksCount() === 0 && (getCashAmount() > 0 || returnOrders > 0)
-    );
-  };
-
-  const handleCashNavigation = () => {
-    const cashAmount = getCashAmount();
-    const txStatus = amountData?.activeTransactionStatus;
-
-    if (txStatus === "To Review") {
-      navigation.navigate("BankTransferSlipStatus" as any, {
-        status: "pending",
-      });
-    } else if (txStatus === "Rejected") {
-      navigation.navigate("BankTransferSlipStatus" as any, {
-        status: "rejected",
-      });
-    } else if (cashAmount > 0) {
-      navigation.navigate("CashHandOver" as any);
-    } else {
-      Alert.alert(
-        "Information",
-        "No cash received. Your previous transfer is completed.",
-      );
-    }
+    // Heavy Weight Drivers do not collect cash (no recovered amount section)
+    // End shift is shown only when all packs are delivered and return orders need to be handed over
+    return getPacksCount() === 0 && returnOrders > 0;
   };
 
   const handleEndShiftPress = () => {
-    const cashAmount = getCashAmount();
     const returnOrders = amountData?.returnOrders || 0;
-    const txStatus = amountData?.activeTransactionStatus;
-
     if (returnOrders > 0) {
       navigation.navigate("ReturnOrders" as any);
-    } else if (txStatus === "To Review" || txStatus === "Rejected") {
-      handleCashNavigation();
-    } else if (cashAmount > 0) {
-      handleCashNavigation();
     }
   };
 
@@ -452,7 +420,8 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
       {
         image: packsImage,
         label: `${packsCount} ${packsCount === 1 ? "Pack" : "Packs"}`,
-        action: () => navigation.navigate("Jobs" as any),
+        action: () =>
+          navigation.navigate("Jobs" as any, { fromScreen: "HeavyDriverHome" }),
         disabled: packsCount === 0 && (amountData?.completedOrders || 0) === 0,
       },
       {
@@ -475,7 +444,9 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
               processOrderIds: ids,
             });
           } else {
-            navigation.navigate("Jobs" as any);
+            navigation.navigate("Jobs" as any, {
+              fromScreen: "HeavyDriverHome",
+            });
           }
         },
         disabled: false,

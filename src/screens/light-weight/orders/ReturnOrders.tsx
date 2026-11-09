@@ -19,6 +19,9 @@ import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/core";
 import FixedMarqueeText from "@/component/common/MarqueeText";
 import LoadingPage from "@/component/common/LoadingPage";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 
 type ReturnOrdersNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -71,6 +74,7 @@ interface ApiResponse {
 }
 
 const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,10 +198,18 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
     });
   };
 
+  const navigateHome = useCallback(() => {
+    if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.navigate("HeavyDriverHome");
+    } else {
+      navigation.navigate("Home");
+    }
+  }, [navigation, jobRole]);
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.navigate("Home");
+        navigateHome();
         return true;
       };
 
@@ -207,7 +219,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
       );
 
       return () => subscription.remove();
-    }, [navigation]),
+    }, [navigateHome]),
   );
 
   if (loading) {
@@ -256,7 +268,7 @@ const ReturnOrders: React.FC<ReturnOrdersProps> = ({ navigation }) => {
         showBackButton={true}
         showLanguageSelector={false}
         navigation={navigation}
-        onBackPress={() => navigation.navigate("Home")}
+        onBackPress={navigateHome}
       />
 
       {returnOrders.length === 0 ? (
