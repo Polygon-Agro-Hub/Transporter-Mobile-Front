@@ -20,6 +20,10 @@ interface CustomHeaderProps {
   onLanguageChange?: (language: string) => void;
   onLogoutPress?: () => void;
   dark?: boolean;
+  backgroundColor?: string;
+  style?: any;
+  backButtonBg?: string;
+  backButtonColor?: string;
 }
 
 const CustomHeader: React.FC<CustomHeaderProps> = ({
@@ -33,6 +37,10 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
   onLanguageChange,
   onLogoutPress,
   dark = false,
+  backgroundColor,
+  style,
+  backButtonBg,
+  backButtonColor,
 }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("EN");
@@ -70,8 +78,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
 
   return (
     <View
+      style={[{ backgroundColor: backgroundColor ?? undefined }, style]}
       className={`flex-row items-center justify-between px-4 py-3 relative ${
-        dark ? "bg-black" : "bg-white"
+        backgroundColor !== undefined ? "" : (dark ? "bg-black" : "bg-white")
       }`}
     >
       <View style={{ width: 50 }}>
@@ -83,9 +92,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({
             <Entypo
               name="chevron-left"
               size={30}
-              color={dark ? "white" : "black"}
+              color={backButtonColor ?? (dark ? "white" : "black")}
               style={{
-                backgroundColor: dark ? "#1F1F1F" : "#F7FAFF",
+                backgroundColor: backButtonBg ?? (dark ? "#1F1F1F" : "#F7FAFF"),
                 borderRadius: 50,
                 padding: 8,
               }}

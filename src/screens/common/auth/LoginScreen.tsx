@@ -1058,6 +1058,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   : "Enable Biometrics"}
               </Text>
             </TouchableOpacity>
+
+            {/* Register Today Navigation Link */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate("RegistrationForm")}
+              style={{
+                alignSelf: "center",
+                marginTop: 22,
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  fontSize: 14,
+                  fontWeight: "600",
+                  textDecorationLine: "underline",
+                  letterSpacing: 0.3,
+                }}
+              >
+                Register Today!
+              </Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </ScrollView>

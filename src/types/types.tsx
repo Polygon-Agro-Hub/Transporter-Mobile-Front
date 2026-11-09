@@ -19,6 +19,7 @@ export type RootStackParamList = {
   DeliverySuccessful: undefined;
   AddComplaint: undefined;
   Login: undefined;
+  RegistrationForm: undefined;
   ChangePassword: { passwordUpdated: number };
   BannedScreen: {
     status?: string;
