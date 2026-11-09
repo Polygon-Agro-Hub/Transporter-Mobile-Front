@@ -10,6 +10,7 @@ import { RootStackParamList } from "@/types/types";
 // --- Public / Common Screens ---
 import Splash from "@/screens/common/splash/Splash";
 import LoginScreen from "@/screens/common/auth/LoginScreen";
+import RegistrationForm from "@/screens/common/auth/RegistrationForm";
 import ChangePassword from "@/screens/common/auth/ChangePassword";
 import BannedScreen from "@/screens/common/auth/BannedScreen";
 import ProfileScreen from "@/screens/common/auth/Profile";
@@ -148,6 +149,7 @@ export function withRoleGuard<P extends object>(
 export const PUBLIC_STACK_SCREENS: StackRouteConfig[] = [
   { name: "Splash", component: Splash, allowedRoles: "PUBLIC" },
   { name: "Login", component: LoginScreen, allowedRoles: "PUBLIC" },
+  { name: "RegistrationForm", component: RegistrationForm, allowedRoles: "PUBLIC" },
   { name: "ChangePassword", component: ChangePassword, allowedRoles: "PUBLIC" },
   { name: "BannedScreen", component: BannedScreen as any, allowedRoles: "PUBLIC" },
   { name: "Profile", component: ProfileScreen, allowedRoles: "PUBLIC" },
