@@ -6,7 +6,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
   Modal,
   Alert,
   ActivityIndicator,
@@ -57,13 +56,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     }
   };
 
-  // Toggle array item (languages, license categories)
+  // Toggle array item (languages)
   const toggleArrayItem = (field: "languages" | "licenseCategories", item: string) => {
     setFormData((prev) => {
-      const existing = prev[field];
+      const existing = prev[field] || [];
       if (existing.includes(item)) {
-        if (existing.length === 1) return prev; // Keep at least one selected
-        return { ...prev, [field]: existing.filter((i) => i !== item) };
+        if (existing.length === 1) return prev;
+        return { ...prev, [field]: existing.filter((i: string) => i !== item) };
       } else {
         return { ...prev, [field]: [...existing, item] };
       }
@@ -97,17 +96,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   // Step 2: Residential & Bank Info Validation
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.addressLine1.trim()) newErrors.addressLine1 = "Address Line 1 is required";
+    if (!formData.houseNumber.trim()) newErrors.houseNumber = "House / Plot Number is required";
+    if (!formData.streetName.trim()) newErrors.streetName = "Street Name is required";
     if (!formData.city.trim()) newErrors.city = "City is required";
     if (!formData.district.trim()) newErrors.district = "District is required";
-    if (!formData.emergencyName.trim()) newErrors.emergencyName = "Contact name is required";
-    if (!formData.emergencyPhone.trim()) newErrors.emergencyPhone = "Emergency phone is required";
     if (!formData.bankAccountHolder.trim()) newErrors.bankAccountHolder = "Account holder name is required";
-    if (!formData.bankName.trim()) newErrors.bankName = "Bank name is required";
     if (!formData.bankAccountNumber.trim()) newErrors.bankAccountNumber = "Account number is required";
-    if (formData.bankAccountNumber !== formData.confirmBankAccountNumber) {
+    if (!formData.confirmBankAccountNumber.trim()) {
+      newErrors.confirmBankAccountNumber = "Confirm Account number is required";
+    } else if (formData.bankAccountNumber !== formData.confirmBankAccountNumber) {
       newErrors.confirmBankAccountNumber = "Account numbers do not match";
     }
+    if (!formData.bankName.trim()) newErrors.bankName = "Bank name is required";
+    if (!formData.bankBranch.trim()) newErrors.bankBranch = "Branch name is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -116,9 +117,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   // Step 3: License & Insurance Info Validation
   const validateStep3 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.licenseNumber.trim()) newErrors.licenseNumber = "License number is required";
-    if (!formData.insuranceProvider.trim()) newErrors.insuranceProvider = "Insurance provider is required";
-    if (!formData.insurancePolicyNumber.trim()) newErrors.insurancePolicyNumber = "Insurance policy number is required";
+    if (!formData.licenseNumber.trim()) newErrors.licenseNumber = "Driving license ID is required";
+    if (!formData.confirmLicenseNumber.trim()) {
+      newErrors.confirmLicenseNumber = "Confirm Driving license ID is required";
+    } else if (formData.licenseNumber.trim().toUpperCase() !== formData.confirmLicenseNumber.trim().toUpperCase()) {
+      newErrors.confirmLicenseNumber = "Driving license IDs do not match";
+    }
+    if (!formData.insurancePolicyNumber.trim()) newErrors.insurancePolicyNumber = "Insurance Policy Number is required.";
+    if (!formData.confirmInsurancePolicyNumber.trim()) {
+      newErrors.confirmInsurancePolicyNumber = "Confirm Insurance Number is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -128,8 +136,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   const handleFinalSubmit = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.vehicleNumber.trim()) newErrors.vehicleNumber = "Vehicle registration number is required";
-    if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Vehicle make & model is required";
-    if (!formData.agreeTerms) newErrors.agreeTerms = "You must agree to the Terms of Service";
+    if (!formData.confirmVehicleNumber.trim()) {
+      newErrors.confirmVehicleNumber = "Confirm Registration Number is required";
+    } else if (formData.vehicleNumber.trim().toUpperCase() !== formData.confirmVehicleNumber.trim().toUpperCase()) {
+      newErrors.confirmVehicleNumber = "Vehicle registration numbers do not match";
+    }
     if (!formData.agreeDeclaration) newErrors.agreeDeclaration = "You must confirm this declaration";
 
     if (Object.keys(newErrors).length > 0) {
@@ -161,7 +172,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         setCurrentStep(3);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        Alert.alert("Required Fields", "Please complete all required address & bank fields.");
+        Alert.alert("Required Fields", "Please complete all required residential & bank fields.");
       }
     } else if (currentStep === 3) {
       if (validateStep3()) {
@@ -245,7 +256,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           nextPreview: "Next: Residential & Bank Info",
           percent: "0% COMPLETED",
           progressFraction: 0.25,
-          buttonText: "Continue to Address & Bank Details",
+          primaryButtonText: "Continue to Address & Bank Details",
+          secondaryButtonText: "",
         };
       case 2:
         return {
@@ -253,7 +265,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           nextPreview: "Next: License & Insurance Info",
           percent: "25% COMPLETED",
           progressFraction: 0.5,
-          buttonText: "Continue to License & Insurance Info",
+          primaryButtonText: "Continue",
+          secondaryButtonText: "Go Back",
         };
       case 3:
         return {
@@ -261,15 +274,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           nextPreview: "Next: Vehicle Info",
           percent: "50% COMPLETED",
           progressFraction: 0.75,
-          buttonText: "Continue to Vehicle Info",
+          primaryButtonText: "Continue",
+          secondaryButtonText: "Go Back",
         };
       case 4:
         return {
           title: "Vehicle Info",
-          nextPreview: "Final Step",
+          nextPreview: "Next: Submission",
           percent: "75% COMPLETED",
           progressFraction: 1.0,
-          buttonText: "Submit Driver Registration",
+          primaryButtonText: "Send to Approve",
+          secondaryButtonText: "Review Previous Steps",
         };
       default:
         return {
@@ -277,7 +292,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           nextPreview: "",
           percent: "0% COMPLETED",
           progressFraction: 0.25,
-          buttonText: "Continue",
+          primaryButtonText: "Continue",
+          secondaryButtonText: "Go Back",
         };
     }
   };
@@ -290,8 +306,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       style={{ flex: 1, backgroundColor: THEME.bgDark }}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#191919" />
-
       {/* Top Header with Back Button and Title using CustomHeader without bg color */}
       <View style={{ paddingTop: Platform.OS === "ios" ? 44 : 8, backgroundColor: "#191919" }}>
         <CustomHeader
@@ -323,23 +337,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             borderRadius: 16,
             borderWidth: 1,
             borderColor: THEME.cardBorder,
-            padding: 16,
+            padding: 14,
           }}
         >
           <View
             style={{
               flexDirection: "row",
-              alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 10,
+              alignItems: "center",
+              marginBottom: 8,
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
                   backgroundColor: THEME.primaryYellow,
                   alignItems: "center",
                   justifyContent: "center",
@@ -349,7 +363,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                 <Text
                   style={{
                     color: "#0E0E0E",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: "800",
                   }}
                 >
@@ -358,7 +372,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               </View>
               <Text
                 style={{
-                  color: THEME.textWhite,
+                  color: "#FFFFFF",
                   fontSize: 14,
                   fontWeight: "700",
                 }}
@@ -452,7 +466,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             formData={formData}
             errors={errors}
             updateField={updateField}
-            toggleArrayItem={toggleArrayItem}
             openImagePicker={openImagePicker}
           />
         )}
@@ -466,42 +479,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           />
         )}
 
-        {/* Bottom Navigation CTA Buttons */}
+        {/* Bottom Navigation CTA Buttons (Stacked) */}
         <View
           style={{
             paddingHorizontal: 16,
-            flexDirection: "row",
+            marginTop: 10,
             gap: 12,
-            marginTop: 6,
           }}
         >
-          {currentStep > 1 && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handlePrevStep}
-              style={{
-                flex: 1,
-                backgroundColor: "#27272A",
-                borderRadius: 999,
-                height: 52,
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-              }}
-            >
-              <Ionicons name="arrow-back" size={18} color="#D1D5DB" style={{ marginRight: 6 }} />
-              <Text style={{ color: "#D1D5DB", fontSize: 15, fontWeight: "700" }}>
-                Previous
-              </Text>
-            </TouchableOpacity>
-          )}
-
+          {/* Primary Action Button (Top) */}
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleNextStep}
             disabled={isSubmitting}
             style={{
-              flex: currentStep > 1 ? 2 : 1,
               backgroundColor: THEME.primaryYellow,
               borderRadius: 999,
               height: 52,
@@ -527,16 +518,42 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                     marginRight: 6,
                   }}
                 >
-                  {meta.buttonText}
+                  {meta.primaryButtonText}
                 </Text>
                 <Ionicons
-                  name={currentStep === 4 ? "checkmark-circle" : "arrow-forward"}
-                  size={18}
+                  name={currentStep === 4 ? "send" : "arrow-forward"}
+                  size={16}
                   color="#0E0E0E"
                 />
               </>
             )}
           </TouchableOpacity>
+
+          {/* Secondary Action Button (Bottom) - Steps 2, 3, 4 */}
+          {currentStep > 1 && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handlePrevStep}
+              style={{
+                backgroundColor: "#27272A",
+                borderRadius: 999,
+                height: 52,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+              }}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={16}
+                color="#FFFFFF"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                {meta.secondaryButtonText}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -552,95 +569,101 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           onPress={() => setImagePickerModalVisible(false)}
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.75)",
+            backgroundColor: "rgba(0,0,0,0.65)",
             justifyContent: "flex-end",
           }}
         >
           <View
             style={{
-              backgroundColor: THEME.cardBg,
+              backgroundColor: "#202023",
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: 24,
-              paddingBottom: Platform.OS === "ios" ? 40 : 24,
               borderWidth: 1,
               borderColor: THEME.cardBorder,
             }}
           >
             <Text
               style={{
-                color: THEME.textWhite,
-                fontSize: 16,
+                color: "#FFFFFF",
+                fontSize: 17,
                 fontWeight: "700",
                 marginBottom: 18,
                 textAlign: "center",
               }}
             >
-              Select Photo Source
+              Select Document / Photo Source
             </Text>
 
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={handleLaunchCamera}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "#27272A",
-                padding: 14,
+                backgroundColor: "#2D2D31",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
                 borderRadius: 14,
                 marginBottom: 10,
               }}
             >
-              <Ionicons name="camera" size={20} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
-              <Text style={{ color: THEME.textWhite, fontSize: 14, fontWeight: "600" }}>
+              <Ionicons name="camera" size={22} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>
                 Take Photo with Camera
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={handleLaunchGallery}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "#27272A",
-                padding: 14,
+                backgroundColor: "#2D2D31",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
                 borderRadius: 14,
                 marginBottom: 10,
               }}
             >
-              <Ionicons name="images" size={20} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
-              <Text style={{ color: THEME.textWhite, fontSize: 14, fontWeight: "600" }}>
-                Choose from Photo Library
+              <Ionicons name="images" size={22} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>
+                Choose from Photo Gallery
               </Text>
             </TouchableOpacity>
 
             {activePhotoField && formData[activePhotoField] && (
               <TouchableOpacity
+                activeOpacity={0.8}
                 onPress={handleRemovePhoto}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   backgroundColor: "rgba(239, 68, 68, 0.15)",
-                  padding: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
                   borderRadius: 14,
                   marginBottom: 10,
                 }}
               >
-                <Ionicons name="trash" size={20} color="#EF4444" style={{ marginRight: 12 }} />
-                <Text style={{ color: "#EF4444", fontSize: 14, fontWeight: "600" }}>
+                <Ionicons name="trash" size={22} color="#EF4444" style={{ marginRight: 12 }} />
+                <Text style={{ color: "#EF4444", fontSize: 15, fontWeight: "600" }}>
                   Remove Current Photo
                 </Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={() => setImagePickerModalVisible(false)}
               style={{
+                paddingVertical: 14,
                 alignItems: "center",
-                paddingVertical: 12,
-                marginTop: 6,
+                marginTop: 4,
               }}
             >
-              <Text style={{ color: THEME.textMuted, fontSize: 14, fontWeight: "600" }}>
+              <Text style={{ color: THEME.textMuted, fontSize: 15, fontWeight: "600" }}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -652,52 +675,54 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       <Modal
         visible={isSuccessModalVisible}
         transparent
-        animationType="fade"
+        animationType="slide"
+        onRequestClose={() => {
+          setIsSuccessModalVisible(false);
+          navigation.goBack();
+        }}
       >
         <View
           style={{
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.85)",
-            alignItems: "center",
             justifyContent: "center",
             padding: 24,
           }}
         >
           <View
             style={{
-              width: "100%",
-              backgroundColor: THEME.cardBg,
+              backgroundColor: "#202023",
               borderRadius: 24,
-              borderWidth: 1.5,
-              borderColor: THEME.primaryYellow,
-              padding: 24,
+              padding: 26,
               alignItems: "center",
+              borderWidth: 1,
+              borderColor: THEME.cardBorder,
             }}
           >
             <View
               style={{
-                width: 70,
-                height: 70,
-                borderRadius: 35,
-                backgroundColor: "rgba(247, 202, 33, 0.15)",
+                width: 72,
+                height: 72,
+                borderRadius: 36,
+                backgroundColor: "rgba(16, 185, 129, 0.15)",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 16,
               }}
             >
-              <Ionicons name="checkmark-circle" size={48} color={THEME.primaryYellow} />
+              <Ionicons name="checkmark-circle" size={48} color={THEME.successGreen} />
             </View>
 
             <Text
               style={{
-                color: THEME.textWhite,
-                fontSize: 18,
+                color: "#FFFFFF",
+                fontSize: 20,
                 fontWeight: "800",
                 textAlign: "center",
                 marginBottom: 8,
               }}
             >
-              Registration Submitted!
+              Application Submitted!
             </Text>
 
             <Text
@@ -705,33 +730,32 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                 color: THEME.textMuted,
                 fontSize: 13,
                 textAlign: "center",
-                lineHeight: 18,
+                lineHeight: 19,
                 marginBottom: 16,
               }}
             >
-              Your driver registration has been submitted successfully. Our administration team will review your credentials and approve your account.
+              Your driver registration request has been submitted for verification. Our review team will verify your credentials within 24–48 hours.
             </Text>
 
             <View
               style={{
-                backgroundColor: "#252528",
+                backgroundColor: "#27272A",
                 paddingVertical: 10,
-                paddingHorizontal: 18,
+                paddingHorizontal: 16,
                 borderRadius: 12,
                 marginBottom: 24,
+                alignItems: "center",
               }}
             >
-              <Text style={{ color: THEME.textMuted, fontSize: 11, textAlign: "center" }}>
-                Reference Application ID
+              <Text style={{ color: THEME.textSub, fontSize: 11, marginBottom: 2 }}>
+                APPLICATION REFERENCE ID
               </Text>
               <Text
                 style={{
                   color: THEME.primaryYellow,
                   fontSize: 16,
                   fontWeight: "800",
-                  textAlign: "center",
                   letterSpacing: 1,
-                  marginTop: 2,
                 }}
               >
                 {generatedRefId}
@@ -742,19 +766,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               activeOpacity={0.85}
               onPress={() => {
                 setIsSuccessModalVisible(false);
-                navigation.navigate("Login");
+                navigation.goBack();
               }}
               style={{
-                width: "100%",
                 backgroundColor: THEME.primaryYellow,
                 borderRadius: 999,
-                height: 50,
+                width: "100%",
+                paddingVertical: 14,
                 alignItems: "center",
-                justifyContent: "center",
               }}
             >
-              <Text style={{ color: "#0E0E0E", fontSize: 15, fontWeight: "800" }}>
-                Back to Sign In
+              <Text
+                style={{
+                  color: "#0E0E0E",
+                  fontSize: 15,
+                  fontWeight: "800",
+                }}
+              >
+                Back to Login
               </Text>
             </TouchableOpacity>
           </View>

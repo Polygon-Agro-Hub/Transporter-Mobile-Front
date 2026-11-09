@@ -11,43 +11,62 @@ export interface FormData {
   email: string;
 
   // Step 2: Residential & Bank Info
-  addressLine1: string;
-  addressLine2: string;
+  houseNumber: string;
+  streetName: string;
   city: string;
+  country: string;
   district: string;
-  postalCode: string;
-  emergencyName: string;
-  emergencyRelationship: string;
-  emergencyPhone: string;
+  province: string;
   bankAccountHolder: string;
-  bankName: string;
-  bankBranch: string;
   bankAccountNumber: string;
   confirmBankAccountNumber: string;
+  bankName: string;
+  bankBranch: string;
+
+  // Optional legacy fields for backward compatibility
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  emergencyName?: string;
+  emergencyRelationship?: string;
+  emergencyPhone?: string;
 
   // Step 3: License & Insurance Info
   licenseNumber: string;
-  licenseExpiry: string;
-  licenseCategories: string[];
+  confirmLicenseNumber: string;
   licenseFrontPhoto: string | null;
   licenseBackPhoto: string | null;
-  insuranceProvider: string;
   insurancePolicyNumber: string;
-  insuranceCoverageType: string;
+  confirmInsurancePolicyNumber: string;
   insuranceExpiry: string;
-  insuranceCardPhoto: string | null;
+  insuranceFrontPhoto: string | null;
+  insuranceBackPhoto: string | null;
+
+  licenseExpiry?: string;
+  licenseCategories?: string[];
+  insuranceProvider?: string;
+  insuranceCoverageType?: string;
+  insuranceCardPhoto?: string | null;
 
   // Step 4: Vehicle Info
   vehicleNumber: string;
-  vehicleModel: string;
-  fuelType: string;
-  ownershipType: string;
-  revenueLicenseNumber: string;
-  revenueExpiry: string;
-  revenuePhoto: string | null;
-  vehiclePhoto: string | null;
-  agreeTerms: boolean;
+  confirmVehicleNumber: string;
+  vehicleType: string;
+  vehicleCapacity: string;
+  vehicleFrontPhoto: string | null;
+  vehicleBackPhoto: string | null;
+  vehicleLeftSidePhoto: string | null;
+  vehicleRightSidePhoto: string | null;
   agreeDeclaration: boolean;
+
+  vehicleModel?: string;
+  fuelType?: string;
+  ownershipType?: string;
+  revenueLicenseNumber?: string;
+  revenueExpiry?: string;
+  revenuePhoto?: string | null;
+  vehiclePhoto?: string | null;
+  agreeTerms?: boolean;
 }
 
 export const INITIAL_FORM_DATA: FormData = {
@@ -61,40 +80,36 @@ export const INITIAL_FORM_DATA: FormData = {
   nic: "",
   email: "",
 
-  addressLine1: "",
-  addressLine2: "",
+  houseNumber: "",
+  streetName: "",
   city: "",
-  district: "Gampaha",
-  postalCode: "",
-  emergencyName: "",
-  emergencyRelationship: "Spouse",
-  emergencyPhone: "",
+  country: "Sri Lanka",
+  district: "",
+  province: "Western Province",
   bankAccountHolder: "",
-  bankName: "Commercial Bank",
-  bankBranch: "",
   bankAccountNumber: "",
   confirmBankAccountNumber: "",
+  bankName: "",
+  bankBranch: "",
 
   licenseNumber: "",
-  licenseExpiry: "",
-  licenseCategories: ["Light Vehicles (B/B1)"],
+  confirmLicenseNumber: "",
   licenseFrontPhoto: null,
   licenseBackPhoto: null,
-  insuranceProvider: "Sri Lanka Insurance",
   insurancePolicyNumber: "",
-  insuranceCoverageType: "Comprehensive",
+  confirmInsurancePolicyNumber: "",
   insuranceExpiry: "",
-  insuranceCardPhoto: null,
+  insuranceFrontPhoto: null,
+  insuranceBackPhoto: null,
 
   vehicleNumber: "",
-  vehicleModel: "",
-  fuelType: "Diesel",
-  ownershipType: "Owned",
-  revenueLicenseNumber: "",
-  revenueExpiry: "",
-  revenuePhoto: null,
-  vehiclePhoto: null,
-  agreeTerms: false,
+  confirmVehicleNumber: "",
+  vehicleType: "Three Wheeler",
+  vehicleCapacity: "500 kg",
+  vehicleFrontPhoto: null,
+  vehicleBackPhoto: null,
+  vehicleLeftSidePhoto: null,
+  vehicleRightSidePhoto: null,
   agreeDeclaration: false,
 };
 

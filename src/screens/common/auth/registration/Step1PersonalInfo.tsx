@@ -407,13 +407,13 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           placeholderTextColor={THEME.textSub}
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.firstName ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: errors.firstName ? 4 : 14,
           }}
         />
@@ -434,13 +434,13 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           placeholderTextColor={THEME.textSub}
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.lastName ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: errors.lastName ? 4 : 14,
           }}
         />
@@ -462,7 +462,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
         <View
           style={{
             flexDirection: "row",
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.phone1 ? THEME.inputBorderError : THEME.inputBorder,
             overflow: "hidden",
@@ -473,7 +473,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           <View
             style={{
               backgroundColor: "#2C2C30",
-              paddingHorizontal: 14,
+              paddingHorizontal: 16,
               alignItems: "center",
               justifyContent: "center",
               borderRightWidth: 1,
@@ -496,7 +496,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               backgroundColor: THEME.inputBg,
               color: THEME.textWhite,
               fontSize: 14,
-              paddingHorizontal: 14,
+              paddingHorizontal: 16,
             }}
           />
         </View>
@@ -516,7 +516,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
         <View
           style={{
             flexDirection: "row",
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: THEME.inputBorder,
             overflow: "hidden",
@@ -527,7 +527,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           <View
             style={{
               backgroundColor: "#2C2C30",
-              paddingHorizontal: 14,
+              paddingHorizontal: 16,
               alignItems: "center",
               justifyContent: "center",
               borderRightWidth: 1,
@@ -550,7 +550,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               backgroundColor: THEME.inputBg,
               color: THEME.textWhite,
               fontSize: 14,
-              paddingHorizontal: 14,
+              paddingHorizontal: 16,
             }}
           />
         </View>
@@ -567,13 +567,13 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           autoCapitalize="characters"
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.nic ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: errors.nic ? 4 : 14,
           }}
         />
@@ -596,13 +596,13 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           autoCapitalize="none"
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
           }}
         />
       </View>

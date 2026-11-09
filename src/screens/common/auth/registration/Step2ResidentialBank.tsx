@@ -1,15 +1,106 @@
-import React from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { StepProps, THEME } from "./types";
+
+const SRI_LANKA_DISTRICTS = [
+  { district: "Colombo", province: "Western Province" },
+  { district: "Gampaha", province: "Western Province" },
+  { district: "Kalutara", province: "Western Province" },
+  { district: "Kandy", province: "Central Province" },
+  { district: "Matale", province: "Central Province" },
+  { district: "Nuwara Eliya", province: "Central Province" },
+  { district: "Galle", province: "Southern Province" },
+  { district: "Matara", province: "Southern Province" },
+  { district: "Hambantota", province: "Southern Province" },
+  { district: "Jaffna", province: "Northern Province" },
+  { district: "Kilinochchi", province: "Northern Province" },
+  { district: "Mannar", province: "Northern Province" },
+  { district: "Vavuniya", province: "Northern Province" },
+  { district: "Mullaitivu", province: "Northern Province" },
+  { district: "Batticaloa", province: "Eastern Province" },
+  { district: "Ampara", province: "Eastern Province" },
+  { district: "Trincomalee", province: "Eastern Province" },
+  { district: "Kurunegala", province: "North Western Province" },
+  { district: "Puttalam", province: "North Western Province" },
+  { district: "Anuradhapura", province: "North Central Province" },
+  { district: "Polonnaruwa", province: "North Central Province" },
+  { district: "Badulla", province: "Uva Province" },
+  { district: "Monaragala", province: "Uva Province" },
+  { district: "Ratnapura", province: "Sabaragamuwa Province" },
+  { district: "Kegalle", province: "Sabaragamuwa Province" },
+];
+
+const SRI_LANKAN_BANKS = [
+  "Commercial Bank of Ceylon",
+  "Bank of Ceylon (BOC)",
+  "People's Bank",
+  "Sampath Bank",
+  "Hatton National Bank (HNB)",
+  "Seylan Bank",
+  "Nations Trust Bank (NTB)",
+  "DFCC Bank",
+  "National Development Bank (NDB)",
+  "Union Bank",
+  "Pan Asia Bank",
+  "Amana Bank",
+  "Cargills Bank",
+];
+
+const COMMON_BRANCHES = [
+  "Colombo 01 - Fort",
+  "Colombo 03 - Kollupitiya",
+  "Colombo 04 - Bambalapitiya",
+  "Colombo 07 - Cinnamon Gardens",
+  "Colombo 10 - Maradana",
+  "Gampaha",
+  "Negombo",
+  "Kandy Central",
+  "Peradeniya",
+  "Kurunegala",
+  "Galle Fort",
+  "Matara",
+  "Ratnapura",
+  "Anuradhapura",
+  "Jaffna Central",
+  "Batticaloa",
+];
 
 export const Step2ResidentialBank: React.FC<StepProps> = ({
   formData,
   errors,
   updateField,
 }) => {
+  const [districtModalVisible, setDistrictModalVisible] = useState(false);
+  const [bankModalVisible, setBankModalVisible] = useState(false);
+  const [branchModalVisible, setBranchModalVisible] = useState(false);
+
+  const handleSelectDistrict = (item: { district: string; province: string }) => {
+    updateField("district", item.district);
+    updateField("province", item.province);
+    setDistrictModalVisible(false);
+  };
+
+  const handleSelectBank = (bank: string) => {
+    updateField("bankName", bank);
+    setBankModalVisible(false);
+  };
+
+  const handleSelectBranch = (branch: string) => {
+    updateField("bankBranch", branch);
+    setBranchModalVisible(false);
+  };
+
   return (
     <View style={{ paddingHorizontal: 16 }}>
-      {/* 1. Residential Address Card */}
+      {/* 1. Residential Details Card */}
       <View
         style={{
           backgroundColor: THEME.cardBg,
@@ -20,260 +111,230 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
           marginBottom: 16,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-          <Text style={{ fontSize: 16, marginRight: 6 }}>🏠</Text>
-          <Text style={{ color: THEME.textWhite, fontSize: 14, fontWeight: "700" }}>
-            Residential Address
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+          <Ionicons name="location-sharp" size={18} color={THEME.primaryYellow} style={{ marginRight: 8 }} />
+          <Text
+            style={{
+              color: THEME.textWhite,
+              fontSize: 15,
+              fontWeight: "700",
+            }}
+          >
+            Residential Details
           </Text>
         </View>
 
-        {/* Address Line 1 */}
+        {/* House / Plot Number */}
         <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Address Line 1 *
+          House / Plot Number *
         </Text>
         <TextInput
-          value={formData.addressLine1}
-          onChangeText={(text) => updateField("addressLine1", text)}
-          placeholder="e.g. No. 45, Temple Road"
+          value={formData.houseNumber}
+          onChangeText={(text) => updateField("houseNumber", text)}
+          placeholder="e.g. 142/B"
           placeholderTextColor={THEME.textSub}
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
-            borderColor: errors.addressLine1 ? THEME.inputBorderError : THEME.inputBorder,
+            borderColor: errors.houseNumber ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
-            marginBottom: errors.addressLine1 ? 4 : 14,
+            paddingHorizontal: 16,
+            marginBottom: errors.houseNumber ? 4 : 14,
           }}
         />
-        {errors.addressLine1 && (
+        {errors.houseNumber && (
           <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
-            {errors.addressLine1}
+            {errors.houseNumber}
           </Text>
         )}
 
-        {/* Address Line 2 */}
+        {/* Street Name */}
         <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Address Line 2 (Optional)
+          Street Name *
         </Text>
         <TextInput
-          value={formData.addressLine2}
-          onChangeText={(text) => updateField("addressLine2", text)}
-          placeholder="e.g. Baseline Road"
+          value={formData.streetName}
+          onChangeText={(text) => updateField("streetName", text)}
+          placeholder="e.g. Temple Road"
           placeholderTextColor={THEME.textSub}
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
+            borderWidth: 1,
+            borderColor: errors.streetName ? THEME.inputBorderError : THEME.inputBorder,
+            color: THEME.textWhite,
+            fontSize: 14,
+            height: 48,
+            paddingHorizontal: 16,
+            marginBottom: errors.streetName ? 4 : 14,
+          }}
+        />
+        {errors.streetName && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+            {errors.streetName}
+          </Text>
+        )}
+
+        {/* City */}
+        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+          City *
+        </Text>
+        <TextInput
+          value={formData.city}
+          onChangeText={(text) => updateField("city", text)}
+          placeholder="e.g. Colombo 03"
+          placeholderTextColor={THEME.textSub}
+          style={{
+            backgroundColor: THEME.inputBg,
+            borderRadius: 25,
+            borderWidth: 1,
+            borderColor: errors.city ? THEME.inputBorderError : THEME.inputBorder,
+            color: THEME.textWhite,
+            fontSize: 14,
+            height: 48,
+            paddingHorizontal: 16,
+            marginBottom: errors.city ? 4 : 14,
+          }}
+        />
+        {errors.city && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+            {errors.city}
+          </Text>
+        )}
+
+        {/* Country */}
+        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+          Country
+        </Text>
+        <TextInput
+          value={formData.country || "Sri Lanka"}
+          editable={false}
+          style={{
+            backgroundColor: THEME.inputBg,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: 14,
           }}
         />
 
-        {/* City & District in Row */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-              City *
-            </Text>
-            <TextInput
-              value={formData.city}
-              onChangeText={(text) => updateField("city", text)}
-              placeholder="e.g. Colombo"
-              placeholderTextColor={THEME.textSub}
-              style={{
-                backgroundColor: THEME.inputBg,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: errors.city ? THEME.inputBorderError : THEME.inputBorder,
-                color: THEME.textWhite,
-                fontSize: 14,
-                height: 48,
-                paddingHorizontal: 14,
-              }}
-            />
-            {errors.city && (
-              <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginTop: 4 }}>
-                {errors.city}
-              </Text>
-            )}
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-              District *
-            </Text>
-            <TextInput
-              value={formData.district}
-              onChangeText={(text) => updateField("district", text)}
-              placeholder="e.g. Gampaha"
-              placeholderTextColor={THEME.textSub}
-              style={{
-                backgroundColor: THEME.inputBg,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: errors.district ? THEME.inputBorderError : THEME.inputBorder,
-                color: THEME.textWhite,
-                fontSize: 14,
-                height: 48,
-                paddingHorizontal: 14,
-              }}
-            />
-          </View>
-        </View>
-
-        {/* Postal Code */}
+        {/* District */}
         <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Postal Code (Optional)
+          District *
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setDistrictModalVisible(true)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: THEME.inputBg,
+            borderRadius: 25,
+            borderWidth: 1,
+            borderColor: errors.district ? THEME.inputBorderError : THEME.inputBorder,
+            height: 48,
+            paddingHorizontal: 16,
+            marginBottom: errors.district ? 4 : 14,
+          }}
+        >
+          <Text
+            style={{
+              color: formData.district ? THEME.textWhite : THEME.textSub,
+              fontSize: 14,
+            }}
+          >
+            {formData.district || "Select District"}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={THEME.textMuted} />
+        </TouchableOpacity>
+        {errors.district && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+            {errors.district}
+          </Text>
+        )}
+
+        {/* Province */}
+        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+          Province *
         </Text>
         <TextInput
-          value={formData.postalCode}
-          onChangeText={(text) => updateField("postalCode", text)}
-          placeholder="e.g. 11850"
+          value={formData.province || ""}
+          editable={false}
+          placeholder="Auto-Fill"
           placeholderTextColor={THEME.textSub}
-          keyboardType="numeric"
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
-            borderColor: THEME.inputBorder,
+            borderColor: errors.province ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
           }}
         />
+        {errors.province && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginTop: 4 }}>
+            {errors.province}
+          </Text>
+        )}
       </View>
 
-      {/* 2. Emergency Contact Card */}
+      {/* 2. Verified Weekly Payouts Callout Card */}
       <View
         style={{
-          backgroundColor: THEME.cardBg,
-          borderRadius: 16,
+          backgroundColor: "#1F1E19",
+          borderRadius: 14,
           borderWidth: 1,
-          borderColor: THEME.cardBorder,
-          padding: 16,
+          borderColor: "#332D18",
+          padding: 14,
+          flexDirection: "row",
+          alignItems: "center",
           marginBottom: 16,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-          <Text style={{ fontSize: 16, marginRight: 6 }}>📞</Text>
-          <Text style={{ color: THEME.textWhite, fontSize: 14, fontWeight: "700" }}>
-            Emergency Contact
-          </Text>
-        </View>
-
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Contact Person Name *
-        </Text>
-        <TextInput
-          value={formData.emergencyName}
-          onChangeText={(text) => updateField("emergencyName", text)}
-          placeholder="e.g. Sunethra Perera"
-          placeholderTextColor={THEME.textSub}
-          style={{
-            backgroundColor: THEME.inputBg,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: errors.emergencyName ? THEME.inputBorderError : THEME.inputBorder,
-            color: THEME.textWhite,
-            fontSize: 14,
-            height: 48,
-            paddingHorizontal: 14,
-            marginBottom: errors.emergencyName ? 4 : 14,
-          }}
-        />
-        {errors.emergencyName && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
-            {errors.emergencyName}
-          </Text>
-        )}
-
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Relationship *
-        </Text>
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-          {["Spouse", "Parent", "Sibling", "Friend"].map((rel) => {
-            const isSelected = formData.emergencyRelationship === rel;
-            return (
-              <TouchableOpacity
-                key={rel}
-                onPress={() => updateField("emergencyRelationship", rel)}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 14,
-                  borderRadius: 20,
-                  backgroundColor: isSelected ? THEME.primaryYellow : "#27272A",
-                }}
-              >
-                <Text
-                  style={{
-                    color: isSelected ? "#0E0E0E" : "#D1D5DB",
-                    fontSize: 12,
-                    fontWeight: "700",
-                  }}
-                >
-                  {rel}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Emergency Phone Number *
-        </Text>
         <View
           style={{
-            flexDirection: "row",
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: errors.emergencyPhone ? THEME.inputBorderError : THEME.inputBorder,
-            overflow: "hidden",
-            height: 48,
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            backgroundColor: "#2E2A18",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 12,
           }}
         >
-          <View
+          <Ionicons name="shield-checkmark" size={20} color={THEME.primaryYellow} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
             style={{
-              backgroundColor: "#2C2C30",
-              paddingHorizontal: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              borderRightWidth: 1,
-              borderRightColor: THEME.inputBorder,
+              color: THEME.primaryYellow,
+              fontSize: 13,
+              fontWeight: "700",
+              marginBottom: 2,
             }}
           >
-            <Text style={{ color: THEME.primaryYellow, fontWeight: "700", fontSize: 13 }}>
-              +94
-            </Text>
-          </View>
-          <TextInput
-            value={formData.emergencyPhone}
-            onChangeText={(text) => updateField("emergencyPhone", text.replace(/[^0-9]/g, ""))}
-            placeholder="7X XXX XXXX"
-            placeholderTextColor={THEME.textSub}
-            keyboardType="phone-pad"
-            maxLength={10}
-            style={{
-              flex: 1,
-              backgroundColor: THEME.inputBg,
-              color: THEME.textWhite,
-              fontSize: 14,
-              paddingHorizontal: 14,
-            }}
-          />
-        </View>
-        {errors.emergencyPhone && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginTop: 4 }}>
-            {errors.emergencyPhone}
+            Verified Weekly Payouts
           </Text>
-        )}
+          <Text
+            style={{
+              color: THEME.textMuted,
+              fontSize: 11,
+              lineHeight: 16,
+            }}
+          >
+            Earnings credited weekly directly to your registered bank account.
+          </Text>
+        </View>
       </View>
 
       {/* 3. Bank Account Details Card */}
@@ -284,84 +345,48 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
           borderWidth: 1,
           borderColor: THEME.cardBorder,
           padding: 16,
-          marginBottom: 20,
+          marginBottom: 16,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-          <Text style={{ fontSize: 16, marginRight: 6 }}>🏦</Text>
-          <Text style={{ color: THEME.textWhite, fontSize: 14, fontWeight: "700" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+          <Ionicons name="business-sharp" size={18} color={THEME.primaryYellow} style={{ marginRight: 8 }} />
+          <Text
+            style={{
+              color: THEME.textWhite,
+              fontSize: 15,
+              fontWeight: "700",
+            }}
+          >
             Bank Account Details
           </Text>
         </View>
-        <Text style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 14 }}>
-          Weekly driver earnings & incentives are directly deposited here.
-        </Text>
 
-        {/* Account Holder Name */}
+        {/* Account Holder's Name */}
         <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Account Holder Name *
+          Account Holder's Name *
         </Text>
         <TextInput
           value={formData.bankAccountHolder}
           onChangeText={(text) => updateField("bankAccountHolder", text)}
-          placeholder="e.g. K. P. Perera"
+          placeholder="As shown on bank passbook"
           placeholderTextColor={THEME.textSub}
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.bankAccountHolder ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: errors.bankAccountHolder ? 4 : 14,
           }}
         />
-
-        {/* Bank Name */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Bank Name *
-        </Text>
-        <TextInput
-          value={formData.bankName}
-          onChangeText={(text) => updateField("bankName", text)}
-          placeholder="e.g. Commercial Bank / Bank of Ceylon"
-          placeholderTextColor={THEME.textSub}
-          style={{
-            backgroundColor: THEME.inputBg,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: errors.bankName ? THEME.inputBorderError : THEME.inputBorder,
-            color: THEME.textWhite,
-            fontSize: 14,
-            height: 48,
-            paddingHorizontal: 14,
-            marginBottom: errors.bankName ? 4 : 14,
-          }}
-        />
-
-        {/* Branch Name */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
-          Branch Name
-        </Text>
-        <TextInput
-          value={formData.bankBranch}
-          onChangeText={(text) => updateField("bankBranch", text)}
-          placeholder="e.g. Pettah Branch"
-          placeholderTextColor={THEME.textSub}
-          style={{
-            backgroundColor: THEME.inputBg,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: THEME.inputBorder,
-            color: THEME.textWhite,
-            fontSize: 14,
-            height: 48,
-            paddingHorizontal: 14,
-            marginBottom: 14,
-          }}
-        />
+        {errors.bankAccountHolder && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+            {errors.bankAccountHolder}
+          </Text>
+        )}
 
         {/* Account Number */}
         <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
@@ -370,18 +395,18 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <TextInput
           value={formData.bankAccountNumber}
           onChangeText={(text) => updateField("bankAccountNumber", text.replace(/[^0-9]/g, ""))}
-          placeholder="e.g. 1000234567"
+          placeholder="e.g. 8001234567"
           placeholderTextColor={THEME.textSub}
-          keyboardType="numeric"
+          keyboardType="number-pad"
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.bankAccountNumber ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
             marginBottom: errors.bankAccountNumber ? 4 : 14,
           }}
         />
@@ -398,26 +423,289 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <TextInput
           value={formData.confirmBankAccountNumber}
           onChangeText={(text) => updateField("confirmBankAccountNumber", text.replace(/[^0-9]/g, ""))}
-          placeholder="Re-enter Account Number"
+          placeholder="Please Re-enter Account Number"
           placeholderTextColor={THEME.textSub}
-          keyboardType="numeric"
+          keyboardType="number-pad"
           style={{
             backgroundColor: THEME.inputBg,
-            borderRadius: 12,
+            borderRadius: 25,
             borderWidth: 1,
             borderColor: errors.confirmBankAccountNumber ? THEME.inputBorderError : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
-            paddingHorizontal: 14,
+            paddingHorizontal: 16,
+            marginBottom: errors.confirmBankAccountNumber ? 4 : 14,
           }}
         />
         {errors.confirmBankAccountNumber && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginTop: 4 }}>
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
             {errors.confirmBankAccountNumber}
           </Text>
         )}
+
+        {/* Bank Name */}
+        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+          Bank Name *
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setBankModalVisible(true)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: THEME.inputBg,
+            borderRadius: 25,
+            borderWidth: 1,
+            borderColor: errors.bankName ? THEME.inputBorderError : THEME.inputBorder,
+            height: 48,
+            paddingHorizontal: 16,
+            marginBottom: errors.bankName ? 4 : 14,
+          }}
+        >
+          <Text
+            style={{
+              color: formData.bankName ? THEME.textWhite : THEME.textSub,
+              fontSize: 14,
+            }}
+          >
+            {formData.bankName || "Select Bank"}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={THEME.textMuted} />
+        </TouchableOpacity>
+        {errors.bankName && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+            {errors.bankName}
+          </Text>
+        )}
+
+        {/* Branch Name */}
+        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+          Branch Name *
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setBranchModalVisible(true)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: THEME.inputBg,
+            borderRadius: 25,
+            borderWidth: 1,
+            borderColor: errors.bankBranch ? THEME.inputBorderError : THEME.inputBorder,
+            height: 48,
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              color: formData.bankBranch ? THEME.textWhite : THEME.textSub,
+              fontSize: 14,
+            }}
+          >
+            {formData.bankBranch || "Select Branch"}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={THEME.textMuted} />
+        </TouchableOpacity>
+        {errors.bankBranch && (
+          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginTop: 4 }}>
+            {errors.bankBranch}
+          </Text>
+        )}
       </View>
+
+      {/* District Selection Modal */}
+      <Modal visible={districtModalVisible} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#202023",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: THEME.cardBorder,
+              maxHeight: "75%",
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+                paddingBottom: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: "#333",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
+                Select District
+              </Text>
+              <TouchableOpacity onPress={() => setDistrictModalVisible(false)}>
+                <Ionicons name="close" size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={SRI_LANKA_DISTRICTS}
+              keyExtractor={(item) => item.district}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleSelectDistrict(item)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#2A2A2E",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "500" }}>
+                    {item.district}
+                  </Text>
+                  <Text style={{ color: THEME.textSub, fontSize: 12 }}>
+                    {item.province}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bank Selection Modal */}
+      <Modal visible={bankModalVisible} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#202023",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: THEME.cardBorder,
+              maxHeight: "75%",
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+                paddingBottom: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: "#333",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
+                Select Bank
+              </Text>
+              <TouchableOpacity onPress={() => setBankModalVisible(false)}>
+                <Ionicons name="close" size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={SRI_LANKAN_BANKS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleSelectBank(item)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#2A2A2E",
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "500" }}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Branch Selection Modal */}
+      <Modal visible={branchModalVisible} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#202023",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: THEME.cardBorder,
+              maxHeight: "75%",
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+                paddingBottom: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: "#333",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
+                Select Branch
+              </Text>
+              <TouchableOpacity onPress={() => setBranchModalVisible(false)}>
+                <Ionicons name="close" size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={COMMON_BRANCHES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleSelectBranch(item)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#2A2A2E",
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "500" }}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
