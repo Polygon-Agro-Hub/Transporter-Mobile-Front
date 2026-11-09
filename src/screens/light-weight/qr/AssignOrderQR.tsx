@@ -6,6 +6,7 @@ import {
   Animated,
   ActivityIndicator,
   StyleSheet,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -18,6 +19,9 @@ import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import CameraAccess from "@/screens/common/permission/CameraAccess";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 
 type AssignOrderQRNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -29,6 +33,7 @@ interface AssignOrderQRProps {
 }
 
 const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanLineAnim] = useState(new Animated.Value(0));
@@ -46,6 +51,36 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
 
   const isFocusedRef = useRef(true);
   const isProcessingRef = useRef(false);
+
+  const navigateHome = () => {
+    if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.navigate("HeavyDriverHome");
+    } else {
+      navigation.navigate("Home");
+    }
+  };
+
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigateHome();
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress,
+      );
+      return () => subscription.remove();
+    }, [jobRole]),
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -243,6 +278,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
             message: error.response.data?.message || "Failed to assign order",
             status: error.response.status,
             data: error.response.data,
+            response: error.response,
           };
         } else if (error.request) {
           throw new Error("Network error. Please check your connection.");
@@ -256,167 +292,188 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
       setLoading(false);
     }
   };
+
   const handleBarCodeScanned = async ({
-    type,
-    data,
-  }: {
-    type: string;
-    data: string;
-  }) => {
-    if (isProcessingRef.current || scanned || loading || !isFocusedRef.current) return;
+  type,
+  data,
+}: {
+  type: string;
+  data: string;
+}) => {
+  if (isProcessingRef.current || scanned || loading || !isFocusedRef.current)
+    return;
 
-    isProcessingRef.current = true;
-    setScanned(true);
+  isProcessingRef.current = true;
+  setScanned(true);
 
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+  }
+
+  try {
+    // Check if the QR code is a Transfer Load QR code (for heavy weight drivers)
+    const trimmedData = (data || "").trim();
+    const isLoadQR =
+      trimmedData.includes("L-DRV") ||
+      (trimmedData.startsWith("{") &&
+        trimmedData.endsWith("}") &&
+        (trimmedData.includes("transferCode") || trimmedData.includes("loadCode")));
+
+    if (isLoadQR) {
+      setModalTitle("Load QR Detected");
+      setModalMessage(
+        "This is a Transfer Load QR code. Please use the 'Scan Load QR' button on your Home screen to accept transfer loads.",
+      );
+      setShowRescanButton(true);
+      setModalType("error");
+      setShowErrorModal(true);
+      return;
     }
 
-    try {
-      const invoiceNo = extractInvoiceNumber(data);
+    const invoiceNo = extractInvoiceNumber(data);
 
-      if (!invoiceNo) {
-        setModalTitle("Error!");
-        setModalMessage(
-          "The QR code is not identified.\nPlease check and try again.",
-        );
-        setShowRescanButton(true);
-        setModalType("error");
-        setShowErrorModal(true);
-        return;
-      }
+    if (!invoiceNo) {
+      setModalTitle("Error!");
+      setModalMessage(
+        "The QR code is not identified.\nPlease check and try again.",
+      );
+      setShowRescanButton(true);
+      setModalType("error");
+      setShowErrorModal(true);
+      return;
+    }
 
-      const result = await assignOrderToDriver(invoiceNo);
+    const result = await assignOrderToDriver(invoiceNo);
 
-      if (result.status === "success") {
-        setModalTitle("Successful!");
-        setModalMessage(
-          <View className="items-center">
-            <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
-              Order:{" "}
-              <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
-              been successfully assigned to you.
-            </Text>
-          </View>,
-        );
-        setModalType("success");
-        setShowSuccessModal(true);
-      } else {
-        let title = "Error";
-        const message = result.message || "Failed to assign order";
-
-        if (message.includes("already in your target list")) {
-          title = "Already got this!";
-        } else if (
-          message.includes("already been collected") ||
-          message.includes("already been assigned to another driver")
-        ) {
-          title = "Order Unavailable!";
-        } else if (
-          message.includes("Still processing this order") ||
-          message.includes("Scanning will be available")
-        ) {
-          title = "Order Not Ready!";
-        }
-
-        setModalTitle(title);
-        setModalMessage(message);
-        setModalType("error");
-        setShowErrorModal(true);
-      }
-    } catch (error: any) {
-      console.error("Error processing QR scan:", error);
-
+    if (result.status === "success") {
+      setModalTitle("Successful!");
+      setModalMessage(
+        <View className="items-center">
+          <Text className="text-center text-[#4E4E4E] mb-5 mt-2">
+            Order:{" "}
+            <Text className="font-bold text-[#000000]">{invoiceNo}</Text> has
+            been successfully assigned to you.
+          </Text>
+        </View>,
+      );
+      setModalType("success");
+      setShowSuccessModal(true);
+    } else {
       let title = "Error";
-      let message = error.message || "Failed to process QR code";
-      let type: "error" | "success" = "error";
+      const message = result.message || "Failed to assign order";
 
-      const errorMessage =
-        error.response?.data?.message || error.message || message;
-      const statusCode = error.response?.status || error.status;
-      const currentStatus =
-        error.response?.data?.currentStatus || error.data?.currentStatus;
-
-      if (currentStatus === "Return Received") {
-        title = "Already Returned!";
-        message =
-          "This order has already been returned to the center and cannot proceed again!";
-      } else if (currentStatus === "Return") {
-        title = "Return Order!";
-        message =
-          "This order has been marked as Return. Please complete the return handover process at the distribution center.";
-      } else if (currentStatus === "Ready to Pickup") {
-        title = "Cannot Proceed!";
-        message =
-          "This order is designated for customer pickup. Kindly hand it over to the officers to proceed further.";
-      } else if (
-        currentStatus === "Delivered" ||
-        currentStatus === "Picked up"
-      ) {
-        title = "Cannot Proceed!";
-        message =
-          "This order has already been successfully handed over to the customer. Please scan an active order to proceed.";
-      } else if (
-        statusCode === 409 &&
-        (errorMessage.includes("already in your target list") ||
-          errorMessage.toLowerCase().includes("already got"))
-      ) {
+      if (message.includes("already in your target list")) {
         title = "Already got this!";
-        message = errorMessage;
       } else if (
-        statusCode === 409 &&
-        (errorMessage.includes("already been collected") ||
-          errorMessage.includes("already been assigned to another driver") ||
-          errorMessage.toLowerCase().includes("collected by another Driver") ||
-          errorMessage.toLowerCase().includes("assigned to another") ||
-          errorMessage.toLowerCase().includes("Driver id:"))
+        message.includes("already been collected") ||
+        message.includes("already been assigned to another driver")
       ) {
         title = "Order Unavailable!";
-        message = errorMessage
-          .replace(/officer/gi, "Driver")
-          .replace(/Officer ID:/gi, "Driver ID:");
       } else if (
-        statusCode === 400 &&
-        (errorMessage.includes("Still processing this order") ||
-          errorMessage.includes("Scanning will be available") ||
-          errorMessage.toLowerCase().includes("not ready") ||
-          errorMessage.toLowerCase().includes("processing"))
+        message.includes("Still processing this order") ||
+        message.includes("Scanning will be available")
       ) {
         title = "Order Not Ready!";
-        message = errorMessage.includes("Scanning will be available")
-          ? errorMessage
-          : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
-      } else if (
-        statusCode === 404 ||
-        errorMessage.includes("not found") ||
-        errorMessage.includes("Invoice number not found") ||
-        errorMessage.toLowerCase().includes("invalid invoice")
-      ) {
-        title = "Error!";
-        message = "The QR code is not identified. Please check and try again.";
-      } else if (
-        errorMessage.includes("Network error") ||
-        errorMessage.includes("Network Error")
-      ) {
-        title = "Network Error";
-        message = "Please check your internet connection and try again.";
-      } else if (statusCode === 401 || errorMessage.includes("Unauthorized")) {
-        title = "Session Expired";
-        message = "Please login again to continue.";
-      } else if (statusCode === 500) {
-        title = "Server Error";
-        message = "Internal server error. Please try again later.";
-      } else if (statusCode === 400) {
-        title = "Invalid Request";
-        message = errorMessage || "Invalid request. Please try again.";
+      } else if (message.includes("you can only scan")) {
+        title = "Wrong Order Type!";
       }
 
       setModalTitle(title);
       setModalMessage(message);
-      setModalType(type);
+      setModalType("error");
       setShowErrorModal(true);
     }
-  };
+  } catch (error: any) {
+    console.error("Error processing QR scan:", error);
+
+    let title = "Error";
+    let message = error.message || "Failed to process QR code";
+    const type: "error" | "success" = "error";
+
+    const errorMessage =
+      error.response?.data?.message || error.message || message;
+    const lowerMessage = errorMessage.toLowerCase();
+    const statusCode = error.response?.status || error.status;
+    const currentStatus =
+      error.response?.data?.currentStatus || error.data?.currentStatus;
+
+    if (statusCode === 403) {
+      // Job role vs buyer type mismatch (or role not allowed)
+      title = "Wrong Order Type!";
+      message = errorMessage;
+    } else if (currentStatus === "Return Received") {
+      title = "Already Returned!";
+      message =
+        "This order has already been returned to the center and cannot proceed again!";
+    } else if (currentStatus === "Return") {
+      title = "Return Order!";
+      message =
+        "This order has been marked as Return. Please complete the return handover process at the distribution center.";
+    } else if (currentStatus === "Ready to Pickup") {
+      title = "Cannot Proceed!";
+      message =
+        "This order is designated for customer pickup. Kindly hand it over to the officers to proceed further.";
+    } else if (currentStatus === "Delivered" || currentStatus === "Picked up") {
+      title = "Cannot Proceed!";
+      message =
+        "This order has already been successfully handed over to the customer. Please scan an active order to proceed.";
+    } else if (
+      statusCode === 409 &&
+      (lowerMessage.includes("already in your target list") ||
+        lowerMessage.includes("already got"))
+    ) {
+      title = "Already got this!";
+      message = errorMessage;
+    } else if (
+      statusCode === 409 &&
+      (lowerMessage.includes("already been collected") ||
+        lowerMessage.includes("already been assigned to another driver") ||
+        lowerMessage.includes("collected by another") ||
+        lowerMessage.includes("assigned to another") ||
+        lowerMessage.includes("driver id:"))
+    ) {
+      title = "Order Unavailable!";
+      message = errorMessage
+        .replace(/officer/gi, "Driver")
+        .replace(/Officer ID:/gi, "Driver ID:");
+    } else if (
+      statusCode === 400 &&
+      (lowerMessage.includes("still processing this order") ||
+        lowerMessage.includes("scanning will be available") ||
+        lowerMessage.includes("not ready") ||
+        lowerMessage.includes("processing"))
+    ) {
+      title = "Order Not Ready!";
+      message = errorMessage.includes("Scanning will be available")
+        ? errorMessage
+        : "Still processing this order. Scanning will be available after it's set to Out For Delivery.";
+    } else if (
+      statusCode === 404 ||
+      lowerMessage.includes("not found") ||
+      lowerMessage.includes("invalid invoice")
+    ) {
+      title = "Error!";
+      message = "The QR code is not identified. Please check and try again.";
+    } else if (lowerMessage.includes("network error")) {
+      title = "Network Error";
+      message = "Please check your internet connection and try again.";
+    } else if (statusCode === 401 || lowerMessage.includes("unauthorized")) {
+      title = "Session Expired";
+      message = "Please login again to continue.";
+    } else if (statusCode === 500) {
+      title = "Server Error";
+      message = "Internal server error. Please try again later.";
+    } else if (statusCode === 400) {
+      title = "Invalid Request";
+      message = errorMessage || "Invalid request. Please try again.";
+    }
+
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalType(type);
+    setShowErrorModal(true);
+  }
+};
 
   const handleErrorModalClose = () => {
     setShowErrorModal(false);
@@ -426,7 +483,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
     setScanned(false);
-    navigation.navigate("Home");
+    navigateHome();
   };
 
   const handleTimeoutModalClose = () => {
@@ -461,7 +518,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
           }
         }}
         returnScreen="AssignOrderQR"
-        onClose={() => navigation.goBack()}
+        onClose={handleBackPress}
       />
     );
   }
@@ -540,7 +597,7 @@ const AssignOrderQR: React.FC<AssignOrderQRProps> = ({ navigation }) => {
         {/* Top Header with Back Button */}
         <View className="flex-row items-center justify-between px-4 py-3 relative">
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={handleBackPress}
             className="items-start"
             disabled={loading}
           >

@@ -40,7 +40,7 @@ export type RootStackParamList = {
     dcmEmpId: string;
     drvOrderId: number;
   };
-  Jobs: undefined;
+  Jobs: { fromScreen?: keyof RootStackParamList } | undefined;
   Loads: undefined;
   LoadSummary: { loadCode?: string; mode?: "accept" | "journey" } | undefined;
   LoadQR: { loadCode?: string } | undefined;

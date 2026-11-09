@@ -30,6 +30,9 @@ import environment from "@/environment/environment";
 import { AlertModal } from "@/component/common/AlertModal";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LoadingPage from "@/component/common/LoadingPage";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 
 type OrderDetailsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -158,6 +161,8 @@ const parseScheduleStartMinutes = (time: string): number => {
 
 const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
   const { processOrderIds = [] } = route.params;
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
+  const isHeavyDriver = jobRole === ROLES.HEAVY_WEIGHT_DRIVER;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -882,35 +887,37 @@ const OrderDetails: React.FC<OrderDetailsProp> = ({ navigation, route }) => {
                     </Text>
                   </View>
 
-                  {/* Payment Info */}
-                  <View className="flex-row items-center mb-4">
-                    {order.processOrder.paymentMethod?.toLowerCase() ===
-                    "cash" ? (
-                      <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-                    ) : order.processOrder.isPaid ? (
-                      <FontAwesome
-                        name="check-circle"
-                        size={16}
-                        color="#F7CA21"
-                      />
-                    ) : (
-                      <FontAwesome6 name="coins" size={16} color="#F7CA21" />
-                    )}
-                    <Text className="ml-2 text-sm text-black">
+                  {/* Payment Info - Only display price / already paid for Light Weight Driver */}
+                  {!isHeavyDriver && (
+                    <View className="flex-row items-center mb-4">
                       {order.processOrder.paymentMethod?.toLowerCase() ===
                       "cash" ? (
-                        <Text>
-                          {formatCurrency(
-                            (order.processOrder.cashAmountDue ?? 0).toString(),
-                          )}
-                        </Text>
+                        <FontAwesome6 name="coins" size={16} color="#F7CA21" />
                       ) : order.processOrder.isPaid ? (
-                        <Text className="text-black">Already Paid!</Text>
+                        <FontAwesome
+                          name="check-circle"
+                          size={16}
+                          color="#F7CA21"
+                        />
                       ) : (
-                        <Text>{formatCurrency(order.pricing)}</Text>
+                        <FontAwesome6 name="coins" size={16} color="#F7CA21" />
                       )}
-                    </Text>
-                  </View>
+                      <Text className="ml-2 text-sm text-black">
+                        {order.processOrder.paymentMethod?.toLowerCase() ===
+                        "cash" ? (
+                          <Text>
+                            {formatCurrency(
+                              (order.processOrder.cashAmountDue ?? 0).toString(),
+                            )}
+                          </Text>
+                        ) : order.processOrder.isPaid ? (
+                          <Text className="text-black">Already Paid!</Text>
+                        ) : (
+                          <Text>{formatCurrency(order.pricing)}</Text>
+                        )}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* Action Buttons Row */}
