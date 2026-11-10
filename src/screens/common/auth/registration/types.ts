@@ -1,3 +1,9 @@
+export interface VehicleTypeItem {
+  name: string;
+  capacity: number;
+  category: "Light Weight Driver" | "Heavy Weight Driver" | string;
+}
+
 export interface FormData {
   // Step 1: Personal & Job Info
   profilePhoto: string | null;
@@ -105,7 +111,7 @@ export const INITIAL_FORM_DATA: FormData = {
   vehicleNumber: "",
   confirmVehicleNumber: "",
   vehicleType: "Three Wheeler",
-  vehicleCapacity: "500 kg",
+  vehicleCapacity: "100 kg",
   vehicleFrontPhoto: null,
   vehicleBackPhoto: null,
   vehicleLeftSidePhoto: null,
@@ -116,7 +122,8 @@ export const INITIAL_FORM_DATA: FormData = {
 export const THEME = {
   primaryYellow: "#F7CA21",
   primaryYellowHover: "#E5B813",
-  requiredAsterisk: "#F7CA21", // color of the * on required field labels
+  requiredAsterisk: "#F7CA21",
+  textYellow: "#F7CA21",
   bgDark: "#191919",
   cardBg: "#191919",
   cardBorder: "#2E2E2E",
@@ -124,9 +131,8 @@ export const THEME = {
   inputBorder: "#38383C",
   inputBorderError: "#EF4444",
   textWhite: "#FFFFFF",
-  textMuted: "#FFEDC2",
-  textSub: "#747990",
-  textYellow:"#D1C6AC",
+  textMuted: "#9CA3AF",
+  textSub: "#71717A",
   successGreen: "#10B981",
 };
 

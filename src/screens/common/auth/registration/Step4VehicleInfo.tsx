@@ -8,20 +8,28 @@ import {
   TextStyle,
   ActivityIndicator,
 } from "react-native";
-import { FontAwesome, FontAwesome6, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { StepProps, THEME } from "./types";
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { StepProps, THEME, VehicleTypeItem } from "./types";
 import environment from "@/environment/environment";
 
 /* ---------- Vehicle types (loaded from backend) ---------- */
 
-type VehicleType = { id: string; label: string; capacity: string };
+export type VehicleType = VehicleTypeItem;
 
-// Set EXPO_PUBLIC_API_URL in .env, e.g. https://your-api-host  (adjust path below if your API prefix differs)
+export const FALLBACK_VEHICLE_TYPES: VehicleType[] = [
+  { name: "Three Wheeler", capacity: 100, category: "Light Weight Driver" },
+  { name: "Mahindra Bollero", capacity: 272, category: "Light Weight Driver" },
+  { name: "Dimo Batta", capacity: 750, category: "Light Weight Driver" },
+  { name: "Double Cab Pickup (4x4)", capacity: 900, category: "Heavy Weight Driver" },
+  { name: "Isuzu Elf / Canter Lorry", capacity: 3000, category: "Heavy Weight Driver" },
+  { name: "Lorry (6-8 Ton)", capacity: 7500, category: "Heavy Weight Driver" },
+];
+
 const BASE_API_URL = (process.env.EXPO_PUBLIC_API_URL || environment.API_BASE_URL || "").replace(/\/+$/, "");
 const VEHICLE_TYPES_ENDPOINT = `${BASE_API_URL}/api/vehicle-types`;
 
 const useVehicleTypes = () => {
-  const [types, setTypes] = useState<VehicleType[]>([]);
+  const [types, setTypes] = useState<VehicleType[]>(FALLBACK_VEHICLE_TYPES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -30,11 +38,22 @@ const useVehicleTypes = () => {
     setError(false);
     try {
       const res = await fetch(VEHICLE_TYPES_ENDPOINT);
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) throw new Error("Request failed with status " + res.status);
       const json = await res.json();
-      const list = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-      setTypes(list);
-    } catch {
+      const rawList = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      if (rawList.length > 0) {
+        const normalized: VehicleType[] = rawList.map((item: any) => ({
+          name: item.name || item.label || item.id || "",
+          capacity:
+            typeof item.capacity === "number"
+              ? item.capacity
+              : parseInt(String(item.capacity).replace(/[^0-9]/g, ""), 10) || 0,
+          category: item.category || "Light Weight Driver",
+        }));
+        setTypes(normalized);
+      }
+    } catch (err) {
+      console.warn("Could not fetch vehicle types from API, using default list:", err);
       setError(true);
     } finally {
       setLoading(false);
@@ -91,7 +110,7 @@ const useFileSize = (uri?: string | null): string => {
   return size;
 };
 
-/* ---------- Label with yellow asterisk (THEME.requiredAsterisk) ---------- */
+/* ---------- Label with yellow asterisk ---------- */
 
 const FormLabel: React.FC<{ label: string; required?: boolean; style?: TextStyle }> = ({
   label,
@@ -271,10 +290,35 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
 }) => {
   const { types: vehicleTypes, loading: typesLoading, error: typesError, reload } = useVehicleTypes();
 
+  // Active category filter tab: default to the driver's role chosen in Step 1
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>(
+    formData.jobRole || "Light Weight Driver"
+  );
+
+  useEffect(() => {
+    if (formData.jobRole) {
+      setSelectedCategoryTab(formData.jobRole);
+    }
+  }, [formData.jobRole]);
+
+  // Displayed vehicles filtered by tab
+  const displayedVehicles = vehicleTypes.filter((v) => {
+    if (selectedCategoryTab === "All") return true;
+    return (v.category || "").toLowerCase() === selectedCategoryTab.toLowerCase();
+  });
+
   const handleSelectVehicleType = (type: VehicleType) => {
-    updateField("vehicleType", type.id);
-    updateField("vehicleCapacity", type.capacity);
+    updateField("vehicleType", type.name);
+    updateField("vehicleCapacity", `${type.capacity} kg`);
   };
+
+  // If vehicleType matches any loaded vehicle, ensure capacity is auto-filled
+  useEffect(() => {
+    const matched = vehicleTypes.find((v) => v.name === formData.vehicleType);
+    if (matched && (!formData.vehicleCapacity || formData.vehicleCapacity === "Auto-Fill")) {
+      updateField("vehicleCapacity", `${matched.capacity} kg`);
+    }
+  }, [formData.vehicleType, vehicleTypes]);
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -321,7 +365,43 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
           <Text style={{ color: THEME.textYellow, fontSize: 11 }}>Select Type</Text>
         </View>
 
-        {/* Vehicle Type Selection Options (from backend) */}
+        {/* Category Filter Tabs */}
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+          {["Light Weight Driver", "Heavy Weight Driver", "All"].map((cat) => {
+            const isTabActive = selectedCategoryTab === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                activeOpacity={0.8}
+                onPress={() => setSelectedCategoryTab(cat)}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  backgroundColor: isTabActive ? THEME.primaryYellow : "#252528",
+                  borderWidth: 1,
+                  borderColor: isTabActive ? THEME.primaryYellow : "#38383C",
+                }}
+              >
+                <Text
+                  style={{
+                    color: isTabActive ? "#0E0E0E" : "#D1D5DB",
+                    fontSize: 12,
+                    fontWeight: isTabActive ? "700" : "500",
+                  }}
+                >
+                  {cat === "Light Weight Driver"
+                    ? "Light Weight"
+                    : cat === "Heavy Weight Driver"
+                    ? "Heavy Weight"
+                    : "All"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Vehicle Type Selection Options (from backend API) */}
         {typesLoading && (
           <View style={{ paddingVertical: 20, alignItems: "center" }}>
             <ActivityIndicator color={THEME.primaryYellow} />
@@ -331,7 +411,7 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         {!typesLoading && typesError && (
           <View style={{ alignItems: "center", paddingVertical: 14 }}>
             <Text style={{ color: THEME.inputBorderError, fontSize: 12, marginBottom: 10 }}>
-              Couldn't load vehicle types.
+              Couldn't load latest vehicle types.
             </Text>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -352,12 +432,11 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         )}
 
         {!typesLoading &&
-          !typesError &&
-          vehicleTypes.map((type) => {
-            const isSelected = formData.vehicleType === type.id;
+          displayedVehicles.map((type) => {
+            const isSelected = formData.vehicleType === type.name;
             return (
               <TouchableOpacity
-                key={type.id}
+                key={type.name}
                 activeOpacity={0.85}
                 onPress={() => handleSelectVehicleType(type)}
                 style={{
@@ -367,21 +446,33 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
                   backgroundColor: isSelected ? THEME.primaryYellow : "#222225",
                   borderRadius: 25,
                   borderWidth: 1.5,
-                  borderColor: isSelected ? THEME.primaryYellow : "#FFEDC2",
+                  borderColor: isSelected ? THEME.primaryYellow : "#374151",
                   paddingVertical: 13,
                   paddingHorizontal: 18,
                   marginBottom: 10,
                 }}
               >
-                <Text
-                  style={{
-                    color: isSelected ? "#0E0E0E" : "#FFFFFF",
-                    fontSize: 14,
-                    fontWeight: "700",
-                  }}
-                >
-                  {type.label}
-                </Text>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text
+                    style={{
+                      color: isSelected ? "#0E0E0E" : "#FFFFFF",
+                      fontSize: 14,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {type.name}
+                  </Text>
+                  <Text
+                    style={{
+                      color: isSelected ? "#27272A" : THEME.textSub,
+                      fontSize: 11,
+                      marginTop: 2,
+                    }}
+                  >
+                    Capacity: {type.capacity} kg
+                  </Text>
+                </View>
+
                 <View
                   style={{
                     width: 22,
