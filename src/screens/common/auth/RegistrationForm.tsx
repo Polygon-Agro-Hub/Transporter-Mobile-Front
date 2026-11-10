@@ -24,7 +24,11 @@ import {
   clearRegistrationDraft,
   isFormDirty,
 } from "./registration/registrationStorage";
-import { Step1PersonalInfo } from "./registration/Step1PersonalInfo";
+import {
+  Step1PersonalInfo,
+  getEmailError,
+  isValidNIC,
+} from "./registration/Step1PersonalInfo";
 import { Step2ResidentialBank } from "./registration/Step2ResidentialBank";
 import { Step3LicenseInsurance } from "./registration/Step3LicenseInsurance";
 import { Step4VehicleInfo } from "./registration/Step4VehicleInfo";
@@ -137,12 +141,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       newErrors.phone1 = "Please enter a valid 9-digit phone number";
     }
 
+    // NIC: 9 digits + V, or exactly 12 digits
     const cleanNic = formData.nic.trim().toUpperCase();
     if (!cleanNic) {
       newErrors.nic = "National Identity Card (NIC) is required";
-    } else if (cleanNic.length < 10) {
-      newErrors.nic = "Please enter a valid NIC (e.g. 123456789V)";
+    } else if (!isValidNIC(cleanNic)) {
+      newErrors.nic = "Enter 9 digits + V (e.g. 123456789V) or 12 digits";
     }
+
+    // Email is optional, but if the user typed one it must be valid.
+    // getEmailError returns "" for an empty or valid email.
+    const emailErr = getEmailError(formData.email ?? "");
+    if (emailErr) newErrors.email = emailErr;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -229,7 +239,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        Alert.alert("Required Fields", "Please complete all mandatory credentials before continuing.");
+        Alert.alert("Required Fields", "Please complete all mandatory credentials and fix any invalid fields before continuing.");
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
@@ -338,7 +348,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Personal & Job Info",
           nextPreview: "Next: Residential & Bank Info",
           percent: "0% COMPLETED",
-          progressFraction: 0.25,
+          progressFraction: 0.10,
           primaryButtonText: "Continue to Address & Bank Details",
           secondaryButtonText: "",
         };
@@ -347,7 +357,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Residential & Bank Info",
           nextPreview: "Next: License & Insurance Info",
           percent: "25% COMPLETED",
-          progressFraction: 0.5,
+          progressFraction: 0.25,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -356,7 +366,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "License & Insurance Info",
           nextPreview: "Next: Vehicle Info",
           percent: "50% COMPLETED",
-          progressFraction: 0.75,
+          progressFraction: 0.5,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -365,7 +375,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Vehicle Info",
           nextPreview: "Next: Submission",
           percent: "75% COMPLETED",
-          progressFraction: 1.0,
+          progressFraction: 0.75,
           primaryButtonText: "Send to Approve",
           secondaryButtonText: "Review Previous Steps",
         };
@@ -515,7 +525,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             </Text>
             <Text
               style={{
-                color: THEME.textSub,
+                color: THEME.textGray,
                 fontSize: 11,
               }}
             >

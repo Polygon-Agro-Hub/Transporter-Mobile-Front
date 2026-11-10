@@ -123,7 +123,7 @@ export const THEME = {
   primaryYellow: "#F7CA21",
   primaryYellowHover: "#E5B813",
   requiredAsterisk: "#F7CA21",
-  textYellow: "#F7CA21",
+  textYellow: "#FFEDC2",
   bgDark: "#191919",
   cardBg: "#191919",
   cardBorder: "#2E2E2E",
@@ -133,6 +133,7 @@ export const THEME = {
   textWhite: "#FFFFFF",
   textMuted: "#9CA3AF",
   textSub: "#71717A",
+  textGray:"#9A9079",
   successGreen: "#10B981",
 };
 

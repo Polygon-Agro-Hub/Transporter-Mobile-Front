@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
 import {
   Ionicons,
@@ -11,6 +11,114 @@ import { StepProps, THEME } from "./types";
 
 const defaultProfileImage = require("@/assets/images/auth/profile.webp");
 
+/**
+ * NIC input filter (runs on every keystroke / paste)
+ * - Digits only, max 12 (new NIC)
+ * - "V" allowed ONLY as the 10th character, right after 9 digits (old NIC)
+ * - Other English letters and special characters are blocked
+ * - Nothing can be typed after "V"
+ */
+const sanitizeNIC = (input: string): string => {
+  let result = "";
+
+  for (const ch of input.toUpperCase()) {
+    if (result.endsWith("V")) break;
+
+    if (/[0-9]/.test(ch)) {
+      if (result.length < 12) result += ch;
+    } else if (ch === "V" && result.length === 9) {
+      result += ch;
+    }
+  }
+
+  return result;
+};
+
+// Use this in your parent form's submit validation
+export const isValidNIC = (nic: string): boolean =>
+  /^(\d{9}V|\d{12})$/.test(nic);
+
+/**
+ * Email validation. Returns an error message, or "" when the email is valid.
+ * Email is optional on this form, so an empty value is valid unless
+ * `required` is true.
+ */
+export const getEmailError = (email: string, required = false): string => {
+  const value = email.trim();
+
+  if (!value) return required ? "Email is required" : "";
+
+  const parts = value.toLowerCase().split("@");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return "Please enter a valid email address";
+  }
+
+  const [localPart, domain] = parts;
+
+  if (domain.includes("..")) {
+    return "Email domain cannot contain consecutive dots (e.g., gmail..com is invalid)";
+  }
+
+  // Domain: dot-separated labels (no leading/trailing hyphen), TLD of 2+ letters
+  const domainRegex = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
+  if (!domainRegex.test(domain)) {
+    return "Please enter a valid email address";
+  }
+
+  // Gmail
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    if (localPart.length < 6) {
+      return "Gmail addresses must be at least 6 characters before @";
+    }
+    if (localPart.length > 30) {
+      return "Gmail addresses cannot exceed 30 characters before @";
+    }
+    if (/\.{2,}/.test(localPart)) {
+      return "Gmail addresses cannot have consecutive dots";
+    }
+    if (/^\.|\.$/.test(localPart)) {
+      return "Gmail addresses cannot start or end with a dot";
+    }
+    if (!/^[a-z0-9.+]+$/.test(localPart)) {
+      return "Gmail addresses can only contain letters, numbers, dots and plus signs";
+    }
+    return "";
+  }
+
+  // Yahoo
+  if (domain === "yahoo.com") {
+    if (localPart.length > 32) {
+      return "Yahoo addresses cannot exceed 32 characters before @";
+    }
+    if (/\.{2,}/.test(localPart)) {
+      return "Yahoo addresses cannot have consecutive dots";
+    }
+    if (/^[._-]|[._-]$/.test(localPart)) {
+      return "Yahoo addresses cannot start or end with dots, underscores or hyphens";
+    }
+    if (!/^[a-z0-9._-]+$/.test(localPart)) {
+      return "Yahoo addresses can only contain letters, numbers, dots, underscores and hyphens";
+    }
+    return "";
+  }
+
+  // Other providers (any valid domain / TLD)
+  if (localPart.length > 64) {
+    return "Email address is too long";
+  }
+  if (/\.{2,}/.test(localPart)) {
+    return "Email addresses cannot have consecutive dots";
+  }
+  if (/^\.|\.$/.test(localPart)) {
+    return "Email addresses cannot start or end with a dot";
+  }
+  if (!/^[a-z0-9._%+-]+$/.test(localPart)) {
+    return "Please enter a valid email address";
+  }
+
+  return "";
+};
+
 export const Step1PersonalInfo: React.FC<StepProps> = ({
   formData,
   errors,
@@ -18,6 +126,20 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
   toggleArrayItem,
   openImagePicker,
 }) => {
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  const emailValue = formData.email ?? "";
+
+  // Validate live once the user has typed an "@" (so no error on the first
+  // keystroke), after they leave the field, or when the parent flags it.
+  const showLocalEmailError = emailTouched || emailValue.includes("@");
+  const localEmailError = showLocalEmailError ? getEmailError(emailValue) : "";
+
+  // Local format error wins; otherwise fall back to the parent's message
+  // (e.g. "Email already in use" from submit / server validation).
+  const emailErrorText =
+    localEmailError || (typeof errors.email === "string" ? errors.email : "");
+
   return (
     <View style={{ paddingHorizontal: 16 }}>
       {/* 1. Driver Profile Photo Card */}
@@ -137,7 +259,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           </View>
           <Text
             style={{
-              color: THEME.textMuted,
+              color: THEME.textYellow,
               fontSize: 11,
               fontWeight: "500",
             }}
@@ -216,7 +338,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
         </View>
         <Text
           style={{
-            color: THEME.textMuted,
+            color: THEME.textYellow,
             fontSize: 12,
             marginBottom: 14,
             lineHeight: 17,
@@ -274,7 +396,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
                 color:
                   formData.jobRole === "Light Weight Driver"
                     ? "#27272A"
-                    : THEME.textSub,
+                    : THEME.textYellow,
                 fontSize: 11,
                 marginTop: 2,
               }}
@@ -352,7 +474,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
                 color:
                   formData.jobRole === "Heavy Weight Driver"
                     ? "#27272A"
-                    : THEME.textSub,
+                    : THEME.textYellow,
                 fontSize: 11,
                 marginTop: 2,
               }}
@@ -423,7 +545,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          First Name (in English) *
+          First Name (in English) <Text style={{ color: "#F7CA21" }}>*</Text>
         </Text>
         <TextInput
           value={formData.firstName}
@@ -465,7 +587,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          Last Name (in English) *
+          Last Name (in English) <Text style={{ color: "#F7CA21" }}>*</Text>
         </Text>
         <TextInput
           value={formData.lastName}
@@ -507,7 +629,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           }}
         >
           <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600" }}>
-            Phone Number - 1 *
+            Phone Number - 1 <Text style={{ color: "#F7CA21" }}>*</Text>
           </Text>
           <Text
             style={{
@@ -593,7 +715,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600" }}>
             Phone Number - 2
           </Text>
-          <Text style={{ color: THEME.textMuted, fontSize: 11 }}>Optional</Text>
+          <Text style={{ color: THEME.textYellow, fontSize: 11 }}>Optional</Text>
         </View>
         <View
           style={{
@@ -618,7 +740,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           >
             <Text
               style={{
-                color: THEME.primaryYellow,
+                color: THEME.textYellow,
                 fontWeight: "700",
                 fontSize: 13,
               }}
@@ -654,14 +776,16 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          National Identity Card (NIC) *
+          National Identity Card (NIC) <Text style={{ color: "#F7CA21" }}>*</Text>
         </Text>
         <TextInput
           value={formData.nic}
-          onChangeText={(text) => updateField("nic", text.toUpperCase())}
+          onChangeText={(text) => updateField("nic", sanitizeNIC(text))}
           placeholder="e.g. 123456789V / 123456789012"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={12}
           style={{
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
@@ -701,22 +825,38 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
         </Text>
         <TextInput
           value={formData.email}
-          onChangeText={(text) => updateField("email", text)}
+          onChangeText={(text) => updateField("email", text.replace(/\s/g, ""))}
+          onBlur={() => setEmailTouched(true)}
           placeholder="e.g. yourname@gmail.com"
           placeholderTextColor={THEME.textSub}
           keyboardType="email-address"
           autoCapitalize="none"
+          autoCorrect={false}
           style={{
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: THEME.inputBorder,
+            borderColor: emailErrorText
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
             paddingHorizontal: 16,
+            marginBottom: emailErrorText ? 4 : 0,
           }}
         />
+        {!!emailErrorText && (
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 4,
+            }}
+          >
+            {emailErrorText}
+          </Text>
+        )}
       </View>
     </View>
   );

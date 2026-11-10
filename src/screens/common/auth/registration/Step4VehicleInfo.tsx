@@ -290,35 +290,37 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
 }) => {
   const { types: vehicleTypes, loading: typesLoading, error: typesError, reload } = useVehicleTypes();
 
-  // Active category filter tab: default to the driver's role chosen in Step 1
-  const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>(
-    formData.jobRole || "Light Weight Driver"
+  // Role chosen in Step 1 ("Light Weight Driver" or "Heavy Weight Driver")
+  const jobRole = formData.jobRole || "Light Weight Driver";
+
+  // Only show vehicles that belong to the selected role
+  const displayedVehicles = vehicleTypes.filter(
+    (v) => (v.category || "").toLowerCase() === jobRole.toLowerCase()
   );
-
-  useEffect(() => {
-    if (formData.jobRole) {
-      setSelectedCategoryTab(formData.jobRole);
-    }
-  }, [formData.jobRole]);
-
-  // Displayed vehicles filtered by tab
-  const displayedVehicles = vehicleTypes.filter((v) => {
-    if (selectedCategoryTab === "All") return true;
-    return (v.category || "").toLowerCase() === selectedCategoryTab.toLowerCase();
-  });
 
   const handleSelectVehicleType = (type: VehicleType) => {
     updateField("vehicleType", type.name);
     updateField("vehicleCapacity", `${type.capacity} kg`);
   };
 
-  // If vehicleType matches any loaded vehicle, ensure capacity is auto-filled
+  // If the saved vehicle doesn't belong to the current role (e.g. the user went
+  // back and changed role in Step 1), clear it so they pick a valid one.
   useEffect(() => {
-    const matched = vehicleTypes.find((v) => v.name === formData.vehicleType);
+    if (typesLoading || !formData.vehicleType) return;
+    const belongsToRole = displayedVehicles.some((v) => v.name === formData.vehicleType);
+    if (!belongsToRole) {
+      updateField("vehicleType", "");
+      updateField("vehicleCapacity", "");
+    }
+  }, [jobRole, vehicleTypes, typesLoading]);
+
+  // If vehicleType matches a displayed vehicle, ensure capacity is auto-filled
+  useEffect(() => {
+    const matched = displayedVehicles.find((v) => v.name === formData.vehicleType);
     if (matched && (!formData.vehicleCapacity || formData.vehicleCapacity === "Auto-Fill")) {
       updateField("vehicleCapacity", `${matched.capacity} kg`);
     }
-  }, [formData.vehicleType, vehicleTypes]);
+  }, [formData.vehicleType, vehicleTypes, jobRole]);
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -365,43 +367,7 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
           <Text style={{ color: THEME.textYellow, fontSize: 11 }}>Select Type</Text>
         </View>
 
-        {/* Category Filter Tabs */}
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-          {["Light Weight Driver", "Heavy Weight Driver", "All"].map((cat) => {
-            const isTabActive = selectedCategoryTab === cat;
-            return (
-              <TouchableOpacity
-                key={cat}
-                activeOpacity={0.8}
-                onPress={() => setSelectedCategoryTab(cat)}
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 14,
-                  backgroundColor: isTabActive ? THEME.primaryYellow : "#252528",
-                  borderWidth: 1,
-                  borderColor: isTabActive ? THEME.primaryYellow : "#38383C",
-                }}
-              >
-                <Text
-                  style={{
-                    color: isTabActive ? "#0E0E0E" : "#D1D5DB",
-                    fontSize: 12,
-                    fontWeight: isTabActive ? "700" : "500",
-                  }}
-                >
-                  {cat === "Light Weight Driver"
-                    ? "Light Weight"
-                    : cat === "Heavy Weight Driver"
-                    ? "Heavy Weight"
-                    : "All"}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Vehicle Type Selection Options (from backend API) */}
+        {/* Vehicle Type Selection Options (only for the selected role) */}
         {typesLoading && (
           <View style={{ paddingVertical: 20, alignItems: "center" }}>
             <ActivityIndicator color={THEME.primaryYellow} />
@@ -429,6 +395,12 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {!typesLoading && displayedVehicles.length === 0 && (
+          <Text style={{ color: THEME.textSub, fontSize: 12, paddingVertical: 10 }}>
+            No vehicle types available for this role.
+          </Text>
         )}
 
         {!typesLoading &&
@@ -490,6 +462,7 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
               </TouchableOpacity>
             );
           })}
+        <ErrorText message={errors.vehicleType} />
 
         {/* Vehicle Capacity (kg) */}
         <FormLabel label="Vehicle Capacity (kg)" style={{ marginTop: 4 }} />
