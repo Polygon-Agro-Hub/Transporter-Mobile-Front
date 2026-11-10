@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
@@ -17,6 +18,12 @@ import * as ImagePicker from "expo-image-picker";
 import CustomHeader from "@/component/common/CustomHeader";
 
 import { FormData, INITIAL_FORM_DATA, THEME } from "./registration/types";
+import {
+  saveRegistrationDraft,
+  loadRegistrationDraft,
+  clearRegistrationDraft,
+  isFormDirty,
+} from "./registration/registrationStorage";
 import { Step1PersonalInfo } from "./registration/Step1PersonalInfo";
 import { Step2ResidentialBank } from "./registration/Step2ResidentialBank";
 import { Step3LicenseInsurance } from "./registration/Step3LicenseInsurance";
@@ -37,6 +44,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [isDiscardModalVisible, setIsDiscardModalVisible] = useState(false);
   const [generatedRefId, setGeneratedRefId] = useState("");
 
   const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
@@ -44,9 +52,54 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Update a single form field
+  // Load saved draft from SQLite on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const saved = await loadRegistrationDraft();
+        if (saved && isMounted) {
+          setFormData(saved.formData);
+          if (saved.currentStep >= 1 && saved.currentStep <= 4) {
+            setCurrentStep(saved.currentStep);
+          }
+        }
+      } catch (err) {
+        console.warn("Error loading SQLite registration draft:", err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Handle hardware back press on Android
+  useEffect(() => {
+    const onHardwareBack = () => {
+      if (currentStep > 1) {
+        handlePrevStep();
+        return true;
+      }
+      if (isFormDirty(formData)) {
+        setIsDiscardModalVisible(true);
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", onHardwareBack);
+    return () => {
+      backHandler.remove();
+    };
+  }, [currentStep, formData]);
+
+  // Update a single form field and persist to SQLite
   const updateField = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      saveRegistrationDraft(currentStep, next);
+      return next;
+    });
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -56,16 +109,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     }
   };
 
-  // Toggle array item (languages)
+  // Toggle array item (languages) and persist
   const toggleArrayItem = (field: "languages" | "licenseCategories", item: string) => {
     setFormData((prev) => {
       const existing = prev[field] || [];
-      if (existing.includes(item)) {
-        if (existing.length === 1) return prev;
-        return { ...prev, [field]: existing.filter((i: string) => i !== item) };
-      } else {
-        return { ...prev, [field]: [...existing, item] };
-      }
+      const updated = existing.includes(item)
+        ? existing.length === 1
+          ? existing
+          : existing.filter((i: string) => i !== item)
+        : [...existing, item];
+      const next = { ...prev, [field]: updated };
+      saveRegistrationDraft(currentStep, next);
+      return next;
     });
   };
 
@@ -132,7 +187,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Step 4: Vehicle Info Validation & Submission
+  // Step 4: Vehicle Info Validation & Final Submission
   const handleFinalSubmit = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.vehicleNumber.trim()) newErrors.vehicleNumber = "Vehicle registration number is required";
@@ -150,11 +205,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const randomRef = "REG-DRV-" + Math.floor(10000 + Math.random() * 90000);
-      setGeneratedRefId(randomRef);
-      setIsSuccessModalVisible(true);
+    setTimeout(async () => {
+      try {
+        // Complete success: remove draft from SQLite and finalize save to DB
+        await clearRegistrationDraft();
+        setIsSubmitting(false);
+        const randomRef = "REG-DRV-" + Math.floor(10000 + Math.random() * 90000);
+        setGeneratedRefId(randomRef);
+        setIsSuccessModalVisible(true);
+      } catch (err) {
+        setIsSubmitting(false);
+        Alert.alert("Submission Error", "Failed to submit registration. Please try again.");
+      }
     }, 1200);
   };
 
@@ -162,21 +224,27 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   const handleNextStep = () => {
     if (currentStep === 1) {
       if (validateStep1()) {
-        setCurrentStep(2);
+        const nextStep = 2;
+        setCurrentStep(nextStep);
+        saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         Alert.alert("Required Fields", "Please complete all mandatory credentials before continuing.");
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
-        setCurrentStep(3);
+        const nextStep = 3;
+        setCurrentStep(nextStep);
+        saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         Alert.alert("Required Fields", "Please complete all required residential & bank fields.");
       }
     } else if (currentStep === 3) {
       if (validateStep3()) {
-        setCurrentStep(4);
+        const nextStep = 4;
+        setCurrentStep(nextStep);
+        saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         Alert.alert("Required Fields", "Please fill in your driving license and insurance information.");
@@ -188,11 +256,26 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      saveRegistrationDraft(prevStep, formData);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else {
-      navigation.goBack();
+      // Step 1: Check if user has entered data before leaving
+      if (isFormDirty(formData)) {
+        setIsDiscardModalVisible(true);
+      } else {
+        navigation.goBack();
+      }
     }
+  };
+
+  // Confirmed discard and exit
+  const handleConfirmDiscard = async () => {
+    setIsDiscardModalVisible(false);
+    await clearRegistrationDraft();
+    setFormData(INITIAL_FORM_DATA);
+    navigation.goBack();
   };
 
   // Image picking
@@ -255,7 +338,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Personal & Job Info",
           nextPreview: "Next: Residential & Bank Info",
           percent: "0% COMPLETED",
-          progressFraction: 0.10,
+          progressFraction: 0.25,
           primaryButtonText: "Continue to Address & Bank Details",
           secondaryButtonText: "",
         };
@@ -264,7 +347,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Residential & Bank Info",
           nextPreview: "Next: License & Insurance Info",
           percent: "25% COMPLETED",
-          progressFraction: 0.25,
+          progressFraction: 0.5,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -273,7 +356,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "License & Insurance Info",
           nextPreview: "Next: Vehicle Info",
           percent: "50% COMPLETED",
-          progressFraction: 0.50,
+          progressFraction: 0.75,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -282,7 +365,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Vehicle Info",
           nextPreview: "Next: Submission",
           percent: "75% COMPLETED",
-          progressFraction: 0.75,
+          progressFraction: 1.0,
           primaryButtonText: "Send to Approve",
           secondaryButtonText: "Review Previous Steps",
         };
@@ -556,6 +639,109 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Confirmation Modal when user attempts to go back from Step 1 */}
+      <Modal
+        visible={isDiscardModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsDiscardModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#202023",
+              borderRadius: 24,
+              padding: 24,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: THEME.cardBorder,
+            }}
+          >
+            {/* Warning Alert Icon */}
+            <View
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 29,
+                backgroundColor: "rgba(247, 202, 33, 0.15)",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 16,
+              }}
+            >
+              <Ionicons name="alert-circle" size={36} color={THEME.primaryYellow} />
+            </View>
+
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 19,
+                fontWeight: "800",
+                textAlign: "center",
+                marginBottom: 8,
+              }}
+            >
+              Want to go back?
+            </Text>
+
+            <Text
+              style={{
+                color: THEME.textMuted,
+                fontSize: 14,
+                textAlign: "center",
+                lineHeight: 20,
+                marginBottom: 24,
+              }}
+            >
+              All the changes you’ve made will be lost.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setIsDiscardModalVisible(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#2E2E33",
+                  borderRadius: 999,
+                  height: 48,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#E5E7EB", fontSize: 14, fontWeight: "700" }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleConfirmDiscard}
+                style={{
+                  flex: 1,
+                  backgroundColor: THEME.primaryYellow,
+                  borderRadius: 999,
+                  height: 48,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#0E0E0E", fontSize: 14, fontWeight: "800" }}>
+                  Leave
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Photo Picker Modal (Camera vs Gallery) */}
       <Modal
