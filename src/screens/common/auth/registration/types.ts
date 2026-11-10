@@ -85,7 +85,7 @@ export const INITIAL_FORM_DATA: FormData = {
   city: "",
   country: "Sri Lanka",
   district: "",
-  province: "Western Province",
+  province: "", // empty so the "Auto-Fill" placeholder shows until a district is chosen
   bankAccountHolder: "",
   bankAccountNumber: "",
   confirmBankAccountNumber: "",
@@ -116,6 +116,7 @@ export const INITIAL_FORM_DATA: FormData = {
 export const THEME = {
   primaryYellow: "#F7CA21",
   primaryYellowHover: "#E5B813",
+  requiredAsterisk: "#F7CA21", // color of the * on required field labels
   bgDark: "#191919",
   cardBg: "#191919",
   cardBorder: "#2E2E2E",
@@ -123,8 +124,9 @@ export const THEME = {
   inputBorder: "#38383C",
   inputBorderError: "#EF4444",
   textWhite: "#FFFFFF",
-  textMuted: "#9CA3AF",
-  textSub: "#71717A",
+  textMuted: "#FFEDC2",
+  textSub: "#747990",
+  textYellow:"#D1C6AC",
   successGreen: "#10B981",
 };
 

@@ -1,7 +1,15 @@
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import {
+  Ionicons,
+  FontAwesome5,
+  Feather,
+  FontAwesome6,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { StepProps, THEME } from "./types";
+
+const defaultProfileImage = require("@/assets/images/auth/profile.webp");
 
 export const Step1PersonalInfo: React.FC<StepProps> = ({
   formData,
@@ -41,15 +49,15 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               overflow: "hidden",
             }}
           >
-            {formData.profilePhoto ? (
-              <Image
-                source={{ uri: formData.profilePhoto }}
-                style={{ width: "100%", height: "100%" }}
-                resizeMode="cover"
-              />
-            ) : (
-              <Ionicons name="person" size={62} color="#FFFFFF" />
-            )}
+            <Image
+              source={
+                formData.profilePhoto
+                  ? { uri: formData.profilePhoto }
+                  : defaultProfileImage
+              }
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
           </View>
 
           {/* Camera Badge Icon */}
@@ -58,18 +66,17 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               position: "absolute",
               bottom: 2,
               right: 2,
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               borderRadius: 14,
               backgroundColor: "#FFFFFF",
               alignItems: "center",
               justifyContent: "center",
-              borderWidth: 2,
               borderColor: THEME.cardBg,
               elevation: 3,
             }}
           >
-            <Ionicons name="camera" size={14} color="#1F2937" />
+            <Feather name="camera" size={14} color="#1F2937" />
           </View>
         </TouchableOpacity>
 
@@ -115,7 +122,9 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ fontSize: 15, marginRight: 6 }}>🌐</Text>
+            <Text style={{ fontSize: 15, marginRight: 6 }}>
+              <FontAwesome5 name="globe" size={16} color="#F7CA21" />
+            </Text>
             <Text
               style={{
                 color: THEME.textWhite,
@@ -187,8 +196,14 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           marginBottom: 16,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-          <Text style={{ fontSize: 16, marginRight: 6 }}>🚚</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 4,
+          }}
+        >
+          <FontAwesome6 name="truck-fast" size={16} color="#F7CA21" />
           <Text
             style={{
               color: THEME.textWhite,
@@ -196,7 +211,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               fontWeight: "700",
             }}
           >
-            Job Role Allocation
+            {" "}Job Role Allocation
           </Text>
         </View>
         <Text
@@ -207,7 +222,8 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             lineHeight: 17,
           }}
         >
-          Are you working as a Light Weight Driver or Heavy Weight Driver with us?
+          Are you working as a Light Weight Driver or Heavy Weight Driver with
+          us?
         </Text>
 
         {/* Option 1: Light Weight Driver */}
@@ -226,19 +242,17 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             borderColor:
               formData.jobRole === "Light Weight Driver"
                 ? THEME.primaryYellow
-                : "#374151",
+                : "#FFEDC2",
             paddingVertical: 14,
             paddingHorizontal: 16,
             marginBottom: 12,
           }}
         >
-          <FontAwesome5
-            name="truck-pickup"
-            size={20}
+          <MaterialCommunityIcons
+            name="rickshaw"
+            size={24}
             color={
-              formData.jobRole === "Light Weight Driver"
-                ? "#0E0E0E"
-                : "#9CA3AF"
+              formData.jobRole === "Light Weight Driver" ? "#0E0E0E" : "#9CA3AF"
             }
             style={{ marginRight: 14 }}
           />
@@ -307,18 +321,16 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             borderColor:
               formData.jobRole === "Heavy Weight Driver"
                 ? THEME.primaryYellow
-                : "#374151",
+                : "#FFEDC2",
             paddingVertical: 14,
             paddingHorizontal: 16,
           }}
         >
-          <FontAwesome5
-            name="truck-moving"
+          <FontAwesome6
+            name="truck"
             size={20}
             color={
-              formData.jobRole === "Heavy Weight Driver"
-                ? "#0E0E0E"
-                : "#9CA3AF"
+              formData.jobRole === "Heavy Weight Driver" ? "#0E0E0E" : "#9CA3AF"
             }
             style={{ marginRight: 14 }}
           />
@@ -383,8 +395,14 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           marginBottom: 20,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-          <Text style={{ fontSize: 16, marginRight: 6 }}>👤</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <FontAwesome6 name="user-large" size={16} color="#F7CA21" />
           <Text
             style={{
               color: THEME.textWhite,
@@ -392,12 +410,19 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               fontWeight: "700",
             }}
           >
-            Official Driver Credentials
+            {" "}Official Driver Credentials
           </Text>
         </View>
 
         {/* First Name */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+        <Text
+          style={{
+            color: "#E5E7EB",
+            fontSize: 12,
+            fontWeight: "600",
+            marginBottom: 6,
+          }}
+        >
           First Name (in English) *
         </Text>
         <TextInput
@@ -409,7 +434,9 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: errors.firstName ? THEME.inputBorderError : THEME.inputBorder,
+            borderColor: errors.firstName
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
@@ -418,13 +445,26 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           }}
         />
         {errors.firstName && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 10,
+            }}
+          >
             {errors.firstName}
           </Text>
         )}
 
         {/* Last Name */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+        <Text
+          style={{
+            color: "#E5E7EB",
+            fontSize: 12,
+            fontWeight: "600",
+            marginBottom: 6,
+          }}
+        >
           Last Name (in English) *
         </Text>
         <TextInput
@@ -436,7 +476,9 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: errors.lastName ? THEME.inputBorderError : THEME.inputBorder,
+            borderColor: errors.lastName
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
@@ -445,17 +487,35 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           }}
         />
         {errors.lastName && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 10,
+            }}
+          >
             {errors.lastName}
           </Text>
         )}
 
         {/* Phone Number - 1 */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginBottom: 6,
+          }}
+        >
           <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600" }}>
             Phone Number - 1 *
           </Text>
-          <Text style={{ color: THEME.primaryYellow, fontSize: 11, fontWeight: "600" }}>
+          <Text
+            style={{
+              color: THEME.primaryYellow,
+              fontSize: 11,
+              fontWeight: "600",
+            }}
+          >
             Primary / Call
           </Text>
         </View>
@@ -464,7 +524,9 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             flexDirection: "row",
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: errors.phone1 ? THEME.inputBorderError : THEME.inputBorder,
+            borderColor: errors.phone1
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             overflow: "hidden",
             marginBottom: errors.phone1 ? 4 : 14,
             height: 48,
@@ -480,13 +542,21 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               borderRightColor: THEME.inputBorder,
             }}
           >
-            <Text style={{ color: THEME.primaryYellow, fontWeight: "700", fontSize: 13 }}>
+            <Text
+              style={{
+                color: THEME.primaryYellow,
+                fontWeight: "700",
+                fontSize: 13,
+              }}
+            >
               +94
             </Text>
           </View>
           <TextInput
             value={formData.phone1}
-            onChangeText={(text) => updateField("phone1", text.replace(/[^0-9]/g, ""))}
+            onChangeText={(text) =>
+              updateField("phone1", text.replace(/[^0-9]/g, ""))
+            }
             placeholder="7X XXX XXXX"
             placeholderTextColor={THEME.textSub}
             keyboardType="phone-pad"
@@ -501,13 +571,25 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           />
         </View>
         {errors.phone1 && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 10,
+            }}
+          >
             {errors.phone1}
           </Text>
         )}
 
         {/* Phone Number - 2 */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginBottom: 6,
+          }}
+        >
           <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600" }}>
             Phone Number - 2
           </Text>
@@ -534,13 +616,21 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
               borderRightColor: THEME.inputBorder,
             }}
           >
-            <Text style={{ color: THEME.primaryYellow, fontWeight: "700", fontSize: 13 }}>
+            <Text
+              style={{
+                color: THEME.primaryYellow,
+                fontWeight: "700",
+                fontSize: 13,
+              }}
+            >
               +94
             </Text>
           </View>
           <TextInput
             value={formData.phone2}
-            onChangeText={(text) => updateField("phone2", text.replace(/[^0-9]/g, ""))}
+            onChangeText={(text) =>
+              updateField("phone2", text.replace(/[^0-9]/g, ""))
+            }
             placeholder="7X XXX XXXX"
             placeholderTextColor={THEME.textSub}
             keyboardType="phone-pad"
@@ -556,7 +646,14 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
         </View>
 
         {/* National Identity Card (NIC) */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+        <Text
+          style={{
+            color: "#E5E7EB",
+            fontSize: 12,
+            fontWeight: "600",
+            marginBottom: 6,
+          }}
+        >
           National Identity Card (NIC) *
         </Text>
         <TextInput
@@ -569,7 +666,9 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: errors.nic ? THEME.inputBorderError : THEME.inputBorder,
+            borderColor: errors.nic
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             color: THEME.textWhite,
             fontSize: 14,
             height: 48,
@@ -578,13 +677,26 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
           }}
         />
         {errors.nic && (
-          <Text style={{ color: THEME.inputBorderError, fontSize: 11, marginBottom: 10 }}>
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 10,
+            }}
+          >
             {errors.nic}
           </Text>
         )}
 
         {/* Email Address */}
-        <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", marginBottom: 6 }}>
+        <Text
+          style={{
+            color: "#E5E7EB",
+            fontSize: 12,
+            fontWeight: "600",
+            marginBottom: 6,
+          }}
+        >
           Email Address
         </Text>
         <TextInput

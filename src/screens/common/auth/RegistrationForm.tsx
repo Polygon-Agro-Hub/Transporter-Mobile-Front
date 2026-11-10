@@ -255,7 +255,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Personal & Job Info",
           nextPreview: "Next: Residential & Bank Info",
           percent: "0% COMPLETED",
-          progressFraction: 0.25,
+          progressFraction: 0.10,
           primaryButtonText: "Continue to Address & Bank Details",
           secondaryButtonText: "",
         };
@@ -264,7 +264,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Residential & Bank Info",
           nextPreview: "Next: License & Insurance Info",
           percent: "25% COMPLETED",
-          progressFraction: 0.5,
+          progressFraction: 0.25,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -273,7 +273,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "License & Insurance Info",
           nextPreview: "Next: Vehicle Info",
           percent: "50% COMPLETED",
-          progressFraction: 0.75,
+          progressFraction: 0.50,
           primaryButtonText: "Continue",
           secondaryButtonText: "Go Back",
         };
@@ -282,7 +282,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           title: "Vehicle Info",
           nextPreview: "Next: Submission",
           percent: "75% COMPLETED",
-          progressFraction: 1.0,
+          progressFraction: 0.75,
           primaryButtonText: "Send to Approve",
           secondaryButtonText: "Review Previous Steps",
         };
