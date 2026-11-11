@@ -18,13 +18,18 @@ import environment from "@/environment/environment";
 import { formatScheduleTime } from "@/utils/formatScheduleTime";
 import LottieView from "lottie-react-native";
 import MarqueeText from "@/component/common/MarqueeText";
-import { useFocusEffect } from "@react-navigation/native";
+import { RouteProp, useFocusEffect } from "@react-navigation/native";
 import LoadingPage from "@/component/common/LoadingPage";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 
 type JobsScreenNavigationProp = StackNavigationProp<RootStackParamList, "Jobs">;
+type JobsScreenRouteProp = RouteProp<RootStackParamList, "Jobs">;
 
 interface JobsScreenProp {
   navigation: JobsScreenNavigationProp;
+  route?: JobsScreenRouteProp;
 }
 
 interface HoldReason {
@@ -79,7 +84,8 @@ interface OrderStatistics {
   Total: number;
 }
 
-const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
+const Jobs: React.FC<JobsScreenProp> = ({ navigation, route }) => {
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
   const [activeTab, setActiveTab] = useState<"todo" | "completed">("todo");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -421,10 +427,23 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
     return formatCount(todoOrders.length + holdOrders.length);
   };
 
+  const navigateHome = useCallback(() => {
+    const fromScreen = route?.params?.fromScreen;
+    if (fromScreen) {
+      navigation.replace(fromScreen as any);
+      return;
+    }
+    if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.replace("HeavyDriverHome");
+    } else {
+      navigation.replace("Home");
+    }
+  }, [navigation, route?.params?.fromScreen, jobRole]);
+
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        navigation.replace("Home");
+        navigateHome();
         return true;
       };
 
@@ -434,7 +453,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
       );
 
       return () => subscription.remove();
-    }, [navigation]),
+    }, [navigateHome]),
   );
 
   const getCompletedCount = () => {
@@ -464,7 +483,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
           navigation={navigation}
           showBackButton={true}
           showLanguageSelector={false}
-          onBackPress={() => navigation.replace("Home")}
+          onBackPress={navigateHome}
         />
         <LoadingPage message="Loading Jobs..." fullScreen={true} />
       </View>
@@ -478,7 +497,7 @@ const Jobs: React.FC<JobsScreenProp> = ({ navigation }) => {
         navigation={navigation}
         showBackButton={true}
         showLanguageSelector={false}
-        onBackPress={() => navigation.navigate("Home")}
+        onBackPress={navigateHome}
       />
 
       {error && (
