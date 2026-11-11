@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
-  Alert,
   ActivityIndicator,
   BackHandler,
 } from "react-native";
@@ -29,9 +28,41 @@ import {
   getEmailError,
   isValidNIC,
 } from "./registration/Step1PersonalInfo";
+import {
+  isAllowedImageUri,
+  validateFieldLive,
+  getDrivingLicenseError,
+  getConfirmDrivingLicenseError,
+  getVehicleNumberError,
+  getConfirmVehicleNumberError,
+  getFirstNameError,
+  getLastNameError,
+  getPhone1Error,
+  getPhone2Error,
+  getNICError,
+  getHouseNumberError,
+  getStreetNameError,
+  getDistrictError,
+  getBankAccountHolderError,
+  getBankAccountNumberError,
+  getConfirmBankAccountNumberError,
+  getBankNameError,
+  getBankBranchError,
+  getInsurancePolicyNumberError,
+  getConfirmInsurancePolicyNumberError,
+  getInsuranceExpiryError,
+  getVehicleTypeError,
+  getAgreeDeclarationError,
+} from "./registration/registrationValidation";
 import { Step2ResidentialBank } from "./registration/Step2ResidentialBank";
 import { Step3LicenseInsurance } from "./registration/Step3LicenseInsurance";
 import { Step4VehicleInfo } from "./registration/Step4VehicleInfo";
+import {
+  uploadRegistrationDocument,
+  submitDriverRegistration,
+} from "@/services/auth/registration.service";
+import { AlertModal } from "@/component/common/AlertModal";
+import { optimizeImageForUpload } from "@/utils/imageOptimizer";
 
 type RegistrationFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -47,12 +78,30 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitProgressText, setSubmitProgressText] = useState("");
+  const [isSubmitConfirmModalVisible, setIsSubmitConfirmModalVisible] = useState(false);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [isDiscardModalVisible, setIsDiscardModalVisible] = useState(false);
-  const [generatedRefId, setGeneratedRefId] = useState("");
 
   const [imagePickerModalVisible, setImagePickerModalVisible] = useState(false);
   const [activePhotoField, setActivePhotoField] = useState<keyof FormData | null>(null);
+
+  // Global custom AlertModal state
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertModalTitle, setAlertModalTitle] = useState("");
+  const [alertModalMessage, setAlertModalMessage] = useState("");
+  const [alertModalType, setAlertModalType] = useState<"success" | "error">("error");
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error"
+  ) => {
+    setAlertModalTitle(title);
+    setAlertModalMessage(message);
+    setAlertModalType(type);
+    setAlertModalVisible(true);
+  };
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -97,20 +146,69 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     };
   }, [currentStep, formData]);
 
-  // Update a single form field and persist to SQLite
-  const updateField = (field: keyof FormData, value: any) => {
+  // Update multiple form fields atomically and persist to SQLite with instance-by-instance live validation
+  const updateFields = (updates: Partial<FormData>) => {
     setFormData((prev) => {
-      const next = { ...prev, [field]: value };
-      saveRegistrationDraft(currentStep, next);
-      return next;
-    });
-    if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
+      const nextForm = { ...prev };
+      Object.keys(updates).forEach((k) => {
+        const field = k as keyof FormData;
+        let nextValue = updates[field];
+        // Strip non-digits and leading 0 for phone numbers (exactly 9 digits starting with 7)
+        if ((field === "phone1" || field === "phone2") && typeof nextValue === "string") {
+          const digits = nextValue.replace(/[^0-9]/g, "");
+          nextValue = digits.replace(/^0+/, "").slice(0, 9);
+        }
+        // Auto uppercase for license, vehicle numbers, and NIC
+        if (
+          (field === "licenseNumber" ||
+            field === "confirmLicenseNumber" ||
+            field === "vehicleNumber" ||
+            field === "confirmVehicleNumber" ||
+            field === "nic") &&
+          typeof nextValue === "string"
+        ) {
+          nextValue = nextValue.toUpperCase();
+        }
+        (nextForm as any)[field] = nextValue;
       });
-    }
+
+      saveRegistrationDraft(currentStep, nextForm);
+
+      // Live instance-by-instance inline validation for updated fields
+      setErrors((prevErrors) => {
+        const updatedErrors = { ...prevErrors };
+        Object.keys(updates).forEach((k) => {
+          const field = k as keyof FormData;
+          const { fieldError, relatedUpdates } = validateFieldLive(
+            field,
+            nextForm[field],
+            nextForm
+          );
+          if (fieldError) {
+            updatedErrors[field] = fieldError;
+          } else {
+            delete updatedErrors[field];
+          }
+          if (relatedUpdates) {
+            Object.keys(relatedUpdates).forEach((rk) => {
+              if (relatedUpdates[rk]) {
+                updatedErrors[rk] = relatedUpdates[rk];
+              } else {
+                delete updatedErrors[rk];
+              }
+            });
+          }
+        });
+        return updatedErrors;
+      });
+
+      return nextForm;
+    });
+  };
+
+  // Update a single form field and persist
+  const updateField = (field: keyof FormData, value: any) => {
+    updateFields({ [field]: value });
   };
 
   // Toggle array item (languages) and persist
@@ -131,26 +229,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   // Step 1: Personal & Job Info Validation
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    const fnErr = getFirstNameError(formData.firstName);
+    if (fnErr) newErrors.firstName = fnErr;
 
-    const cleanPhone = formData.phone1.replace(/\s/g, "");
-    if (!cleanPhone) {
-      newErrors.phone1 = "Primary phone number is required";
-    } else if (cleanPhone.length < 9) {
-      newErrors.phone1 = "Please enter a valid 9-digit phone number";
-    }
+    const lnErr = getLastNameError(formData.lastName);
+    if (lnErr) newErrors.lastName = lnErr;
 
-    // NIC: 9 digits + V, or exactly 12 digits
-    const cleanNic = formData.nic.trim().toUpperCase();
-    if (!cleanNic) {
-      newErrors.nic = "National Identity Card (NIC) is required";
-    } else if (!isValidNIC(cleanNic)) {
-      newErrors.nic = "Enter 9 digits + V (e.g. 123456789V) or 12 digits";
-    }
+    const pErr = getPhone1Error(formData.phone1);
+    if (pErr) newErrors.phone1 = pErr;
 
-    // Email is optional, but if the user typed one it must be valid.
-    // getEmailError returns "" for an empty or valid email.
+    const p2Err = getPhone2Error(formData.phone2);
+    if (p2Err) newErrors.phone2 = p2Err;
+
+    const nicErr = getNICError(formData.nic);
+    if (nicErr) newErrors.nic = nicErr;
+
     const emailErr = getEmailError(formData.email ?? "");
     if (emailErr) newErrors.email = emailErr;
 
@@ -161,19 +254,32 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   // Step 2: Residential & Bank Info Validation
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.houseNumber.trim()) newErrors.houseNumber = "House / Plot Number is required";
-    if (!formData.streetName.trim()) newErrors.streetName = "Street Name is required";
-    if (!formData.city.trim()) newErrors.city = "City is required";
-    if (!formData.district.trim()) newErrors.district = "District is required";
-    if (!formData.bankAccountHolder.trim()) newErrors.bankAccountHolder = "Account holder name is required";
-    if (!formData.bankAccountNumber.trim()) newErrors.bankAccountNumber = "Account number is required";
-    if (!formData.confirmBankAccountNumber.trim()) {
-      newErrors.confirmBankAccountNumber = "Confirm Account number is required";
-    } else if (formData.bankAccountNumber !== formData.confirmBankAccountNumber) {
-      newErrors.confirmBankAccountNumber = "Account numbers do not match";
-    }
-    if (!formData.bankName.trim()) newErrors.bankName = "Bank name is required";
-    if (!formData.bankBranch.trim()) newErrors.bankBranch = "Branch name is required";
+    const hErr = getHouseNumberError(formData.houseNumber);
+    if (hErr) newErrors.houseNumber = hErr;
+
+    const sErr = getStreetNameError(formData.streetName);
+    if (sErr) newErrors.streetName = sErr;
+
+    const dErr = getDistrictError(formData.district);
+    if (dErr) newErrors.district = dErr;
+
+    const hldErr = getBankAccountHolderError(formData.bankAccountHolder);
+    if (hldErr) newErrors.bankAccountHolder = hldErr;
+
+    const numErr = getBankAccountNumberError(formData.bankAccountNumber);
+    if (numErr) newErrors.bankAccountNumber = numErr;
+
+    const cnumErr = getConfirmBankAccountNumberError(
+      formData.confirmBankAccountNumber,
+      formData.bankAccountNumber
+    );
+    if (cnumErr) newErrors.confirmBankAccountNumber = cnumErr;
+
+    const bErr = getBankNameError(formData.bankName);
+    if (bErr) newErrors.bankName = bErr;
+
+    const brErr = getBankBranchError(formData.bankBranch);
+    if (brErr) newErrors.bankBranch = brErr;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -182,52 +288,114 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   // Step 3: License & Insurance Info Validation
   const validateStep3 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.licenseNumber.trim()) newErrors.licenseNumber = "Driving license ID is required";
-    if (!formData.confirmLicenseNumber.trim()) {
-      newErrors.confirmLicenseNumber = "Confirm Driving license ID is required";
-    } else if (formData.licenseNumber.trim().toUpperCase() !== formData.confirmLicenseNumber.trim().toUpperCase()) {
-      newErrors.confirmLicenseNumber = "Driving license IDs do not match";
+    const licErr = getDrivingLicenseError(formData.licenseNumber);
+    if (licErr) newErrors.licenseNumber = licErr;
+
+    const cLicErr = getConfirmDrivingLicenseError(
+      formData.confirmLicenseNumber,
+      formData.licenseNumber
+    );
+    if (cLicErr) newErrors.confirmLicenseNumber = cLicErr;
+
+    const insErr = getInsurancePolicyNumberError(formData.insurancePolicyNumber);
+    if (insErr) newErrors.insurancePolicyNumber = insErr;
+
+    const cInsErr = getConfirmInsurancePolicyNumberError(
+      formData.confirmInsurancePolicyNumber,
+      formData.insurancePolicyNumber
+    );
+    if (cInsErr) newErrors.confirmInsurancePolicyNumber = cInsErr;
+
+    const expErr = getInsuranceExpiryError(formData.insuranceExpiry);
+    if (expErr) newErrors.insuranceExpiry = expErr;
+
+    // Required license and insurance photo validation
+    if (!formData.licenseFrontPhoto) {
+      newErrors.licenseFrontPhoto = "Front image of driving license is required";
     }
-    if (!formData.insurancePolicyNumber.trim()) newErrors.insurancePolicyNumber = "Insurance Policy Number is required.";
-    if (!formData.confirmInsurancePolicyNumber.trim()) {
-      newErrors.confirmInsurancePolicyNumber = "Confirm Insurance Number is required";
+    if (!formData.licenseBackPhoto) {
+      newErrors.licenseBackPhoto = "Back image of driving license is required";
+    }
+    if (!formData.insuranceFrontPhoto) {
+      newErrors.insuranceFrontPhoto = "Front image of insurance certificate is required";
+    }
+    if (!formData.insuranceBackPhoto) {
+      newErrors.insuranceBackPhoto = "Back image of insurance certificate is required";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Step 4: Vehicle Info Validation & Final Submission
+  // Step 4: Vehicle Info Validation & Open Submit Confirmation Modal
   const handleFinalSubmit = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.vehicleNumber.trim()) newErrors.vehicleNumber = "Vehicle registration number is required";
-    if (!formData.confirmVehicleNumber.trim()) {
-      newErrors.confirmVehicleNumber = "Confirm Registration Number is required";
-    } else if (formData.vehicleNumber.trim().toUpperCase() !== formData.confirmVehicleNumber.trim().toUpperCase()) {
-      newErrors.confirmVehicleNumber = "Vehicle registration numbers do not match";
+    const vehErr = getVehicleNumberError(formData.vehicleNumber);
+    if (vehErr) newErrors.vehicleNumber = vehErr;
+
+    const cVehErr = getConfirmVehicleNumberError(
+      formData.confirmVehicleNumber,
+      formData.vehicleNumber
+    );
+    if (cVehErr) newErrors.confirmVehicleNumber = cVehErr;
+
+    // Vehicle type validation
+    const typeErr = getVehicleTypeError(formData.vehicleType);
+    if (typeErr) newErrors.vehicleType = typeErr;
+
+    // Required vehicle photos validation
+    if (!formData.vehicleFrontPhoto) {
+      newErrors.vehicleFrontPhoto = "Front image of vehicle is required";
     }
-    if (!formData.agreeDeclaration) newErrors.agreeDeclaration = "You must confirm this declaration";
+    if (!formData.vehicleBackPhoto) {
+      newErrors.vehicleBackPhoto = "Back image of vehicle is required";
+    }
+    if (!formData.vehicleLeftSidePhoto) {
+      newErrors.vehicleLeftSidePhoto = "Left side image of vehicle is required";
+    }
+    if (!formData.vehicleRightSidePhoto) {
+      newErrors.vehicleRightSidePhoto = "Right side image of vehicle is required";
+    }
+
+    const decErr = getAgreeDeclarationError(formData.agreeDeclaration);
+    if (decErr) newErrors.agreeDeclaration = decErr;
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      Alert.alert("Required Fields", "Please complete all mandatory vehicle details and accept declarations.");
+      showAlert(
+        "Required Fields",
+        "Please complete all mandatory vehicle details, upload required photos, and accept declarations."
+      );
       return;
     }
 
+    // Validation passed -> Open confirmation popup
+    setIsSubmitConfirmModalVisible(true);
+  };
+
+  // Confirmed final submit action
+  const handleConfirmSubmit = async () => {
+    setIsSubmitConfirmModalVisible(false);
     setIsSubmitting(true);
-    setTimeout(async () => {
-      try {
-        // Complete success: remove draft from SQLite and finalize save to DB
-        await clearRegistrationDraft();
-        setIsSubmitting(false);
-        const randomRef = "REG-DRV-" + Math.floor(10000 + Math.random() * 90000);
-        setGeneratedRefId(randomRef);
-        setIsSuccessModalVisible(true);
-      } catch (err) {
-        setIsSubmitting(false);
-        Alert.alert("Submission Error", "Failed to submit registration. Please try again.");
-      }
-    }, 1200);
+    setSubmitProgressText("Submitting application...");
+
+    try {
+      const result = await submitDriverRegistration(formData, (statusMsg) => {
+        setSubmitProgressText(statusMsg);
+      });
+
+      // Complete success: remove draft from SQLite and show success modal
+      await clearRegistrationDraft();
+      setIsSubmitting(false);
+      setIsSuccessModalVisible(true);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to submit registration. Please check your internet connection and try again.";
+      showAlert("Submission Failed", errorMessage, "error");
+    }
   };
 
   // Navigation between steps
@@ -239,7 +407,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        Alert.alert("Required Fields", "Please complete all mandatory credentials and fix any invalid fields before continuing.");
+        showAlert(
+          "Required Fields",
+          "Please complete all mandatory credentials and fix any invalid fields before continuing."
+        );
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
@@ -248,7 +419,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        Alert.alert("Required Fields", "Please complete all required residential & bank fields.");
+        showAlert(
+          "Required Fields",
+          "Please complete all required residential & bank fields."
+        );
       }
     } else if (currentStep === 3) {
       if (validateStep3()) {
@@ -257,7 +431,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        Alert.alert("Required Fields", "Please fill in your driving license and insurance information.");
+        showAlert(
+          "Required Fields",
+          "Please fill in your driving license and insurance information, and upload all required documents."
+        );
       }
     } else if (currentStep === 4) {
       handleFinalSubmit();
@@ -288,7 +465,34 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     navigation.goBack();
   };
 
-  // Image picking
+  // Image picking & background upload
+  const getCategoryForField = (
+    field: keyof FormData
+  ): "profile" | "license" | "insurance" | "vehicle" | "documents" => {
+    if (field === "profilePhoto") return "profile";
+    if (field.startsWith("license")) return "license";
+    if (field.startsWith("insurance")) return "insurance";
+    if (field.startsWith("vehicle")) return "vehicle";
+    return "documents";
+  };
+
+  const processImageSelected = (field: keyof FormData, uri: string) => {
+    // 1. Immediately display local preview
+    updateField(field, uri);
+
+    // 2. Perform background upload to Cloudflare R2
+    const category = getCategoryForField(field);
+    uploadRegistrationDocument(uri, category)
+      .then((r2Url) => {
+        if (r2Url) {
+          updateField(field, r2Url);
+        }
+      })
+      .catch((err) => {
+        console.warn(`Background upload for ${String(field)} will complete on submit:`, err?.message || err);
+      });
+  };
+
   const openImagePicker = (field: keyof FormData) => {
     setActivePhotoField(field);
     setImagePickerModalVisible(true);
@@ -299,7 +503,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission Denied", "Camera permission is required to capture photos.");
+        showAlert("Permission Denied", "Camera permission is required to capture photos.", "error");
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -309,7 +513,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]?.uri && activePhotoField) {
-        updateField(activePhotoField, result.assets[0].uri);
+        let uri = result.assets[0].uri;
+        if (!isAllowedImageUri(uri)) {
+          showAlert("Invalid File Format", "Only .jpg, .jpeg, .png, and .heic files are allowed.", "error");
+          return;
+        }
+        try {
+          uri = await optimizeImageForUpload(uri);
+        } catch (sizeErr: any) {
+          showAlert("File Too Large", sizeErr?.message || "Image file size exceeds the 10MB limit.", "error");
+          return;
+        }
+        processImageSelected(activePhotoField, uri);
       }
     } catch (err) {
       console.warn("Camera launch error:", err);
@@ -326,7 +541,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]?.uri && activePhotoField) {
-        updateField(activePhotoField, result.assets[0].uri);
+        let uri = result.assets[0].uri;
+        if (!isAllowedImageUri(uri)) {
+          showAlert("Invalid File Format", "Only .jpg, .jpeg, .png, and .heic files are allowed.", "error");
+          return;
+        }
+        try {
+          uri = await optimizeImageForUpload(uri);
+        } catch (sizeErr: any) {
+          showAlert("File Too Large", sizeErr?.message || "Image file size exceeds the 10MB limit.", "error");
+          return;
+        }
+        processImageSelected(activePhotoField, uri);
       }
     } catch (err) {
       console.warn("Gallery launch error:", err);
@@ -550,6 +776,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             formData={formData}
             errors={errors}
             updateField={updateField}
+            updateFields={updateFields}
             openImagePicker={openImagePicker}
           />
         )}
@@ -600,7 +827,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             }}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#0E0E0E" size="small" />
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <ActivityIndicator color="#0E0E0E" size="small" style={{ marginRight: 8 }} />
+                <Text style={{ color: "#0E0E0E", fontSize: 14, fontWeight: "700" }}>
+                  {submitProgressText || "Submitting..."}
+                </Text>
+              </View>
             ) : (
               <>
                 <Text
@@ -746,6 +978,118 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               >
                 <Text style={{ color: "#0E0E0E", fontSize: 14, fontWeight: "800" }}>
                   Leave
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Ready to Submit Confirmation Modal */}
+      <Modal
+        visible={isSubmitConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsSubmitConfirmModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#232324",
+              borderRadius: 24,
+              paddingTop: 32,
+              paddingBottom: 24,
+              paddingHorizontal: 20,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "rgba(255, 255, 255, 0.08)",
+              position: "relative",
+            }}
+          >
+            {/* Top-Right Circular Close Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsSubmitConfirmModalVisible(false)}
+              style={{
+                position: "absolute",
+                top: 14,
+                right: 14,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255, 255, 255, 0.18)",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10,
+              }}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 19,
+                fontWeight: "800",
+                textAlign: "center",
+                marginBottom: 10,
+              }}
+            >
+              Are you ready to submit?
+            </Text>
+
+            <Text
+              style={{
+                color: "#D1D5DB",
+                fontSize: 15,
+                textAlign: "center",
+                lineHeight: 22,
+                marginBottom: 24,
+                paddingHorizontal: 8,
+              }}
+            >
+              Please make sure you review it twice before submitting to avoid any rejections.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setIsSubmitConfirmModalVisible(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#E2E8F0",
+                  borderRadius: 999,
+                  height: 48,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#0E0E0E", fontSize: 15, fontWeight: "700" }}>
+                  Go Back
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleConfirmSubmit}
+                style={{
+                  flex: 1,
+                  backgroundColor: THEME.primaryYellow,
+                  borderRadius: 999,
+                  height: 48,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#0E0E0E", fontSize: 15, fontWeight: "800" }}>
+                  Submit
                 </Text>
               </TouchableOpacity>
             </View>
@@ -927,36 +1271,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                 fontSize: 13,
                 textAlign: "center",
                 lineHeight: 19,
-                marginBottom: 16,
+                marginBottom: 24,
               }}
             >
               Your driver registration request has been submitted for verification. Our review team will verify your credentials within 24–48 hours.
             </Text>
-
-            <View
-              style={{
-                backgroundColor: "#27272A",
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-                marginBottom: 24,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: THEME.textSub, fontSize: 11, marginBottom: 2 }}>
-                APPLICATION REFERENCE ID
-              </Text>
-              <Text
-                style={{
-                  color: THEME.primaryYellow,
-                  fontSize: 16,
-                  fontWeight: "800",
-                  letterSpacing: 1,
-                }}
-              >
-                {generatedRefId}
-              </Text>
-            </View>
 
             <TouchableOpacity
               activeOpacity={0.85}
@@ -985,6 +1304,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Global Custom Alert Modal */}
+      <AlertModal
+        visible={alertModalVisible}
+        title={alertModalTitle}
+        message={alertModalMessage}
+        type={alertModalType}
+        onClose={() => setAlertModalVisible(false)}
+        duration={4000}
+        autoClose={true}
+      />
     </KeyboardAvoidingView>
   );
 };

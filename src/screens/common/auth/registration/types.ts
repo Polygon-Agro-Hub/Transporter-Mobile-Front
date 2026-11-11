@@ -141,6 +141,7 @@ export interface StepProps {
   formData: FormData;
   errors: Record<string, string>;
   updateField: (field: keyof FormData, value: any) => void;
+  updateFields?: (updates: Partial<FormData>) => void;
   toggleArrayItem?: (field: "languages" | "licenseCategories", item: string) => void;
   openImagePicker: (field: keyof FormData) => void;
 }

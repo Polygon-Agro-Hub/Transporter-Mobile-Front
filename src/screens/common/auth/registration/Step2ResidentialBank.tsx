@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { TextStyle, View, Text, TextInput, TouchableOpacity } from "react-native";
 import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { StepProps, THEME } from "./types";
@@ -147,6 +147,7 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
   formData,
   errors,
   updateField,
+  updateFields,
 }) => {
   const [districtModalVisible, setDistrictModalVisible] = useState(false);
   const [bankModalVisible, setBankModalVisible] = useState(false);
@@ -159,16 +160,43 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
   );
   const branchOptions = useMemo(() => getBranchNames(selectedBank?.ID), [selectedBank]);
 
+  // Derive province from district if not already populated
+  const derivedProvince = useMemo(() => {
+    if (formData.province) return formData.province;
+    if (!formData.district) return "";
+    const match = SRI_LANKA_DISTRICTS.find(
+      (d) => d.district.toLowerCase() === formData.district.trim().toLowerCase()
+    );
+    return match ? match.province : "";
+  }, [formData.district, formData.province]);
+
+  // Ensure province is saved in form state if district is present but province is empty
+  useEffect(() => {
+    if (formData.district && !formData.province && derivedProvince) {
+      if (updateFields) {
+        updateFields({ province: derivedProvince, city: formData.district });
+      } else {
+        updateField("province", derivedProvince);
+      }
+    }
+  }, [formData.district, formData.province, derivedProvince]);
+
   // Some banks in branches.json have no branch list (e.g. finance companies).
   // For those, the branch becomes a free-text field.
   const bankHasNoBranches = !!selectedBank && branchOptions.length === 0;
 
   const handleSelectDistrict = (item: District) => {
-    updateField("district", item.district);
-    updateField("province", item.province);
-    // City field was removed from this screen, but the parent form may still
-    // require `city`. Fill it from the district so validation/API stay happy.
-    updateField("city", item.district);
+    if (updateFields) {
+      updateFields({
+        district: item.district,
+        province: item.province,
+        city: item.district,
+      });
+    } else {
+      updateField("district", item.district);
+      updateField("province", item.province);
+      updateField("city", item.district);
+    }
     setDistrictModalVisible(false);
   };
 
@@ -229,7 +257,7 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
 
         <FormLabel label="Province" required />
         <TextInput
-          value={formData.district ? formData.province || "" : ""}
+          value={derivedProvince || ""}
           editable={false}
           placeholder="Auto-Fill"
           placeholderTextColor={THEME.textSub}
