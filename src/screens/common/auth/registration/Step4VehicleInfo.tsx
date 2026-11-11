@@ -12,24 +12,15 @@ import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icon
 import { StepProps, THEME, VehicleTypeItem } from "./types";
 import environment from "@/environment/environment";
 
-/* ---------- Vehicle types (loaded from backend) ---------- */
+/* ---------- Vehicle types (loaded directly from backend API) ---------- */
 
 export type VehicleType = VehicleTypeItem;
-
-export const FALLBACK_VEHICLE_TYPES: VehicleType[] = [
-  { name: "Three Wheeler", capacity: 100, category: "Light Weight Driver" },
-  { name: "Mahindra Bollero", capacity: 272, category: "Light Weight Driver" },
-  { name: "Dimo Batta", capacity: 750, category: "Light Weight Driver" },
-  { name: "Double Cab Pickup (4x4)", capacity: 900, category: "Heavy Weight Driver" },
-  { name: "Isuzu Elf / Canter Lorry", capacity: 3000, category: "Heavy Weight Driver" },
-  { name: "Lorry (6-8 Ton)", capacity: 7500, category: "Heavy Weight Driver" },
-];
 
 const BASE_API_URL = (process.env.EXPO_PUBLIC_API_URL || environment.API_BASE_URL || "").replace(/\/+$/, "");
 const VEHICLE_TYPES_ENDPOINT = `${BASE_API_URL}/api/vehicle-types`;
 
 const useVehicleTypes = () => {
-  const [types, setTypes] = useState<VehicleType[]>(FALLBACK_VEHICLE_TYPES);
+  const [types, setTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -51,10 +42,13 @@ const useVehicleTypes = () => {
           category: item.category || "Light Weight Driver",
         }));
         setTypes(normalized);
+      } else {
+        setTypes([]);
       }
     } catch (err) {
-      console.warn("Could not fetch vehicle types from API, using default list:", err);
+      console.warn("Could not fetch vehicle types from API:", err);
       setError(true);
+      setTypes([]);
     } finally {
       setLoading(false);
     }
@@ -176,14 +170,22 @@ const ErrorText: React.FC<{ message?: string; spaced?: boolean }> = ({ message, 
     </Text>
   ) : null;
 
-const CardHeader: React.FC<{ icon: any; title: string; marginBottom?: number }> = ({
-  icon,
-  title,
-  marginBottom = 16,
-}) => (
+const CardHeader: React.FC<{
+  icon: any;
+  title: string;
+  marginBottom?: number;
+  required?: boolean;
+}> = ({ icon, title, marginBottom = 16, required = false }) => (
   <View style={{ flexDirection: "row", alignItems: "center", marginBottom }}>
     <FontAwesome name={icon} size={18} color={THEME.primaryYellow} style={{ marginRight: 8 }} />
-    <Text style={{ color: THEME.textWhite, fontSize: 15, fontWeight: "700" }}>{title}</Text>
+    <Text style={{ color: THEME.textWhite, fontSize: 15, fontWeight: "700" }}>
+      {title}
+      {required && (
+        <Text style={{ color: THEME.requiredAsterisk, fontSize: 15, fontWeight: "700" }}>
+          {" *"}
+        </Text>
+      )}
+    </Text>
   </View>
 );
 
@@ -332,9 +334,11 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         <TextInput
           value={formData.vehicleNumber}
           onChangeText={(text) => updateField("vehicleNumber", text.toUpperCase())}
-          placeholder="e.g. WP CAA-4589"
+          placeholder="e.g. CAA-4589"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={15}
           style={inputStyle(!!errors.vehicleNumber, {
             marginBottom: errors.vehicleNumber ? 4 : 14,
           })}
@@ -348,6 +352,8 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
           placeholder="Confirm Registration Number"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={10}
           style={inputStyle(!!errors.confirmVehicleNumber, {
             marginBottom: errors.confirmVehicleNumber ? 4 : 14,
           })}
@@ -477,7 +483,7 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
 
       {/* 2. Exterior Inspection Photos Card */}
       <View style={cardStyle}>
-        <CardHeader icon="car" title="Exterior Inspection Photos" marginBottom={12} />
+        <CardHeader icon="car" title="Exterior Inspection Photos" marginBottom={12} required />
 
         {/* Info Banner */}
         <View
@@ -527,7 +533,7 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         />
         <UploadBox
           uri={formData.vehicleRightSidePhoto}
-          title="Vehicle's Side 1 Image (Right)"
+          title="Vehicle's Side 2 Image (Right)"
           changeLabel="Change Right Side"
           error={errors.vehicleRightSidePhoto}
           last

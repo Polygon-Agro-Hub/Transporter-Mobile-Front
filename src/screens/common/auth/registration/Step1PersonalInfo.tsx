@@ -682,7 +682,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             placeholder="7X XXX XXXX"
             placeholderTextColor={THEME.textSub}
             keyboardType="phone-pad"
-            maxLength={10}
+            maxLength={9}
             style={{
               flex: 1,
               backgroundColor: THEME.inputBg,
@@ -722,9 +722,11 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             flexDirection: "row",
             borderRadius: 25,
             borderWidth: 1,
-            borderColor: THEME.inputBorder,
+            borderColor: errors.phone2
+              ? THEME.inputBorderError
+              : THEME.inputBorder,
             overflow: "hidden",
-            marginBottom: 14,
+            marginBottom: errors.phone2 ? 4 : 14,
             height: 48,
           }}
         >
@@ -756,7 +758,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             placeholder="7X XXX XXXX"
             placeholderTextColor={THEME.textSub}
             keyboardType="phone-pad"
-            maxLength={10}
+            maxLength={9}
             style={{
               flex: 1,
               backgroundColor: THEME.inputBg,
@@ -766,6 +768,17 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             }}
           />
         </View>
+        {errors.phone2 && (
+          <Text
+            style={{
+              color: THEME.inputBorderError,
+              fontSize: 11,
+              marginBottom: 10,
+            }}
+          >
+            {errors.phone2}
+          </Text>
+        )}
 
         {/* National Identity Card (NIC) */}
         <Text

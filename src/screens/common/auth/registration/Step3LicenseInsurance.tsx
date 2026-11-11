@@ -380,6 +380,8 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
           placeholder="e.g. B8849201"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={9}
           style={inputStyle(!!errors.licenseNumber, {
             marginBottom: errors.licenseNumber ? 4 : 14,
           })}
@@ -393,6 +395,8 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
           placeholder="Re-enter license ID"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={9}
           style={inputStyle(!!errors.confirmLicenseNumber, {
             marginBottom: errors.confirmLicenseNumber ? 4 : 14,
           })}
@@ -439,6 +443,8 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
           placeholder="e.g. POL-9948201-A"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={30}
           style={inputStyle(!!errors.insurancePolicyNumber, {
             marginBottom: errors.insurancePolicyNumber ? 4 : 14,
           })}
@@ -449,9 +455,11 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
         <TextInput
           value={formData.confirmInsurancePolicyNumber}
           onChangeText={(text) => updateField("confirmInsurancePolicyNumber", text.toUpperCase())}
-          placeholder="Please Re-enter Account Number"
+          placeholder="Re-enter insurance policy number"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={30}
           style={inputStyle(!!errors.confirmInsurancePolicyNumber, {
             marginBottom: errors.confirmInsurancePolicyNumber ? 4 : 14,
           })}
