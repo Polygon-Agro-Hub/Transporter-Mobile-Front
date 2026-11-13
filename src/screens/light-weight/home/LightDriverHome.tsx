@@ -7,10 +7,12 @@ import {
   RefreshControl,
   Image,
   Alert,
+  Linking,
+  ActivityIndicator,
 } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useSelector, useDispatch } from "react-redux";
 import { selectUserProfile, logoutUser } from "@/store/authSlice";
 import axios from "axios";
@@ -218,6 +220,100 @@ const LightDriverHome: React.FC<LightDriverHomeProps> = ({ navigation }) => {
     }
   };
 
+  const [loadingCentre, setLoadingCentre] = useState(false);
+
+  const openMapToCentre = (centre: any) => {
+    let destinationQuery = "";
+
+    const lat = centre?.latitude != null ? parseFloat(centre.latitude) : null;
+    const lng = centre?.longitude != null ? parseFloat(centre.longitude) : null;
+
+    if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+      destinationQuery = `${lat},${lng}`;
+    } else {
+      const parts = [
+        centre?.centerName,
+        centre?.buildingNumber,
+        centre?.street,
+        centre?.city,
+        centre?.district,
+        centre?.province,
+        centre?.country || "Sri Lanka",
+      ].filter(Boolean);
+
+      destinationQuery = parts.join(", ");
+    }
+
+    if (!destinationQuery) {
+      Alert.alert(
+        "Location Unavailable",
+        "Collection centre location details are not available.",
+      );
+      return;
+    }
+
+    const encodedDestination = encodeURIComponent(destinationQuery);
+    const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedDestination}&travelmode=driving&dir_action=navigate`;
+    const searchUrl = `https://maps.google.com/?q=${encodedDestination}`;
+
+    Linking.canOpenURL(dirUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(dirUrl);
+        } else {
+          return Linking.openURL(searchUrl);
+        }
+      })
+      .catch((err) => {
+        console.error("Error opening Google Maps direction:", err);
+        Linking.openURL(searchUrl).catch(() => {
+          Alert.alert(
+            "Error",
+            "Could not open Google Maps. Please make sure Google Maps is installed on your device.",
+          );
+        });
+      });
+  };
+
+  const handleBackToCentre = async () => {
+    try {
+      setLoadingCentre(true);
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Authentication Error", "No authentication token found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${environment.API_BASE_URL}api/home/get-centre-location`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (response.data?.status === "success" && response.data?.data) {
+        openMapToCentre(response.data.data);
+      } else {
+        Alert.alert(
+          "Notice",
+          response.data?.message || "Collection centre location not found.",
+        );
+      }
+    } catch (error: any) {
+      console.error("Error fetching centre location:", error);
+      const msg =
+        error?.response?.data?.message ||
+        "Failed to load collection centre location. Please try again.";
+      Alert.alert("Notice", msg);
+    } finally {
+      setLoadingCentre(false);
+    }
+  };
+
   const getMotivationalMessage = () => {
     if (shouldShowEndShiftButton()) {
       return null;
@@ -390,44 +486,71 @@ const LightDriverHome: React.FC<LightDriverHomeProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Conditional Rendering: Either motivational message OR End My Shift button */}
+      {/* Conditional Rendering: Either motivational message OR End My Shift / Back To Centre card */}
       {showEndShiftButton ? (
-        <TouchableOpacity
-          className="mx-4 mt-8 mb-4 rounded-2xl px-5 py-3 flex-col items-center justify-center border"
+        <View
+          className="mx-4 mt-8 mb-4 rounded-2xl px-4 py-4 flex-col items-center justify-center border"
           style={{
             backgroundColor: "#FFFBEA",
             borderColor: "#F7CA21",
           }}
-          onPress={handleEndShiftPress}
-          activeOpacity={0.7}
         >
-          <View className="flex">
-            <Text className="text-lg font-bold text-black text-center">
+          <View className="flex items-center">
+            <Text className="text-xl font-bold text-black text-center">
               Great Work!
             </Text>
-            <Text className="text-black mt-1 text-center">
-              Click on Close button to end the shift.
+            <Text className="text-black mt-1 text-center text-sm">
+              Click on Close button to end the shift..
             </Text>
           </View>
-          <View className="ml-4">
+          <View className="flex-row items-center justify-between w-full mt-4 px-1 gap-2.5">
             <TouchableOpacity
-              className="bg-[#F7CA21] px-14 py-3 rounded-full mt-2"
+              className="flex-1 flex-row items-center justify-center py-4 px-3 rounded-full border border-black bg-[#FFFBEA]"
+              onPress={handleBackToCentre}
+              activeOpacity={0.7}
+              disabled={loadingCentre}
+            >
+              {loadingCentre ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="location-sharp"
+                    size={17}
+                    color="#000"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text className="font-bold text-black text-xs md:text-sm" numberOfLines={1}>
+                    Back to Centre
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="flex-1 flex-row items-center justify-center py-4 px-3 rounded-full bg-[#F7CA21]"
               onPress={handleEndShiftPress}
               activeOpacity={0.7}
               style={{
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 5,
+                shadowOpacity: 0.25,
+                shadowRadius: 3,
+                elevation: 3,
               }}
             >
-              <View className="flex-row items-center">
-                <Text className="font-bold text-black">End My Shift</Text>
-              </View>
+              <FontAwesome5
+                name="flag-checkered"
+                size={15}
+                color="#000"
+                style={{ marginRight: 6 }}
+              />
+              <Text className="font-bold text-black text-xs md:text-sm" numberOfLines={1}>
+                End My Shift
+              </Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       ) : (
         motivationalMsg &&
         (motivationalMsg.style === 1 ? (
