@@ -10,6 +10,7 @@ import { RootStackParamList } from "@/types/types";
 // --- Public / Common Screens ---
 import Splash from "@/screens/common/splash/Splash";
 import LoginScreen from "@/screens/common/auth/LoginScreen";
+import RegistrationForm from "@/screens/common/auth/RegistrationForm";
 import ChangePassword from "@/screens/common/auth/ChangePassword";
 import BannedScreen from "@/screens/common/auth/BannedScreen";
 import ProfileScreen from "@/screens/common/auth/Profile";
@@ -148,6 +149,7 @@ export function withRoleGuard<P extends object>(
 export const PUBLIC_STACK_SCREENS: StackRouteConfig[] = [
   { name: "Splash", component: Splash, allowedRoles: "PUBLIC" },
   { name: "Login", component: LoginScreen, allowedRoles: "PUBLIC" },
+  { name: "RegistrationForm", component: RegistrationForm, allowedRoles: "PUBLIC" },
   { name: "ChangePassword", component: ChangePassword, allowedRoles: "PUBLIC" },
   { name: "BannedScreen", component: BannedScreen as any, allowedRoles: "PUBLIC" },
   { name: "Profile", component: ProfileScreen, allowedRoles: "PUBLIC" },
@@ -175,6 +177,11 @@ export const SHARED_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
     component: MyQRCode,
     allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER],
   },
+  { 
+    name: "AssignOrderQR", 
+    component: AssignOrderQR, 
+    allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] 
+  },
 ];
 
 // ============================================================================
@@ -182,18 +189,17 @@ export const SHARED_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
 // ============================================================================
 export const LIGHT_WEIGHT_DRIVER_STACK_SCREENS: StackRouteConfig[] = [
   { name: "Home", component: LightDriverHome, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "Jobs", component: Jobs, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "OrderDetails", component: OrderDetails, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "OrderDetailsLoadingScreen", component: OrderDetailsLoadingScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "ReturnOrders", component: ReturnOrders, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "AssignOrderQR", component: AssignOrderQR, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "ReturnOrderQR", component: ReturnOrderQR, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "ReturnOrderOTPVerification", component: ReturnOrderOTPVerification, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "EndJourneyConfirmation", component: EndJourneyConfirmation, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "SignatureScreen", component: SignatureScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "DeliverySuccessful", component: DeliverySuccessful, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "OrderReturn", component: OrderReturn, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
-  { name: "HoldOrder", component: HoldOrder, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
+  { name: "Jobs", component: Jobs, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "OrderDetails", component: OrderDetails, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "OrderDetailsLoadingScreen", component: OrderDetailsLoadingScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "ReturnOrders", component: ReturnOrders, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "ReturnOrderQR", component: ReturnOrderQR, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "ReturnOrderOTPVerification", component: ReturnOrderOTPVerification, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "EndJourneyConfirmation", component: EndJourneyConfirmation, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "SignatureScreen", component: SignatureScreen, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "DeliverySuccessful", component: DeliverySuccessful, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "OrderReturn", component: OrderReturn, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
+  { name: "HoldOrder", component: HoldOrder, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER, ROLES.HEAVY_WEIGHT_DRIVER] },
   { name: "MyEarnings", component: MyEarnings, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "CashHandOver", component: CashHandOver, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },
   { name: "UploadBankTransferSlip", component: UploadBankTransferSlip, allowedRoles: [ROLES.LIGHT_WEIGHT_DRIVER] },

@@ -3,6 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import LottieView from "lottie-react-native";
 import { RootStackParamList } from "@/types/types";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 
 const successAnimation = require("@/assets/json/delivery-successful.json");
 
@@ -18,8 +21,14 @@ interface DeliverySuccessfulProps {
 const DeliverySuccessful: React.FC<DeliverySuccessfulProps> = ({
   navigation,
 }) => {
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
+
   const handleContinue = () => {
-    navigation.navigate("Home");
+    if (jobRole === ROLES.HEAVY_WEIGHT_DRIVER) {
+      navigation.navigate("HeavyDriverHome");
+    } else {
+      navigation.navigate("Home");
+    }
   };
 
   return (

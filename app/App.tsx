@@ -230,7 +230,7 @@ function AppContent() {
     return () => backHandler.remove();
   }, []);
 
-  // Axios interceptor to handle 401/403 responses with specific status types
+  // Axios interceptor to handle 401/403 responses specifically for banned/rejected accounts
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
@@ -238,27 +238,47 @@ function AppContent() {
         const errorResponse = error.response;
         if (
           errorResponse &&
-          (errorResponse.status === 401 || errorResponse.status === 403) &&
-          (errorResponse.status === 403 ||
-            errorResponse.data?.status === OFFICER_STATUS.REJECTED ||
-            errorResponse.data?.status === OFFICER_STATUS.NOT_APPROVED)
+          (errorResponse.status === 401 || errorResponse.status === 403)
         ) {
-          let currentRouteName = "";
-          if (navigationRef.isReady()) {
-            const route = navigationRef.getCurrentRoute() as any;
-            currentRouteName = route?.name || "";
-          }
+          const data = errorResponse.data;
+          const rawStatus = (data?.status || data?.officerStatus || "").toString();
+          const rawStatusType = (data?.statusType || "").toString().toLowerCase();
+          const rawMessage = (data?.message || "").toString().toLowerCase();
 
-          if (currentRouteName !== "Login" && currentRouteName !== "Splash" && currentRouteName !== "BannedScreen") {
-            const exactStatus =
-              errorResponse.data?.status === OFFICER_STATUS.REJECTED
-                ? OFFICER_STATUS.REJECTED
-                : OFFICER_STATUS.NOT_APPROVED;
+          // Only trigger BannedScreen when the account itself is rejected or not approved
+          const isAccountDisallowed =
+            rawStatus === OFFICER_STATUS.REJECTED ||
+            rawStatus === OFFICER_STATUS.NOT_APPROVED ||
+            rawStatusType === "rejected" ||
+            rawStatusType === "not_approved" ||
+            rawMessage.includes("employee id is rejected") ||
+            rawMessage.includes("employee id is not approved") ||
+            rawMessage.includes("account has been rejected");
 
-            handleAccountBanned(exactStatus, errorResponse.data?.message);
+          if (isAccountDisallowed) {
+            let currentRouteName = "";
+            if (navigationRef.isReady()) {
+              const route = navigationRef.getCurrentRoute() as any;
+              currentRouteName = route?.name || "";
+            }
 
-            // Return a promise that never resolves or rejects to prevent component error logs
-            return new Promise(() => {});
+            if (
+              currentRouteName !== "Login" &&
+              currentRouteName !== "Splash" &&
+              currentRouteName !== "BannedScreen"
+            ) {
+              const exactStatus =
+                rawStatus === OFFICER_STATUS.REJECTED ||
+                rawStatusType === "rejected" ||
+                rawMessage.includes("rejected")
+                  ? OFFICER_STATUS.REJECTED
+                  : OFFICER_STATUS.NOT_APPROVED;
+
+              handleAccountBanned(exactStatus, data?.message);
+
+              // Return a promise that never resolves or rejects to prevent component error logs
+              return new Promise(() => {});
+            }
           }
         }
         return Promise.reject(error);
@@ -268,7 +288,7 @@ function AppContent() {
     return () => {
       axios.interceptors.response.eject(interceptor);
     };
-  }, []);
+  }, [handleAccountBanned]);
 
   const [currentRoute, setCurrentRoute] = useState<string>("Splash");
 
