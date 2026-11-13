@@ -275,7 +275,7 @@ const LightDriverHome: React.FC<LightDriverHomeProps> = ({ navigation }) => {
         image: packsImage,
         label: `${packsCount} ${packsCount === 1 ? "Pack" : "Packs"}`,
         color: "#10B981",
-        action: () => navigation.navigate("Jobs"),
+        action: () => navigation.navigate("Jobs", { fromScreen: "Home" }),
         disabled: packsCount === 0 && (amountData?.completedOrders || 0) === 0,
       },
       {
@@ -300,7 +300,7 @@ const LightDriverHome: React.FC<LightDriverHomeProps> = ({ navigation }) => {
               processOrderIds: ongoingProcessOrderIds,
             });
           } else {
-            navigation.navigate("Jobs");
+            navigation.navigate("Jobs", { fromScreen: "Home" });
           }
         },
         disabled: false,

@@ -19,6 +19,7 @@ export type RootStackParamList = {
   DeliverySuccessful: undefined;
   AddComplaint: undefined;
   Login: undefined;
+  RegistrationForm: undefined;
   ChangePassword: { passwordUpdated: number };
   BannedScreen: {
     status?: string;
@@ -39,7 +40,7 @@ export type RootStackParamList = {
     dcmEmpId: string;
     drvOrderId: number;
   };
-  Jobs: undefined;
+  Jobs: { fromScreen?: keyof RootStackParamList } | undefined;
   Loads: undefined;
   LoadSummary: { loadCode?: string; mode?: "accept" | "journey" } | undefined;
   LoadQR: { loadCode?: string } | undefined;
