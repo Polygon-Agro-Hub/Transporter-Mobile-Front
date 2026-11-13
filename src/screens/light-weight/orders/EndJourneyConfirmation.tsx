@@ -19,6 +19,9 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import environment from "@/environment/environment";
+import { useSelector } from "react-redux";
+import { RootState } from "@/services/store";
+import { ROLES } from "@/constants/user-roles";
 const locationImage = require("@/assets/images/orders/location.webp");
 
 type EndJourneyNavigationProp = StackNavigationProp<
@@ -48,6 +51,10 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
     onOrderComplete,
   } = route.params;
 
+  // Only Light Weight Drivers see payment / price information
+  const jobRole = useSelector((state: RootState) => state.auth.jobRole);
+  const isHeavyDriver = jobRole === ROLES.HEAVY_WEIGHT_DRIVER;
+
   const currentOrderId = processOrderIds[0]; // Single order
   const invoiceNumber = orderData?.processOrder?.invNo || "";
 
@@ -60,6 +67,9 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
   const [currentOrderData, setCurrentOrderData] = useState(orderData ?? null);
 
   useEffect(() => {
+    // Heavy drivers never see the payment card, so no need to fetch payment data
+    if (isHeavyDriver) return;
+
     // If orderData was not passed (e.g. navigated from OrderDetails quick path), fetch it
     if (!currentOrderData && currentOrderId) {
       (async () => {
@@ -71,7 +81,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
             {
               params: { orderIds: currentOrderId, isProcessOrderIds: 1 },
               headers: { Authorization: `Bearer ${token}` },
-            }
+            },
           );
           if (
             res.data.status === "success" &&
@@ -84,7 +94,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
         }
       })();
     }
-  }, []);
+  }, [isHeavyDriver]);
 
   // Currency formatter
   const formatCurrency = (val: string | number | null | undefined): string => {
@@ -108,10 +118,11 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
   // Amount to display for collect-cash case
   const amountDue =
     paymentMethod === "cash"
-      ? cashAmountDue ?? pricing ?? 0
-      : cashAmountDue ?? pricing ?? 0;
+      ? (cashAmountDue ?? pricing ?? 0)
+      : (cashAmountDue ?? pricing ?? 0);
 
-  const showPaymentCard = !!currentOrderData?.processOrder;
+  // Payment card is shown to Light Weight Drivers only
+  const showPaymentCard = !isHeavyDriver && !!currentOrderData?.processOrder;
 
   // Function to open Google Maps with directions
   const openGoogleMapsNavigation = () => {
@@ -123,20 +134,14 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
       return;
     }
 
-    // Construct the Google Maps navigation URL
-    // Using "daddr" for destination address with navigation mode
     const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving&dir_action=navigate`;
-
-    // Alternative URL format that directly opens in Google Maps app
     const urlAlt = `https://maps.google.com/?q=${latitude},${longitude}`;
 
-    // Check if we can open Google Maps
     Linking.canOpenURL(url)
       .then((supported) => {
         if (supported) {
           return Linking.openURL(url);
         } else {
-          // Try alternative URL
           return Linking.openURL(urlAlt);
         }
       })
@@ -206,7 +211,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
       );
 
       return () => subscription.remove();
-    }, [handleBackPress])
+    }, [handleBackPress]),
   );
 
   return (
@@ -224,7 +229,7 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
         contentContainerStyle={{ paddingBottom: 100 }}
         className="flex-1"
       >
-        {/* Icon Section - Reduced size */}
+        {/* Icon Section */}
         <View className="items-center mt-6">
           <Image
             source={locationImage}
@@ -290,11 +295,9 @@ const EndJourneyConfirmation: React.FC<EndJourneyProps> = ({
             Collect digital signature to confirm delivery.
           </Text>
 
-          {/* Payment Status Card */}
+          {/* Payment Status Card - Light Weight Drivers only */}
           {showPaymentCard && (
-            <View
-              className="w-full mb-4 py-4 px-6 rounded-2xl bg-[#FFFDF0] border border-[#F7CA21] flex-row items-center justify-center"
-            >
+            <View className="w-full mb-4 py-4 px-6 rounded-2xl bg-[#FFFDF0] border border-[#F7CA21] flex-row items-center justify-center">
               {isAlreadyPaid ? (
                 <>
                   <Ionicons

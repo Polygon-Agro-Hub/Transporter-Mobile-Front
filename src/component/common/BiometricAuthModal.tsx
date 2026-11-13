@@ -25,7 +25,7 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
   visible,
   status,
   onCancel,
-  biometricLabel = "Fingerprint",
+  biometricLabel = "Face ID / Fingerprint",
   mode = "login",
 }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -85,7 +85,7 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
 
   // Apple Pay spring bounce checkmark animation on success
   useEffect(() => {
-    if (status === "success") {
+    if (visible && status === "success") {
       scaleSuccessAnim.setValue(0);
       Animated.spring(scaleSuccessAnim, {
         toValue: 1,
@@ -94,7 +94,7 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [status]);
+  }, [visible, status]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -302,8 +302,8 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
                 }}
               >
                 {mode === "enable"
-                  ? "Touch the sensor to verify and enable biometrics"
-                  : "Touch the fingerprint sensor or hold your finger to sign in"}
+                  ? "Verify your identity to sign in"
+                  : "Verify your identity to sign in"}
               </Text>
             </>
           )}
@@ -330,7 +330,7 @@ export const BiometricAuthModal: React.FC<BiometricAuthModalProps> = ({
               >
                 {mode === "enable"
                   ? "Biometrics enabled. Signing in..."
-                  : "Welcome back. Signing in..."}
+                  : "Welcome back. Redirecting to Dashboard..."}
               </Text>
             </>
           )}
