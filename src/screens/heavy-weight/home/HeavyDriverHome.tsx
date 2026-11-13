@@ -625,12 +625,19 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
               Click on Close button to end the shift..
             </Text>
           </View>
-          <View className="flex-row items-center justify-between w-full mt-4 px-1 gap-2.5">
+          <View className="flex-row items-center justify-between w-full mt-4 gap-2.5">
             <TouchableOpacity
-              className="flex-1 flex-row items-center justify-center py-4 px-3 rounded-full border border-black bg-[#FFFBEA]"
+              className="flex-1 flex-row items-center justify-center h-[52px] px-2 rounded-full border border-black bg-[#FFFBEA]"
               onPress={handleBackToCentre}
               activeOpacity={0.7}
               disabled={loadingCentre}
+              style={{
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3,
+                elevation: 3,
+              }}
             >
               {loadingCentre ? (
                 <ActivityIndicator size="small" color="#000" />
@@ -643,8 +650,9 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
                     style={{ marginRight: 6 }}
                   />
                   <Text
-                    className="font-bold text-black text-xs md:text-sm"
+                    className="font-bold text-black text-sm"
                     numberOfLines={1}
+                    adjustsFontSizeToFit
                   >
                     Back to Centre
                   </Text>
@@ -653,7 +661,7 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="flex-1 flex-row items-center justify-center py-4 px-3 rounded-full bg-[#F7CA21]"
+              className="flex-1 flex-row items-center justify-center h-[52px] px-2 rounded-full bg-[#F7CA21]"
               onPress={handleEndShiftPress}
               activeOpacity={0.7}
               style={{
@@ -666,13 +674,14 @@ const HeavyDriverHome: React.FC<HeavyDriverHomeProps> = ({ navigation }) => {
             >
               <FontAwesome5
                 name="flag-checkered"
-                size={15}
+                size={16}
                 color="#000"
                 style={{ marginRight: 6 }}
               />
               <Text
-                className="font-bold text-black text-xs md:text-sm"
+                className="font-bold text-black text-sm"
                 numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 End My Shift
               </Text>
