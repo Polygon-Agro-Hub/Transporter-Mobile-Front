@@ -14,6 +14,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import CustomHeader from "@/component/common/CustomHeader";
 
 import { FormData, INITIAL_FORM_DATA, THEME } from "./registration/types";
@@ -622,16 +623,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
 
   const handleLaunchCamera = async () => {
     setImagePickerModalVisible(false);
+    // Allow the modal dismiss transition to complete on iOS before presenting the system camera
+    if (Platform.OS === "ios") {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    }
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
         showAlert("Permission Denied", "Camera permission is required to capture photos.", "error");
         return;
       }
+      const isProfile = activePhotoField === "profilePhoto";
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: activePhotoField === "profilePhoto" ? [1, 1] : [4, 3],
+        allowsEditing: isProfile,
+        aspect: isProfile ? [1, 1] : undefined,
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]?.uri && activePhotoField) {
@@ -655,11 +661,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
 
   const handleLaunchGallery = async () => {
     setImagePickerModalVisible(false);
+    // Allow the modal dismiss transition to complete on iOS before presenting the photo library
+    if (Platform.OS === "ios") {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    }
     try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showAlert("Permission Denied", "Photo library permission is required to select photos.", "error");
+        return;
+      }
+      const isProfile = activePhotoField === "profilePhoto";
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: activePhotoField === "profilePhoto" ? [1, 1] : [4, 3],
+        allowsEditing: isProfile,
+        aspect: isProfile ? [1, 1] : undefined,
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]?.uri && activePhotoField) {
@@ -678,6 +694,36 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       }
     } catch (err) {
       console.warn("Gallery launch error:", err);
+    }
+  };
+
+  const handleLaunchDocument = async () => {
+    setImagePickerModalVisible(false);
+    // Allow the modal dismiss transition to complete on iOS before presenting the document picker
+    if (Platform.OS === "ios") {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    }
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/*"],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets[0]?.uri && activePhotoField) {
+        let uri = result.assets[0].uri;
+        if (!isAllowedImageUri(uri)) {
+          showAlert("Invalid File Format", "Only .jpg, .jpeg, .png, and .heic files are allowed.", "error");
+          return;
+        }
+        try {
+          uri = await optimizeImageForUpload(uri);
+        } catch (sizeErr: any) {
+          showAlert("File Too Large", sizeErr?.message || "Image file size exceeds the 10MB limit.", "error");
+          return;
+        }
+        processImageSelected(activePhotoField, uri);
+      }
+    } catch (err) {
+      console.warn("Document picker error:", err);
     }
   };
 
@@ -748,7 +794,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       style={{ flex: 1, backgroundColor: THEME.bgDark }}
     >
       {/* Top Header with Back Button and Title using CustomHeader without bg color */}
-      <View style={{ paddingTop: Platform.OS === "ios" ? 44 : 8, backgroundColor: "#191919" }}>
+      <View style={{ paddingTop: 0, backgroundColor: "#191919" }}>
         <CustomHeader
           title="Registration Form"
           dark={true}
@@ -1301,6 +1347,25 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               <Ionicons name="images" size={22} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
               <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>
                 Choose from Photo Gallery
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleLaunchDocument}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#2D2D31",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 14,
+                marginBottom: 10,
+              }}
+            >
+              <Ionicons name="folder-open" size={22} color={THEME.primaryYellow} style={{ marginRight: 12 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>
+                Choose from Files / Folders
               </Text>
             </TouchableOpacity>
 
