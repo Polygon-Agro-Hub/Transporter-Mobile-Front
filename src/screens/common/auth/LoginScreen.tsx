@@ -1060,7 +1060,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
 
             {/* Register Today Navigation Link */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => navigation.navigate("RegistrationForm")}
               style={{
@@ -1081,7 +1081,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               >
                 Register Today!
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </LinearGradient>
       </ScrollView>
