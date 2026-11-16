@@ -8,8 +8,9 @@ import {
   TextStyle,
   ActivityIndicator,
 } from "react-native";
-import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { StepProps, THEME, VehicleTypeItem } from "./types";
+import { useFileSize } from "@/utils/useFileSize";
 import environment from "@/environment/environment";
 
 /* ---------- Vehicle types (loaded directly from backend API) ---------- */
@@ -72,38 +73,6 @@ const getFileName = (uri: string): string => {
   }
 };
 
-const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const useFileSize = (uri?: string | null): string => {
-  const [size, setSize] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!uri) {
-      setSize("");
-      return;
-    }
-    (async () => {
-      try {
-        const res = await fetch(uri);
-        const blob = await res.blob();
-        if (!cancelled) setSize(formatBytes(blob.size));
-      } catch {
-        if (!cancelled) setSize("");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [uri]);
-
-  return size;
-};
-
 /* ---------- Label with yellow asterisk ---------- */
 
 const FormLabel: React.FC<{ label: string; required?: boolean; style?: TextStyle }> = ({
@@ -125,9 +94,7 @@ const FormLabel: React.FC<{ label: string; required?: boolean; style?: TextStyle
   >
     {label}
     {required && (
-      <Text style={{ color: THEME.requiredAsterisk, fontSize: 14, lineHeight: 18, fontWeight: "600" }}>
-        {" *"}
-      </Text>
+      <Text style={{ color: THEME.requiredAsterisk }}>{"\u00A0*"}</Text>
     )}
   </Text>
 );
@@ -181,9 +148,7 @@ const CardHeader: React.FC<{
     <Text style={{ color: THEME.textWhite, fontSize: 15, fontWeight: "700" }}>
       {title}
       {required && (
-        <Text style={{ color: THEME.requiredAsterisk, fontSize: 15, fontWeight: "700" }}>
-          {" *"}
-        </Text>
+        <Text style={{ color: THEME.requiredAsterisk }}>{"\u00A0*"}</Text>
       )}
     </Text>
   </View>
@@ -252,7 +217,7 @@ const UploadBox: React.FC<{
                 justifyContent: "center",
               }}
             >
-              <MaterialCommunityIcons name="rotate-left" size={18} color={THEME.primaryYellow} />
+              <Feather name="rotate-ccw" size={16} color={THEME.primaryYellow} />
             </View>
           </View>
         ) : (
@@ -333,12 +298,14 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         <FormLabel label="Vehicle Registration Number" required />
         <TextInput
           value={formData.vehicleNumber}
-          onChangeText={(text) => updateField("vehicleNumber", text.toUpperCase())}
+          onChangeText={(text) =>
+            updateField("vehicleNumber", text.toUpperCase().replace(/^\s+/, ""))
+          }
           placeholder="e.g. CAA-4589"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
           autoCorrect={false}
-          maxLength={15}
+          maxLength={10}
           style={inputStyle(!!errors.vehicleNumber, {
             marginBottom: errors.vehicleNumber ? 4 : 14,
           })}
@@ -348,7 +315,9 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
         <FormLabel label="Confirm Vehicle Registration Number" required />
         <TextInput
           value={formData.confirmVehicleNumber}
-          onChangeText={(text) => updateField("confirmVehicleNumber", text.toUpperCase())}
+          onChangeText={(text) =>
+            updateField("confirmVehicleNumber", text.toUpperCase().replace(/^\s+/, ""))
+          }
           placeholder="Confirm Registration Number"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
@@ -369,8 +338,8 @@ export const Step4VehicleInfo: React.FC<StepProps> = ({
             marginBottom: 10,
           }}
         >
-          <FormLabel label="Vehicle Type" required style={{ marginBottom: 0 }} />
-          <Text style={{ color: THEME.textYellow, fontSize: 11 }}>Select Type</Text>
+          <FormLabel label="Vehicle Type" required style={{ marginBottom: 0, flexShrink: 0 }} />
+          <Text style={{ color: THEME.textYellow, fontSize: 11, flexShrink: 0 }}>Select Type</Text>
         </View>
 
         {/* Vehicle Type Selection Options (only for the selected role) */}

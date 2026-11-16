@@ -18,8 +18,6 @@ import CustomHeader from "@/component/common/CustomHeader";
 
 import { FormData, INITIAL_FORM_DATA, THEME } from "./registration/types";
 import {
-  saveRegistrationDraft,
-  loadRegistrationDraft,
   clearRegistrationDraft,
   isFormDirty,
 } from "./registration/registrationStorage";
@@ -60,9 +58,12 @@ import { Step4VehicleInfo } from "./registration/Step4VehicleInfo";
 import {
   uploadRegistrationDocument,
   submitDriverRegistration,
+  checkExistingRecords,
 } from "@/services/auth/registration.service";
 import { AlertModal } from "@/component/common/AlertModal";
 import { optimizeImageForUpload } from "@/utils/imageOptimizer";
+import { linkRemoteFileSize } from "@/utils/useFileSize";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type RegistrationFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -74,10 +75,12 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const [submitProgressText, setSubmitProgressText] = useState("");
   const [isSubmitConfirmModalVisible, setIsSubmitConfirmModalVisible] = useState(false);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
@@ -105,25 +108,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Load saved draft from SQLite on mount
+  // Clear any existing draft on mount so registration always starts fresh
   useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const saved = await loadRegistrationDraft();
-        if (saved && isMounted) {
-          setFormData(saved.formData);
-          if (saved.currentStep >= 1 && saved.currentStep <= 4) {
-            setCurrentStep(saved.currentStep);
-          }
-        }
-      } catch (err) {
-        console.warn("Error loading SQLite registration draft:", err);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
+    clearRegistrationDraft().catch(() => {});
+    setFormData(INITIAL_FORM_DATA);
+    setCurrentStep(1);
+    setErrors({});
   }, []);
 
   // Handle hardware back press on Android
@@ -158,6 +148,41 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           const digits = nextValue.replace(/[^0-9]/g, "");
           nextValue = digits.replace(/^0+/, "").slice(0, 9);
         }
+        // Sanitize first name & last name: no leading spaces, only letters and spaces between words
+        if ((field === "firstName" || field === "lastName") && typeof nextValue === "string") {
+          nextValue = nextValue
+            .replace(/[^A-Za-z ]/g, "")
+            .replace(/^\s+/, "")
+            .replace(/  +/g, " ");
+        }
+        // Sanitize houseNumber & streetName: no leading spaces
+        if ((field === "houseNumber" || field === "streetName") && typeof nextValue === "string") {
+          nextValue = nextValue.replace(/^\s+/, "");
+        }
+        // Sanitize bankAccountHolder: no leading spaces, only letters and spaces between words
+        if (field === "bankAccountHolder" && typeof nextValue === "string") {
+          nextValue = nextValue
+            .replace(/[^A-Za-z ]/g, "")
+            .replace(/^\s+/, "")
+            .replace(/  +/g, " ");
+        }
+        // Sanitize license and insurance fields: no leading spaces
+        if (
+          (field === "licenseNumber" ||
+            field === "confirmLicenseNumber" ||
+            field === "insurancePolicyNumber" ||
+            field === "confirmInsurancePolicyNumber") &&
+          typeof nextValue === "string"
+        ) {
+          nextValue = nextValue.replace(/^\s+/, "");
+        }
+        // Sanitize vehicle fields: no leading spaces
+        if (
+          (field === "vehicleNumber" || field === "confirmVehicleNumber") &&
+          typeof nextValue === "string"
+        ) {
+          nextValue = nextValue.replace(/^\s+/, "");
+        }
         // Auto uppercase for license, vehicle numbers, and NIC
         if (
           (field === "licenseNumber" ||
@@ -171,8 +196,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         }
         (nextForm as any)[field] = nextValue;
       });
-
-      saveRegistrationDraft(currentStep, nextForm);
 
       // Live instance-by-instance inline validation for updated fields
       setErrors((prevErrors) => {
@@ -221,7 +244,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           : existing.filter((i: string) => i !== item)
         : [...existing, item];
       const next = { ...prev, [field]: updated };
-      saveRegistrationDraft(currentStep, next);
       return next;
     });
   };
@@ -238,7 +260,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     const pErr = getPhone1Error(formData.phone1);
     if (pErr) newErrors.phone1 = pErr;
 
-    const p2Err = getPhone2Error(formData.phone2);
+    const p2Err = getPhone2Error(formData.phone2, formData.phone1);
     if (p2Err) newErrors.phone2 = p2Err;
 
     const nicErr = getNICError(formData.nic);
@@ -328,7 +350,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   };
 
   // Step 4: Vehicle Info Validation & Open Submit Confirmation Modal
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     const newErrors: Record<string, string> = {};
     const vehErr = getVehicleNumberError(formData.vehicleNumber);
     if (vehErr) newErrors.vehicleNumber = vehErr;
@@ -369,6 +391,44 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       return;
     }
 
+    // Check DB for existing records
+    setIsCheckingDuplicates(true);
+    try {
+      const duplicates = await checkExistingRecords({
+        phone1: formData.phone1,
+        phone2: formData.phone2,
+        email: formData.email,
+        nic: formData.nic,
+        licenseNumber: formData.licenseNumber,
+        insurancePolicyNumber: formData.insurancePolicyNumber,
+        vehicleNumber: formData.vehicleNumber,
+      });
+
+      if (Object.keys(duplicates).length > 0) {
+        setErrors((prev) => ({ ...prev, ...duplicates }));
+        const duplicateLabels = Object.keys(duplicates).map((k) => {
+          if (k === "vehicleNumber") return "Vehicle Registration Number";
+          if (k === "licenseNumber") return "Driving License ID";
+          if (k === "insurancePolicyNumber") return "Insurance Policy Number";
+          if (k === "phone1") return "Phone Number 1";
+          if (k === "phone2") return "Phone Number 2";
+          if (k === "email") return "Email Address";
+          if (k === "nic") return "National Identity Card (NIC)";
+          return k;
+        });
+        showAlert(
+          "Already Registered",
+          `${duplicateLabels.join(", ")} already registered. Please check and enter unique details.`,
+          "error"
+        );
+        return;
+      }
+    } catch (err) {
+      console.warn("Error checking duplicates for Step 4:", err);
+    } finally {
+      setIsCheckingDuplicates(false);
+    }
+
     // Validation passed -> Open confirmation popup
     setIsSubmitConfirmModalVisible(true);
   };
@@ -390,6 +450,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
       setIsSuccessModalVisible(true);
     } catch (err: any) {
       setIsSubmitting(false);
+      if (err?.response?.data?.duplicates) {
+        setErrors((prev) => ({ ...prev, ...err.response.data.duplicates }));
+      }
       const errorMessage =
         err?.response?.data?.message ||
         err?.message ||
@@ -399,24 +462,55 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
   };
 
   // Navigation between steps
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (currentStep === 1) {
-      if (validateStep1()) {
-        const nextStep = 2;
-        setCurrentStep(nextStep);
-        saveRegistrationDraft(nextStep, formData);
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
-      } else {
+      if (!validateStep1()) {
         showAlert(
-          "Required Fields",
+          "Check Your Details",
           "Please complete all mandatory credentials and fix any invalid fields before continuing."
         );
+        return;
       }
+
+      // Check DB for existing records (Phone 1, Phone 2, Email, NIC)
+      setIsCheckingDuplicates(true);
+      try {
+        const duplicates = await checkExistingRecords({
+          phone1: formData.phone1,
+          phone2: formData.phone2,
+          email: formData.email,
+          nic: formData.nic,
+        });
+
+        if (Object.keys(duplicates).length > 0) {
+          setErrors((prev) => ({ ...prev, ...duplicates }));
+          const duplicateLabels = Object.keys(duplicates).map((k) => {
+            if (k === "phone1") return "Phone Number 1";
+            if (k === "phone2") return "Phone Number 2";
+            if (k === "email") return "Email Address";
+            if (k === "nic") return "National Identity Card (NIC)";
+            return k;
+          });
+          showAlert(
+            "Already Registered",
+            `${duplicateLabels.join(", ")} already registered. Please check and enter unique details.`,
+            "error"
+          );
+          return;
+        }
+      } catch (err) {
+        console.warn("Error checking duplicates for Step 1:", err);
+      } finally {
+        setIsCheckingDuplicates(false);
+      }
+
+      const nextStep = 2;
+      setCurrentStep(nextStep);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else if (currentStep === 2) {
       if (validateStep2()) {
         const nextStep = 3;
         setCurrentStep(nextStep);
-        saveRegistrationDraft(nextStep, formData);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         showAlert(
@@ -425,17 +519,45 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
         );
       }
     } else if (currentStep === 3) {
-      if (validateStep3()) {
-        const nextStep = 4;
-        setCurrentStep(nextStep);
-        saveRegistrationDraft(nextStep, formData);
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
-      } else {
+      if (!validateStep3()) {
         showAlert(
           "Required Fields",
           "Please fill in your driving license and insurance information, and upload all required documents."
         );
+        return;
       }
+
+      // Check DB for existing records (Driving License ID, Insurance Policy Number)
+      setIsCheckingDuplicates(true);
+      try {
+        const duplicates = await checkExistingRecords({
+          licenseNumber: formData.licenseNumber,
+          insurancePolicyNumber: formData.insurancePolicyNumber,
+        });
+
+        if (Object.keys(duplicates).length > 0) {
+          setErrors((prev) => ({ ...prev, ...duplicates }));
+          const duplicateLabels = Object.keys(duplicates).map((k) => {
+            if (k === "licenseNumber") return "Driving License ID";
+            if (k === "insurancePolicyNumber") return "Insurance Policy Number";
+            return k;
+          });
+          showAlert(
+            "Already Registered",
+            `${duplicateLabels.join(", ")} already registered. Please check and enter unique details.`,
+            "error"
+          );
+          return;
+        }
+      } catch (err) {
+        console.warn("Error checking duplicates for Step 3:", err);
+      } finally {
+        setIsCheckingDuplicates(false);
+      }
+
+      const nextStep = 4;
+      setCurrentStep(nextStep);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else if (currentStep === 4) {
       handleFinalSubmit();
     }
@@ -445,7 +567,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     if (currentStep > 1) {
       const prevStep = currentStep - 1;
       setCurrentStep(prevStep);
-      saveRegistrationDraft(prevStep, formData);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       // Step 1: Check if user has entered data before leaving
@@ -485,6 +606,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
     uploadRegistrationDocument(uri, category)
       .then((r2Url) => {
         if (r2Url) {
+          linkRemoteFileSize(uri, r2Url);
           updateField(field, r2Url);
         }
       })
@@ -811,7 +933,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleNextStep}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isCheckingDuplicates}
             style={{
               backgroundColor: THEME.primaryYellow,
               borderRadius: 999,
@@ -826,11 +948,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               elevation: 4,
             }}
           >
-            {isSubmitting ? (
+            {isSubmitting || isCheckingDuplicates ? (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <ActivityIndicator color="#0E0E0E" size="small" style={{ marginRight: 8 }} />
                 <Text style={{ color: "#0E0E0E", fontSize: 14, fontWeight: "700" }}>
-                  {submitProgressText || "Submitting..."}
+                  {isSubmitting
+                    ? submitProgressText || "Submitting..."
+                    : "Checking details..."}
                 </Text>
               </View>
             ) : (
@@ -960,7 +1084,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                 }}
               >
                 <Text style={{ color: "#E5E7EB", fontSize: 14, fontWeight: "700" }}>
-                  Cancel
+                  Stay Here
                 </Text>
               </TouchableOpacity>
 
@@ -977,7 +1101,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
                 }}
               >
                 <Text style={{ color: "#0E0E0E", fontSize: 14, fontWeight: "800" }}>
-                  Leave
+                  Yes, Go Back
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1004,7 +1128,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             style={{
               backgroundColor: "#232324",
               borderRadius: 24,
-              paddingTop: 32,
+              paddingTop: 36,
               paddingBottom: 24,
               paddingHorizontal: 20,
               alignItems: "center",
@@ -1017,29 +1141,32 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setIsSubmitConfirmModalVisible(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={{
                 position: "absolute",
                 top: 14,
                 right: 14,
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 34,
+                height: 34,
+                borderRadius: 17,
                 backgroundColor: "rgba(255, 255, 255, 0.18)",
                 alignItems: "center",
                 justifyContent: "center",
                 zIndex: 10,
               }}
             >
-              <Ionicons name="close" size={20} color="#FFFFFF" />
+              <Ionicons name="close" size={18} color="#FFFFFF" />
             </TouchableOpacity>
 
             <Text
               style={{
                 color: "#FFFFFF",
-                fontSize: 19,
+                fontSize: 18,
                 fontWeight: "800",
                 textAlign: "center",
+                lineHeight: 25,
                 marginBottom: 10,
+                paddingHorizontal: 36,
               }}
             >
               Are you ready to submit?
@@ -1113,12 +1240,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
             justifyContent: "flex-end",
           }}
         >
-          <View
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
             style={{
               backgroundColor: "#202023",
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
-              padding: 24,
+              paddingTop: 24,
+              paddingHorizontal: 24,
+              paddingBottom: Math.max(insets.bottom, Platform.OS === "android" ? 32 : 16) + 16,
               borderWidth: 1,
               borderColor: THEME.cardBorder,
             }}
@@ -1198,16 +1329,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ navigation }) => {
               activeOpacity={0.8}
               onPress={() => setImagePickerModalVisible(false)}
               style={{
+                backgroundColor: "#2A2A2E",
                 paddingVertical: 14,
                 alignItems: "center",
-                marginTop: 4,
+                borderRadius: 14,
+                marginTop: 6,
+                borderWidth: 1,
+                borderColor: "#3A3A40",
               }}
             >
-              <Text style={{ color: THEME.textMuted, fontSize: 15, fontWeight: "600" }}>
+              <Text style={{ color: "#E5E7EB", fontSize: 15, fontWeight: "700" }}>
                 Cancel
               </Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
 
