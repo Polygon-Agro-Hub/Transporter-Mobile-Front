@@ -111,7 +111,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="font-bold text-lg mb-4 text-center">
+          <Text className="font-bold text-lg mb-4 text-center px-8">
             {getModalTitle()}
           </Text>
 
