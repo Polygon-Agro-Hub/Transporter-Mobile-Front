@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { THEME } from "@/screens/common/auth/registration/types";
@@ -29,6 +29,11 @@ export function SelectModal<T>({
 }: SelectModalProps<T>) {
   const [query, setQuery] = useState("");
 
+  // Reset search input each time the dropdown is closed or reopened
+  useEffect(() => {
+    setQuery("");
+  }, [visible]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!searchText || !q) return data;
@@ -55,6 +60,18 @@ export function SelectModal<T>({
           padding: 24,
         }}
       >
+        {/* Backdrop touch area to close when tapping outside */}
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
         <View
           style={{
             backgroundColor: "#202023",
@@ -78,31 +95,49 @@ export function SelectModal<T>({
             }}
           >
             <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{title}</Text>
-            <TouchableOpacity onPress={handleClose}>
+            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={22} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
           {/* Search */}
           {searchText && (
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={searchPlaceholder}
-              placeholderTextColor={THEME.textSub}
-              autoCorrect={false}
-              style={{
-                backgroundColor: THEME.inputBg,
-                borderRadius: 25,
-                borderWidth: 1,
-                borderColor: THEME.inputBorder,
-                color: THEME.textWhite,
-                fontSize: 14,
-                height: 40,
-                paddingHorizontal: 16,
-                marginBottom: 8,
-              }}
-            />
+            <View style={{ position: "relative", justifyContent: "center", marginBottom: 8 }}>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder={searchPlaceholder}
+                placeholderTextColor={THEME.textSub}
+                autoCorrect={false}
+                style={{
+                  backgroundColor: THEME.inputBg,
+                  borderRadius: 25,
+                  borderWidth: 1,
+                  borderColor: THEME.inputBorder,
+                  color: THEME.textWhite,
+                  fontSize: 14,
+                  height: 40,
+                  paddingLeft: 16,
+                  paddingRight: query ? 38 : 16,
+                }}
+              />
+              {!!query && (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setQuery("")}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    height: 40,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           {/* List */}

@@ -62,9 +62,7 @@ const FormLabel: React.FC<{ label: string; required?: boolean; style?: TextStyle
   >
     {label}
     {required && (
-      <Text style={{ color: THEME.requiredAsterisk, fontSize: 14, lineHeight: 18, fontWeight: "600" }}>
-        {" *"}
-      </Text>
+      <Text style={{ color: THEME.requiredAsterisk }}>{"\u00A0*"}</Text>
     )}
   </Text>
 );
@@ -181,10 +179,6 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
     }
   }, [formData.district, formData.province, derivedProvince]);
 
-  // Some banks in branches.json have no branch list (e.g. finance companies).
-  // For those, the branch becomes a free-text field.
-  const bankHasNoBranches = !!selectedBank && branchOptions.length === 0;
-
   const handleSelectDistrict = (item: District) => {
     if (updateFields) {
       updateFields({
@@ -222,7 +216,7 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <FormLabel label="House / Plot Number" required />
         <TextInput
           value={formData.houseNumber}
-          onChangeText={(text) => updateField("houseNumber", text)}
+          onChangeText={(text) => updateField("houseNumber", text.replace(/^\s+/, ""))}
           placeholder="e.g. 142/B"
           placeholderTextColor={THEME.textSub}
           style={inputStyle(!!errors.houseNumber, { marginBottom: errors.houseNumber ? 4 : 14 })}
@@ -232,7 +226,7 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <FormLabel label="Street Name" required />
         <TextInput
           value={formData.streetName}
-          onChangeText={(text) => updateField("streetName", text)}
+          onChangeText={(text) => updateField("streetName", text.replace(/^\s+/, ""))}
           placeholder="e.g. Temple Road"
           placeholderTextColor={THEME.textSub}
           style={inputStyle(!!errors.streetName, { marginBottom: errors.streetName ? 4 : 14 })}
@@ -316,9 +310,16 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <FormLabel label="Account Holder's Name" required />
         <TextInput
           value={formData.bankAccountHolder}
-          onChangeText={(text) => updateField("bankAccountHolder", text)}
+          onChangeText={(text) => {
+            const sanitized = text
+              .replace(/[^A-Za-z ]/g, "")
+              .replace(/^\s+/, "")
+              .replace(/  +/g, " ");
+            updateField("bankAccountHolder", sanitized);
+          }}
           placeholder="As shown on bank passbook"
           placeholderTextColor={THEME.textSub}
+          autoCorrect={false}
           style={inputStyle(!!errors.bankAccountHolder, {
             marginBottom: errors.bankAccountHolder ? 4 : 14,
           })}
@@ -363,24 +364,14 @@ export const Step2ResidentialBank: React.FC<StepProps> = ({
         <ErrorText message={errors.bankName} />
 
         <FormLabel label="Branch Name" required />
-        {bankHasNoBranches ? (
-          <TextInput
-            value={formData.bankBranch}
-            onChangeText={(text) => updateField("bankBranch", text)}
-            placeholder="Enter branch name"
-            placeholderTextColor={THEME.textSub}
-            style={inputStyle(!!errors.bankBranch)}
-          />
-        ) : (
-          <SelectButton
-            value={formData.bankBranch}
-            placeholder={selectedBank ? "Select Branch" : "Select Bank first"}
-            hasError={!!errors.bankBranch}
-            disabled={!selectedBank}
-            onPress={() => setBranchModalVisible(true)}
-            spaced={false}
-          />
-        )}
+        <SelectButton
+          value={formData.bankBranch}
+          placeholder={selectedBank ? "Select Branch" : "Select Bank first"}
+          hasError={!!errors.bankBranch}
+          disabled={!selectedBank}
+          onPress={() => setBranchModalVisible(true)}
+          spaced={false}
+        />
         <ErrorText message={errors.bankBranch} spaced={false} />
       </View>
 

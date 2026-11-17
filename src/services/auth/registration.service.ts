@@ -224,7 +224,33 @@ export const submitDriverRegistration = async (
   throw new Error(response.data?.message || "Registration failed");
 };
 
+/**
+ * Check database for existing records (e.g. phone1, phone2, email, nic, licenseNumber, insurancePolicyNumber, vehicleNumber).
+ * Returns a map of fieldName -> "Already registered" if any field already exists in the database.
+ */
+export const checkExistingRecords = async (
+  fields: Record<string, string | undefined | null>
+): Promise<Record<string, string>> => {
+  try {
+    const apiUrl = `${getBaseApiUrl()}api/auth/check-existing`;
+    const response = await axios.post(apiUrl, fields, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 10000,
+    });
+    if (response.data && response.data.success && response.data.duplicates) {
+      return response.data.duplicates;
+    }
+    return {};
+  } catch (err: any) {
+    console.warn("[checkExistingRecords] Error checking existing records:", err?.message || err);
+    return {};
+  }
+};
+
 export default {
   uploadRegistrationDocument,
   submitDriverRegistration,
+  checkExistingRecords,
 };

@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   Image,
   TextStyle,
-  Modal,
   Platform,
 } from "react-native";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import { StepProps, THEME } from "./types";
+import { useFileSize } from "@/utils/useFileSize";
+import { CustomCalendarModal } from "@/component/common/CustomCalendarModal";
 
 /* ---------- Date helpers ---------- */
 
@@ -24,22 +24,6 @@ const getMinExpiryDate = (): Date => {
   return d;
 };
 
-const formatDate = (date: Date): string => {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}/${date.getFullYear()}`;
-};
-
-const parseDate = (value?: string): Date | null => {
-  if (!value) return null;
-  const parts = value.split("/");
-  if (parts.length !== 3) return null;
-  const [dd, mm, yyyy] = parts.map(Number);
-  if (!dd || !mm || !yyyy) return null;
-  const d = new Date(yyyy, mm - 1, dd);
-  return isNaN(d.getTime()) ? null : d;
-};
-
 /* ---------- File helpers ---------- */
 
 const getFileName = (uri: string): string => {
@@ -49,38 +33,6 @@ const getFileName = (uri: string): string => {
   } catch {
     return "image.jpg";
   }
-};
-
-const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const useFileSize = (uri?: string | null): string => {
-  const [size, setSize] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!uri) {
-      setSize("");
-      return;
-    }
-    (async () => {
-      try {
-        const res = await fetch(uri);
-        const blob = await res.blob();
-        if (!cancelled) setSize(formatBytes(blob.size));
-      } catch {
-        if (!cancelled) setSize("");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [uri]);
-
-  return size;
 };
 
 /* ---------- Label with yellow asterisk (THEME.requiredAsterisk) ---------- */
@@ -104,9 +56,7 @@ const FormLabel: React.FC<{ label: string; required?: boolean; style?: TextStyle
   >
     {label}
     {required && (
-      <Text style={{ color: THEME.requiredAsterisk, fontSize: 14, lineHeight: 18, fontWeight: "600" }}>
-        {" *"}
-      </Text>
+      <Text style={{ color: THEME.requiredAsterisk }}>{"\u00A0*"}</Text>
     )}
   </Text>
 );
@@ -252,37 +202,11 @@ const ExpiryDateField: React.FC<{
   const [show, setShow] = useState(false);
   const minDate = useMemo(() => getMinExpiryDate(), []);
 
-  const selected = useMemo(() => {
-    const parsed = parseDate(value);
-    return parsed && parsed >= minDate ? parsed : minDate;
-  }, [value, minDate]);
-
-  const [tempDate, setTempDate] = useState<Date>(selected);
-
-  const handleChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === "android") {
-      setShow(false);
-      if (event.type === "set" && date) onChange(formatDate(date));
-      return;
-    }
-    if (date) setTempDate(date);
-  };
-
-  const openPicker = () => {
-    setTempDate(selected);
-    setShow(true);
-  };
-
-  const confirmIOS = () => {
-    onChange(formatDate(tempDate < minDate ? minDate : tempDate));
-    setShow(false);
-  };
-
   return (
     <>
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={openPicker}
+        onPress={() => setShow(true)}
         style={{
           ...inputStyle(hasError, { marginBottom: hasError ? 4 : 14 }),
           flexDirection: "row",
@@ -296,55 +220,14 @@ const ExpiryDateField: React.FC<{
         <Feather name="calendar" size={18} color={THEME.primaryYellow} />
       </TouchableOpacity>
 
-      {show && Platform.OS === "android" && (
-        <DateTimePicker
-          value={selected}
-          mode="date"
-          display="calendar"
-          minimumDate={minDate}
-          onChange={handleChange}
-        />
-      )}
-
-      {Platform.OS === "ios" && (
-        <Modal visible={show} transparent animationType="slide" onRequestClose={() => setShow(false)}>
-          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-            <View
-              style={{
-                backgroundColor: THEME.cardBg,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                padding: 16,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
-              >
-                <TouchableOpacity onPress={() => setShow(false)}>
-                  <Text style={{ color: THEME.textSub, fontSize: 15, fontWeight: "600" }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={confirmIOS}>
-                  <Text style={{ color: THEME.primaryYellow, fontSize: 15, fontWeight: "700" }}>
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="inline"
-                themeVariant="dark"
-                minimumDate={minDate}
-                onChange={handleChange}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
+      <CustomCalendarModal
+        visible={show}
+        title="Insurance Expiry Date"
+        selectedDate={value}
+        minDate={minDate}
+        onSelectDate={onChange}
+        onClose={() => setShow(false)}
+      />
     </>
   );
 };
@@ -376,12 +259,12 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
         <FormLabel label="Driving License ID" required />
         <TextInput
           value={formData.licenseNumber}
-          onChangeText={(text) => updateField("licenseNumber", text.toUpperCase())}
+          onChangeText={(text) => updateField("licenseNumber", text.toUpperCase().replace(/^\s+/, ""))}
           placeholder="e.g. B8849201"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
           autoCorrect={false}
-          maxLength={9}
+          maxLength={10}
           style={inputStyle(!!errors.licenseNumber, {
             marginBottom: errors.licenseNumber ? 4 : 14,
           })}
@@ -391,12 +274,12 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
         <FormLabel label="Confirm Driving License ID" required />
         <TextInput
           value={formData.confirmLicenseNumber}
-          onChangeText={(text) => updateField("confirmLicenseNumber", text.toUpperCase())}
+          onChangeText={(text) => updateField("confirmLicenseNumber", text.toUpperCase().replace(/^\s+/, ""))}
           placeholder="Re-enter license ID"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
           autoCorrect={false}
-          maxLength={9}
+          maxLength={10}
           style={inputStyle(!!errors.confirmLicenseNumber, {
             marginBottom: errors.confirmLicenseNumber ? 4 : 14,
           })}
@@ -439,7 +322,9 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
         <FormLabel label="Insurance Policy Number" required />
         <TextInput
           value={formData.insurancePolicyNumber}
-          onChangeText={(text) => updateField("insurancePolicyNumber", text.toUpperCase())}
+          onChangeText={(text) =>
+            updateField("insurancePolicyNumber", text.toUpperCase().replace(/^\s+/, ""))
+          }
           placeholder="e.g. POL-9948201-A"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"
@@ -454,7 +339,9 @@ export const Step3LicenseInsurance: React.FC<StepProps> = ({
         <FormLabel label="Confirm Insurance Number" required />
         <TextInput
           value={formData.confirmInsurancePolicyNumber}
-          onChangeText={(text) => updateField("confirmInsurancePolicyNumber", text.toUpperCase())}
+          onChangeText={(text) =>
+            updateField("confirmInsurancePolicyNumber", text.toUpperCase().replace(/^\s+/, ""))
+          }
           placeholder="Re-enter insurance policy number"
           placeholderTextColor={THEME.textSub}
           autoCapitalize="characters"

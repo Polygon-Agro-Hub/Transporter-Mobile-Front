@@ -545,13 +545,21 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          First Name (in English) <Text style={{ color: "#F7CA21" }}>*</Text>
+          First Name (in English)<Text style={{ color: "#F7CA21" }}>{"\u00A0*"}</Text>
         </Text>
         <TextInput
           value={formData.firstName}
-          onChangeText={(text) => updateField("firstName", text)}
+          onChangeText={(text) => {
+            // Block space as the first character, and block special characters & numbers
+            const sanitized = text
+              .replace(/[^A-Za-z ]/g, "")
+              .replace(/^\s+/, "")
+              .replace(/  +/g, " ");
+            updateField("firstName", sanitized);
+          }}
           placeholder="e.g. Kasun"
           placeholderTextColor={THEME.textSub}
+          autoCorrect={false}
           style={{
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
@@ -587,13 +595,21 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          Last Name (in English) <Text style={{ color: "#F7CA21" }}>*</Text>
+          Last Name (in English)<Text style={{ color: "#F7CA21" }}>{"\u00A0*"}</Text>
         </Text>
         <TextInput
           value={formData.lastName}
-          onChangeText={(text) => updateField("lastName", text)}
+          onChangeText={(text) => {
+            // Block space as the first character, and block special characters & numbers
+            const sanitized = text
+              .replace(/[^A-Za-z ]/g, "")
+              .replace(/^\s+/, "")
+              .replace(/  +/g, " ");
+            updateField("lastName", sanitized);
+          }}
           placeholder="e.g. Perera"
           placeholderTextColor={THEME.textSub}
+          autoCorrect={false}
           style={{
             backgroundColor: THEME.inputBg,
             borderRadius: 25,
@@ -628,14 +644,15 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600" }}>
-            Phone Number - 1 <Text style={{ color: "#F7CA21" }}>*</Text>
+          <Text style={{ color: "#E5E7EB", fontSize: 12, fontWeight: "600", flexShrink: 0 }}>
+            Phone Number - 1<Text style={{ color: "#F7CA21" }}>{"\u00A0*"}</Text>
           </Text>
           <Text
             style={{
               color: THEME.primaryYellow,
               fontSize: 11,
               fontWeight: "600",
+              flexShrink: 0,
             }}
           >
             Primary / Call
@@ -789,7 +806,7 @@ export const Step1PersonalInfo: React.FC<StepProps> = ({
             marginBottom: 6,
           }}
         >
-          National Identity Card (NIC) <Text style={{ color: "#F7CA21" }}>*</Text>
+          National Identity Card (NIC)<Text style={{ color: "#F7CA21" }}>{"\u00A0*"}</Text>
         </Text>
         <TextInput
           value={formData.nic}
