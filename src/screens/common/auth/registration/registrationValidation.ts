@@ -20,7 +20,7 @@ export const isAllowedImageUri = (uri: string | null | undefined): boolean => {
 /**
  * Driving License ID Validation:
  * - Minimum length: 7 characters
- * - Maximum length: 9 characters (depending on licence series)
+ * - Maximum length: 10 characters (depending on licence series)
  * - Characters: Alphanumeric
  * - Letters: English uppercase letters
  * - Special characters: Allow
@@ -28,11 +28,14 @@ export const isAllowedImageUri = (uri: string | null | undefined): boolean => {
  * Examples supported:
  *   - Older format: B1234567 (1 letter + 7 digits = 8 chars)
  *   - Documented format: A123456 (1 letter + 6 digits = 7 chars)
- *   - Newer series: 85-12345 (8 chars) / 85-123456 (9 chars)
+ *   - Newer series: 85-12345 (8 chars) / 85-123456 (9 chars) / 10-char series
  */
 export const getDrivingLicenseError = (value: string | undefined | null): string => {
   if (!value || value.trim().length === 0) {
     return "Driving license ID is required";
+  }
+  if (/^\s/.test(value)) {
+    return "Driving license ID cannot start with a space";
   }
   if (/\s/.test(value)) {
     return "Spaces are not allowed";
@@ -40,8 +43,8 @@ export const getDrivingLicenseError = (value: string | undefined | null): string
   if (value.length < 7) {
     return "Minimum length is 7 characters";
   }
-  if (value.length > 9) {
-    return "Maximum length is 9 characters";
+  if (value.length > 10) {
+    return "Maximum length is 10 characters";
   }
   if (/[a-z]/.test(value)) {
     return "Only English uppercase letters are allowed";
@@ -55,6 +58,9 @@ export const getConfirmDrivingLicenseError = (
 ): string => {
   if (!confirmVal || confirmVal.trim().length === 0) {
     return "Confirm Driving license ID is required";
+  }
+  if (/^\s/.test(confirmVal)) {
+    return "Confirm Driving license ID cannot start with a space";
   }
   if ((confirmVal || "").trim().toUpperCase() !== (licenseVal || "").trim().toUpperCase()) {
     return "Driving license IDs do not match";
@@ -106,12 +112,20 @@ export const getConfirmVehicleNumberError = (
  * Personal Info Validations (Step 1)
  */
 export const getFirstNameError = (value: string | undefined | null): string => {
-  if (!value || value.trim().length === 0) return "First name is required";
+  if (!value || value.length === 0) return "First name is required";
+  if (/^\s/.test(value)) return "First name cannot start with a space";
+  if (/[0-9]/.test(value)) return "Numbers are not allowed in first name";
+  if (/[^A-Za-z ]/.test(value)) return "Only letters and spaces between words are allowed";
+  if (value.trim().length === 0) return "First name is required";
   return "";
 };
 
 export const getLastNameError = (value: string | undefined | null): string => {
-  if (!value || value.trim().length === 0) return "Last name is required";
+  if (!value || value.length === 0) return "Last name is required";
+  if (/^\s/.test(value)) return "Last name cannot start with a space";
+  if (/[0-9]/.test(value)) return "Numbers are not allowed in last name";
+  if (/[^A-Za-z ]/.test(value)) return "Only letters and spaces between words are allowed";
+  if (value.trim().length === 0) return "Last name is required";
   return "";
 };
 
@@ -123,7 +137,7 @@ export const getLastNameError = (value: string | undefined | null): string => {
 export const getPhone1Error = (value: string | undefined | null): string => {
   const clean = (value || "").replace(/\s/g, "").replace(/^0+/, "");
   if (!clean) {
-    return "Primary phone number is required";
+    return "Phone Number 1 is required";
   }
   if (!clean.startsWith("7")) {
     return "Phone number must start with 7 (e.g. 7XXXXXXXX)";
@@ -137,7 +151,10 @@ export const getPhone1Error = (value: string | undefined | null): string => {
   return "";
 };
 
-export const getPhone2Error = (value: string | undefined | null): string => {
+export const getPhone2Error = (
+  value: string | undefined | null,
+  phone1Val?: string | undefined | null
+): string => {
   const clean = (value || "").replace(/\s/g, "").replace(/^0+/, "");
   if (!clean) {
     return ""; // Optional
@@ -150,6 +167,10 @@ export const getPhone2Error = (value: string | undefined | null): string => {
   }
   if (!/^7\d{8}$/.test(clean)) {
     return "Please enter a valid 9-digit phone number starting with 7";
+  }
+  const cleanPhone1 = (phone1Val || "").replace(/\s/g, "").replace(/^0+/, "");
+  if (cleanPhone1 && clean === cleanPhone1) {
+    return "Phone Number 2 cannot be the same as Phone Number 1";
   }
   return "";
 };
@@ -169,12 +190,16 @@ export const getNICError = (value: string | undefined | null): string => {
  * Residential & Bank Validations (Step 2)
  */
 export const getHouseNumberError = (value: string | undefined | null): string => {
-  if (!value || value.trim().length === 0) return "House / Plot Number is required";
+  if (!value || value.length === 0) return "House / Plot Number is required";
+  if (/^\s/.test(value)) return "House / Plot Number cannot start with a space";
+  if (value.trim().length === 0) return "House / Plot Number is required";
   return "";
 };
 
 export const getStreetNameError = (value: string | undefined | null): string => {
-  if (!value || value.trim().length === 0) return "Street Name is required";
+  if (!value || value.length === 0) return "Street Name is required";
+  if (/^\s/.test(value)) return "Street Name cannot start with a space";
+  if (value.trim().length === 0) return "Street Name is required";
   return "";
 };
 
@@ -184,7 +209,11 @@ export const getDistrictError = (value: string | undefined | null): string => {
 };
 
 export const getBankAccountHolderError = (value: string | undefined | null): string => {
-  if (!value || value.trim().length === 0) return "Account holder name is required";
+  if (!value || value.length === 0) return "Account holder's name is required";
+  if (/^\s/.test(value)) return "Account holder's name cannot start with a space";
+  if (/[0-9]/.test(value)) return "Numbers are not allowed in account holder's name";
+  if (/[^A-Za-z ]/.test(value)) return "Only letters and spaces between words are allowed";
+  if (value.trim().length === 0) return "Account holder's name is required";
   return "";
 };
 
@@ -224,6 +253,9 @@ export const getInsurancePolicyNumberError = (value: string | undefined | null):
   if (!value || value.trim().length === 0) {
     return "Insurance Policy Number is required.";
   }
+  if (/^\s/.test(value)) {
+    return "Insurance policy number cannot start with a space";
+  }
   if (/\s/.test(value)) {
     return "Spaces are not allowed";
   }
@@ -244,6 +276,7 @@ export const getConfirmInsurancePolicyNumberError = (
   policyVal: string | undefined | null
 ): string => {
   if (!confirmVal || confirmVal.trim().length === 0) return "Confirm Insurance Number is required";
+  if (/^\s/.test(confirmVal)) return "Confirm Insurance number cannot start with a space";
   if ((confirmVal || "").trim().toUpperCase() !== (policyVal || "").trim().toUpperCase()) {
     return "Insurance policy numbers do not match";
   }
@@ -310,9 +343,12 @@ export const validateFieldLive = (
       break;
     case "phone1":
       fieldError = getPhone1Error(value);
+      if (allData.phone2) {
+        relatedUpdates.phone2 = getPhone2Error(allData.phone2, value);
+      }
       break;
     case "phone2":
-      fieldError = getPhone2Error(value);
+      fieldError = getPhone2Error(value, allData.phone1);
       break;
     case "nic":
       fieldError = getNICError(value);

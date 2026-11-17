@@ -52,83 +52,23 @@ export async function initRegistrationDatabase(): Promise<boolean> {
 }
 
 /**
- * Save draft data to SQLite (with safe fallback)
+ * Save draft data to SQLite (disabled to ensure registration always starts fresh on reload)
  */
 export async function saveRegistrationDraft(
-  currentStep: number,
-  formData: FormData
+  _currentStep: number,
+  _formData: FormData
 ): Promise<void> {
-  const jsonString = JSON.stringify(formData);
-  const now = new Date().toISOString();
-
-  try {
-    const isReady = await initRegistrationDatabase();
-    if (isReady && sqliteDbInstance) {
-      await sqliteDbInstance.runAsync(
-        `INSERT OR REPLACE INTO registration_draft (id, current_step, form_data, updated_at) VALUES (1, ?, ?, ?);`,
-        [currentStep, jsonString, now]
-      );
-      return;
-    }
-  } catch (err) {
-    console.warn("[SQLite] Save error, writing to fallback:", err);
-  }
-
-  // Fallback storage ensuring zero Play Store build breakage
-  try {
-    const record: RegistrationDraftRecord = {
-      id: 1,
-      currentStep,
-      formData,
-      updatedAt: now,
-    };
-    await AsyncStorage.setItem(ASYNC_STORAGE_FALLBACK_KEY, JSON.stringify(record));
-  } catch (err) {
-    console.warn("[Storage] Failed to save draft fallback:", err);
-  }
+  // Intentionally no-op: Drafts are not persisted so registration always starts fresh on reload.
 }
 
 /**
- * Load draft data from SQLite (with safe fallback)
+ * Load draft data from SQLite (always returns null so registration starts fresh)
  */
 export async function loadRegistrationDraft(): Promise<{
   currentStep: number;
   formData: FormData;
 } | null> {
-  try {
-    const isReady = await initRegistrationDatabase();
-    if (isReady && sqliteDbInstance) {
-      const row: any = await sqliteDbInstance.getFirstAsync(
-        `SELECT current_step, form_data FROM registration_draft WHERE id = 1;`
-      );
-      if (row && row.form_data) {
-        const parsed = JSON.parse(row.form_data);
-        return {
-          currentStep: Number(row.current_step) || 1,
-          formData: { ...INITIAL_FORM_DATA, ...parsed },
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("[SQLite] Load error, checking fallback:", err);
-  }
-
-  // Fallback check
-  try {
-    const raw = await AsyncStorage.getItem(ASYNC_STORAGE_FALLBACK_KEY);
-    if (raw) {
-      const parsed: RegistrationDraftRecord = JSON.parse(raw);
-      if (parsed && parsed.formData) {
-        return {
-          currentStep: Number(parsed.currentStep) || 1,
-          formData: { ...INITIAL_FORM_DATA, ...parsed.formData },
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("[Storage] Failed to load draft fallback:", err);
-  }
-
+  // Always return null: Registration form must be reset and start fresh on reload.
   return null;
 }
 
