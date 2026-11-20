@@ -61,6 +61,7 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
     try {
       await AsyncStorage.multiRemove([
         "token",
+        "refreshToken",
         "tokenStoredTime",
         "tokenExpirationTime",
         "empid",

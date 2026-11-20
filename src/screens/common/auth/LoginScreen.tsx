@@ -26,6 +26,7 @@ import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 import { OFFICER_STATUS } from "@/constants/officer-status";
+import { ACCESS_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 import { AlertModal } from "@/component/common/AlertModal";
 import { BiometricAuthModal } from "@/component/common/BiometricAuthModal";
 import biometricService from "@/services/biometric/biometric.service";
@@ -275,6 +276,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   ): Promise<boolean> => {
     setLoading(true);
     await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("refreshToken");
     await AsyncStorage.removeItem("empid");
     await AsyncStorage.removeItem("jobRole");
 
@@ -376,6 +378,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         lastNameEnglish,
         image,
         token,
+        refreshToken,
         passwordUpdated,
         empId,
         jobRole,
@@ -387,6 +390,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       const qrCodeUrl = QRcode || qrCode || "";
 
       await AsyncStorage.setItem("token", token);
+      if (refreshToken) {
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+      }
       await AsyncStorage.setItem("empid", empId.toString());
       await AsyncStorage.setItem("jobRole", userJobRole);
       if (qrCodeUrl) {
@@ -394,7 +400,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
 
       dispatch(
-        setUser({ token, empId: empId.toString(), jobRole: userJobRole }),
+        setUser({
+          token,
+          refreshToken,
+          empId: empId.toString(),
+          jobRole: userJobRole,
+        }),
       );
 
       dispatch(
@@ -412,7 +423,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       if (token) {
         const timestamp = new Date();
         const expirationTime = new Date(
-          timestamp.getTime() + 8 * 60 * 60 * 1000,
+          timestamp.getTime() + ACCESS_TOKEN_EXPIRY_MS,
         );
 
         await AsyncStorage.multiSet([
