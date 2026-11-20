@@ -7,7 +7,8 @@ import { Provider, useSelector, useDispatch } from "react-redux";
 import { navigationRef } from "../navigationRef";
 import { LogBox } from "react-native";
 import store from "@/services/store";
-import { selectAuthToken, selectEmpId, logoutUser } from "@/store/authSlice";
+import { selectAuthToken, selectEmpId, logoutUser, setUser } from "@/store/authSlice";
+import { normalizeDriverRole } from "@/constants/user-roles";
 import environment from "@/environment/environment";
 import NetInfo from "@react-native-community/netinfo";
 import axios from "axios";
@@ -16,6 +17,7 @@ import RootStackNavigator from "@/routes/Routes";
 import { AppUpdateProvider } from "@/features/app-update";
 import socketService, { AccountStatusData } from "@/services/socket/socket.service";
 import { OFFICER_STATUS } from "@/constants/officer-status";
+import { ACCESS_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -28,6 +30,23 @@ LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
 (TextInput as any).defaultProps = {
   ...(TextInput as any).defaultProps,
   allowFontScaling: false,
+};
+
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else if (token) {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
 };
 
 // AppContent component handles the main application logic, including navigation, authentication checks, and network status monitoring.
@@ -231,12 +250,14 @@ function AppContent() {
     return () => backHandler.remove();
   }, []);
 
-  // Axios interceptor to handle 401/403 responses specifically for banned/rejected accounts
+  // Axios interceptor to handle token refresh and banned/rejected accounts
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
+        const originalRequest = error.config;
         const errorResponse = error.response;
+
         if (
           errorResponse &&
           (errorResponse.status === 401 || errorResponse.status === 403)
@@ -246,7 +267,7 @@ function AppContent() {
           const rawStatusType = (data?.statusType || "").toString().toLowerCase();
           const rawMessage = (data?.message || "").toString().toLowerCase();
 
-          // Only trigger BannedScreen when the account itself is rejected or not approved
+          // 1. Only trigger BannedScreen when the account itself is rejected or not approved
           const isAccountDisallowed =
             rawStatus === OFFICER_STATUS.REJECTED ||
             rawStatus === OFFICER_STATUS.NOT_APPROVED ||
@@ -281,15 +302,154 @@ function AppContent() {
               return new Promise(() => {});
             }
           }
+
+          // 2. Token Refresh handling for 401 Unauthorized responses
+          const requestUrl = (originalRequest?.url || "").toString();
+          const isAuthEndpoint =
+            requestUrl.includes("api/auth/login") ||
+            requestUrl.includes("api/auth/refresh-token") ||
+            requestUrl.includes("api/auth/register-driver");
+
+          if (
+            errorResponse.status === 401 &&
+            !isAuthEndpoint &&
+            !isAccountDisallowed &&
+            originalRequest &&
+            !originalRequest._retry
+          ) {
+            originalRequest._retry = true;
+
+            if (isRefreshing) {
+              return new Promise((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+              })
+                .then((newToken) => {
+                  if (originalRequest.headers) {
+                    originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+                  }
+                  return axios(originalRequest);
+                })
+                .catch((err) => Promise.reject(err));
+            }
+
+            isRefreshing = true;
+
+            try {
+              const storedRefreshToken = await AsyncStorage.getItem("refreshToken");
+
+              if (!storedRefreshToken) {
+                throw new Error("No refresh token available");
+              }
+
+              const refreshResponse = await fetch(
+                `${environment.API_BASE_URL}api/auth/refresh-token`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ refreshToken: storedRefreshToken }),
+                },
+              );
+
+              const refreshData = await refreshResponse.json();
+
+              if (refreshResponse.ok && refreshData.success && refreshData.data?.token) {
+                const newToken = refreshData.data.token;
+                const newRefreshToken =
+                  refreshData.data.refreshToken || storedRefreshToken;
+                const now = new Date();
+                const newExpiry = new Date(now.getTime() + ACCESS_TOKEN_EXPIRY_MS);
+
+                await AsyncStorage.multiSet([
+                  ["token", newToken],
+                  ["refreshToken", newRefreshToken],
+                  ["tokenStoredTime", now.toISOString()],
+                  ["tokenExpirationTime", newExpiry.toISOString()],
+                ]);
+
+                const storedEmpId = await AsyncStorage.getItem("empid");
+                const storedJobRole = await AsyncStorage.getItem("jobRole");
+                if (storedEmpId) {
+                  dispatch(
+                    setUser({
+                      token: newToken,
+                      refreshToken: newRefreshToken,
+                      empId: storedEmpId,
+                      jobRole: normalizeDriverRole(storedJobRole),
+                    }),
+                  );
+                }
+
+                processQueue(null, newToken);
+
+                if (originalRequest.headers) {
+                  originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+                }
+                return axios(originalRequest);
+              } else {
+                // If refresh failed because account was rejected or not approved
+                const refStatus = (refreshData?.status || "").toString();
+                const refStatusType = (refreshData?.statusType || "").toString().toLowerCase();
+                if (
+                  refreshResponse.status === 403 ||
+                  refStatus === OFFICER_STATUS.REJECTED ||
+                  refStatus === OFFICER_STATUS.NOT_APPROVED ||
+                  refStatusType === "rejected" ||
+                  refStatusType === "not_approved"
+                ) {
+                  const exactStatus =
+                    refStatus === OFFICER_STATUS.REJECTED || refStatusType === "rejected"
+                      ? OFFICER_STATUS.REJECTED
+                      : OFFICER_STATUS.NOT_APPROVED;
+                  handleAccountBanned(exactStatus, refreshData.message);
+                  return new Promise(() => {});
+                }
+
+                throw new Error(refreshData.message || "Token refresh failed");
+              }
+            } catch (refreshErr) {
+              processQueue(refreshErr, null);
+
+              await AsyncStorage.multiRemove([
+                "token",
+                "refreshToken",
+                "tokenStoredTime",
+                "tokenExpirationTime",
+                "empid",
+                "jobRole",
+                "userProfile",
+              ]);
+              dispatch(logoutUser());
+
+              if (navigationRef.isReady()) {
+                const route = navigationRef.getCurrentRoute() as any;
+                if (
+                  route?.name !== "Login" &&
+                  route?.name !== "Splash" &&
+                  route?.name !== "BannedScreen"
+                ) {
+                  navigationRef.reset({
+                    index: 0,
+                    routes: [{ name: "Login" as any }],
+                  });
+                }
+              }
+
+              return Promise.reject(refreshErr);
+            } finally {
+              isRefreshing = false;
+            }
+          }
         }
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
       axios.interceptors.response.eject(interceptor);
     };
-  }, [handleAccountBanned]);
+  }, [handleAccountBanned, dispatch]);
 
   const [currentRoute, setCurrentRoute] = useState<string>("Splash");
 
