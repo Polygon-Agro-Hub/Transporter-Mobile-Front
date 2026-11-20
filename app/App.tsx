@@ -17,7 +17,7 @@ import RootStackNavigator from "@/routes/Routes";
 import { AppUpdateProvider } from "@/features/app-update";
 import socketService, { AccountStatusData } from "@/services/socket/socket.service";
 import { OFFICER_STATUS } from "@/constants/officer-status";
-import { ACCESS_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
+import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 
 LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(["InteractionManager has been deprecated"]);
@@ -360,12 +360,14 @@ function AppContent() {
                   refreshData.data.refreshToken || storedRefreshToken;
                 const now = new Date();
                 const newExpiry = new Date(now.getTime() + ACCESS_TOKEN_EXPIRY_MS);
+                const newRefreshExpiry = new Date(now.getTime() + REFRESH_TOKEN_EXPIRY_MS);
 
                 await AsyncStorage.multiSet([
                   ["token", newToken],
                   ["refreshToken", newRefreshToken],
                   ["tokenStoredTime", now.toISOString()],
                   ["tokenExpirationTime", newExpiry.toISOString()],
+                  ["refreshTokenExpirationTime", newRefreshExpiry.toISOString()],
                 ]);
 
                 const storedEmpId = await AsyncStorage.getItem("empid");
@@ -416,6 +418,7 @@ function AppContent() {
                 "refreshToken",
                 "tokenStoredTime",
                 "tokenExpirationTime",
+                "refreshTokenExpirationTime",
                 "empid",
                 "jobRole",
                 "userProfile",
