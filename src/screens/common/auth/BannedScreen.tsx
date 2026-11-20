@@ -64,6 +64,7 @@ const BannedScreen: React.FC<BannedScreenProps> = ({
         "refreshToken",
         "tokenStoredTime",
         "tokenExpirationTime",
+        "refreshTokenExpirationTime",
         "empid",
         "userProfile",
       ]);

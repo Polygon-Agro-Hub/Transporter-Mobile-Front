@@ -26,7 +26,7 @@ import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 import { OFFICER_STATUS } from "@/constants/officer-status";
-import { ACCESS_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
+import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 import { AlertModal } from "@/component/common/AlertModal";
 import { BiometricAuthModal } from "@/component/common/BiometricAuthModal";
 import biometricService from "@/services/biometric/biometric.service";
@@ -277,6 +277,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setLoading(true);
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("refreshToken");
+    await AsyncStorage.removeItem("refreshTokenExpirationTime");
     await AsyncStorage.removeItem("empid");
     await AsyncStorage.removeItem("jobRole");
 
@@ -425,10 +426,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         const expirationTime = new Date(
           timestamp.getTime() + ACCESS_TOKEN_EXPIRY_MS,
         );
+        const refreshExpirationTime = new Date(
+          timestamp.getTime() + REFRESH_TOKEN_EXPIRY_MS,
+        );
 
         await AsyncStorage.multiSet([
           ["tokenStoredTime", timestamp.toISOString()],
           ["tokenExpirationTime", expirationTime.toISOString()],
+          ["refreshTokenExpirationTime", refreshExpirationTime.toISOString()],
         ]);
       }
 

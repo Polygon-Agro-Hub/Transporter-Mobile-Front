@@ -9,7 +9,7 @@ import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 import { OFFICER_STATUS } from "@/constants/officer-status";
-import { ACCESS_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
+import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 
 const splashscreen = require("@/assets/images/splash.webp");
 
@@ -45,6 +45,7 @@ const Splash: React.FC = () => {
   const handleTokenCheck = async () => {
     try {
       const expirationTime = await AsyncStorage.getItem("tokenExpirationTime");
+      const refreshTokenExpirationTime = await AsyncStorage.getItem("refreshTokenExpirationTime");
       const userToken = await AsyncStorage.getItem("token");
       const storedRefreshToken = await AsyncStorage.getItem("refreshToken");
       const empId = await AsyncStorage.getItem("empid");
@@ -76,6 +77,17 @@ const Splash: React.FC = () => {
 
           await fetchUserProfile(userToken, empId);
         } else if (storedRefreshToken) {
+          // Check if refresh token itself has exceeded 14 days
+          const refreshExpiry = refreshTokenExpirationTime
+            ? new Date(refreshTokenExpirationTime)
+            : null;
+
+          if (refreshExpiry && currentTime >= refreshExpiry) {
+            await clearStorage();
+            navigation.replace("Login");
+            return;
+          }
+
           // Token expired, but refresh token is available - attempt silent refresh
           try {
             const refreshResponse = await fetch(
@@ -99,12 +111,16 @@ const Splash: React.FC = () => {
               const newExpiration = new Date(
                 timestamp.getTime() + ACCESS_TOKEN_EXPIRY_MS,
               );
+              const newRefreshExpiration = new Date(
+                timestamp.getTime() + REFRESH_TOKEN_EXPIRY_MS,
+              );
 
               await AsyncStorage.multiSet([
                 ["token", newToken],
                 ["refreshToken", newRefreshToken],
                 ["tokenStoredTime", timestamp.toISOString()],
                 ["tokenExpirationTime", newExpiration.toISOString()],
+                ["refreshTokenExpirationTime", newRefreshExpiration.toISOString()],
               ]);
 
               dispatch(
@@ -269,6 +285,7 @@ const Splash: React.FC = () => {
       "refreshToken",
       "tokenStoredTime",
       "tokenExpirationTime",
+      "refreshTokenExpirationTime",
       "empid",
       "jobRole",
       "userProfile",
