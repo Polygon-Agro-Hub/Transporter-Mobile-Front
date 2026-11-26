@@ -9,6 +9,7 @@ import { useDispatch } from "react-redux";
 import { setUser, setUserProfile } from "@/store/authSlice";
 import { ROLES, normalizeDriverRole } from "@/constants/user-roles";
 import { OFFICER_STATUS } from "@/constants/officer-status";
+import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from "@/constants/auth.constants";
 
 const splashscreen = require("@/assets/images/splash.webp");
 
@@ -44,20 +45,22 @@ const Splash: React.FC = () => {
   const handleTokenCheck = async () => {
     try {
       const expirationTime = await AsyncStorage.getItem("tokenExpirationTime");
+      const refreshTokenExpirationTime = await AsyncStorage.getItem("refreshTokenExpirationTime");
       const userToken = await AsyncStorage.getItem("token");
+      const storedRefreshToken = await AsyncStorage.getItem("refreshToken");
       const empId = await AsyncStorage.getItem("empid");
       const storedJobRole = await AsyncStorage.getItem("jobRole");
       const userProfileStr = await AsyncStorage.getItem("userProfile");
 
-      if (expirationTime && userToken && empId) {
+      if (userToken && empId) {
         const currentTime = new Date();
-        const tokenExpiry = new Date(expirationTime);
+        const tokenExpiry = expirationTime ? new Date(expirationTime) : new Date(0);
 
         if (currentTime < tokenExpiry) {
-
           dispatch(
             setUser({
               token: userToken,
+              refreshToken: storedRefreshToken,
               empId: empId,
               jobRole: normalizeDriverRole(storedJobRole),
             }),
@@ -73,6 +76,103 @@ const Splash: React.FC = () => {
           }
 
           await fetchUserProfile(userToken, empId);
+        } else if (storedRefreshToken) {
+          // Check if refresh token itself has exceeded 14 days
+          const refreshExpiry = refreshTokenExpirationTime
+            ? new Date(refreshTokenExpirationTime)
+            : null;
+
+          if (refreshExpiry && currentTime >= refreshExpiry) {
+            await clearStorage();
+            navigation.replace("Login");
+            return;
+          }
+
+          // Token expired, but refresh token is available - attempt silent refresh
+          try {
+            const refreshResponse = await fetch(
+              `${environment.API_BASE_URL}api/auth/refresh-token`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refreshToken: storedRefreshToken }),
+              },
+            );
+
+            const refreshData = await refreshResponse.json();
+
+            if (refreshResponse.ok && refreshData.success && refreshData.data?.token) {
+              const newToken = refreshData.data.token;
+              const newRefreshToken =
+                refreshData.data.refreshToken || storedRefreshToken;
+              const timestamp = new Date();
+              const newExpiration = new Date(
+                timestamp.getTime() + ACCESS_TOKEN_EXPIRY_MS,
+              );
+              const newRefreshExpiration = new Date(
+                timestamp.getTime() + REFRESH_TOKEN_EXPIRY_MS,
+              );
+
+              await AsyncStorage.multiSet([
+                ["token", newToken],
+                ["refreshToken", newRefreshToken],
+                ["tokenStoredTime", timestamp.toISOString()],
+                ["tokenExpirationTime", newExpiration.toISOString()],
+                ["refreshTokenExpirationTime", newRefreshExpiration.toISOString()],
+              ]);
+
+              dispatch(
+                setUser({
+                  token: newToken,
+                  refreshToken: newRefreshToken,
+                  empId: empId,
+                  jobRole: normalizeDriverRole(storedJobRole),
+                }),
+              );
+
+              if (userProfileStr) {
+                try {
+                  const userProfile = JSON.parse(userProfileStr);
+                  dispatch(setUserProfile(userProfile));
+                } catch (error) {
+                  console.error("Error parsing user profile:", error);
+                }
+              }
+
+              await fetchUserProfile(newToken, empId);
+            } else {
+              // Account disallowed check
+              const rawStatus = (refreshData?.status || "").toString();
+              const rawStatusType = (refreshData?.statusType || "").toString().toLowerCase();
+              if (
+                refreshResponse.status === 403 ||
+                rawStatus === OFFICER_STATUS.REJECTED ||
+                rawStatus === OFFICER_STATUS.NOT_APPROVED ||
+                rawStatusType === "rejected" ||
+                rawStatusType === "not_approved"
+              ) {
+                const exactStatus =
+                  rawStatus === OFFICER_STATUS.REJECTED || rawStatusType === "rejected"
+                    ? OFFICER_STATUS.REJECTED
+                    : OFFICER_STATUS.NOT_APPROVED;
+                navigation.replace("BannedScreen", {
+                  status: exactStatus,
+                  statusType: exactStatus,
+                  message: refreshData.message,
+                });
+                return;
+              }
+
+              await clearStorage();
+              navigation.replace("Login");
+            }
+          } catch (refreshErr) {
+            console.error("Error refreshing token in Splash:", refreshErr);
+            await clearStorage();
+            navigation.replace("Login");
+          }
         } else {
           await clearStorage();
           navigation.replace("Login");
@@ -182,8 +282,10 @@ const Splash: React.FC = () => {
   const clearStorage = async () => {
     await AsyncStorage.multiRemove([
       "token",
+      "refreshToken",
       "tokenStoredTime",
       "tokenExpirationTime",
+      "refreshTokenExpirationTime",
       "empid",
       "jobRole",
       "userProfile",

@@ -18,6 +18,7 @@ export interface ProfileData {
 
 interface AuthState {
   token: string | null;
+  refreshToken: string | null;
   empId: string | null;
   jobRole: string | null;
   userProfile: ProfileData | null;
@@ -25,6 +26,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   token: null,
+  refreshToken: null,
   empId: null,
   jobRole: null,
   userProfile: null,
@@ -36,12 +38,30 @@ const authSlice = createSlice({
   reducers: {
     setUser: (
       state,
-      action: PayloadAction<{ token: string; empId: string; jobRole?: string | null }>
+      action: PayloadAction<{
+        token: string;
+        refreshToken?: string | null;
+        empId: string;
+        jobRole?: string | null;
+      }>
     ) => {
-      const { token, empId, jobRole } = action.payload;
+      const { token, refreshToken, empId, jobRole } = action.payload;
       state.token = token;
+      if (refreshToken !== undefined) {
+        state.refreshToken = refreshToken;
+      }
       state.empId = empId;
       state.jobRole = normalizeDriverRole(jobRole);
+    },
+
+    setTokens: (
+      state,
+      action: PayloadAction<{ token: string; refreshToken?: string | null }>
+    ) => {
+      state.token = action.payload.token;
+      if (action.payload.refreshToken !== undefined) {
+        state.refreshToken = action.payload.refreshToken;
+      }
     },
 
     setUserProfile: (state, action: PayloadAction<ProfileData>) => {
@@ -58,6 +78,7 @@ const authSlice = createSlice({
 
     logoutUser: (state) => {
       state.token = null;
+      state.refreshToken = null;
       state.empId = null;
       state.jobRole = null;
       state.userProfile = null;
@@ -67,13 +88,17 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<{
         token: string;
+        refreshToken?: string | null;
         empId: string;
         jobRole?: string | null;
         profile: ProfileData;
       }>
     ) => {
-      const { token, empId, jobRole, profile } = action.payload;
+      const { token, refreshToken, empId, jobRole, profile } = action.payload;
       state.token = token;
+      if (refreshToken !== undefined) {
+        state.refreshToken = refreshToken;
+      }
       state.empId = empId;
       state.jobRole = normalizeDriverRole(jobRole);
       state.userProfile = profile;
@@ -81,12 +106,13 @@ const authSlice = createSlice({
   },
 });
 
-export const { 
-  setUser, 
-  setUserProfile, 
-  logoutUser, 
+export const {
+  setUser,
+  setTokens,
+  setUserProfile,
+  logoutUser,
   setUserAndProfile,
-  updateProfileImage 
+  updateProfileImage
 } = authSlice.actions;
 
 export default authSlice.reducer;
@@ -96,6 +122,9 @@ export const selectUserProfile = (state: { auth: AuthState }) =>
 
 export const selectAuthToken = (state: { auth: AuthState }) =>
   state.auth.token;
+
+export const selectRefreshToken = (state: { auth: AuthState }) =>
+  state.auth.refreshToken;
 
 export const selectEmpId = (state: { auth: AuthState }) => state.auth.empId;
 
