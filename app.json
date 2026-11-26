@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.polygonagro.Transporter",
-      "versionCode": 26,
+      "versionCode": 27,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -56,7 +56,7 @@
       "icon": "./src/assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.polygonagro.Transporter",
       "buildNumber": "17",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
@@ -131,6 +131,7 @@
         }
       ],
       "./plugins/withCustomAndroidPermissions",
+      "./plugins/withRemoveScreenOrientation",
       [
         "expo-splash-screen",
         {
